@@ -33,27 +33,33 @@ CHECK_LABELS: Dict[str, List[str]] = {
 MAX_PER_CATEGORY = 12
 MAX_TOTAL = MAX_PER_CATEGORY * 6
 
+
 # ---------- data structures ----------
 @dataclass
 class Check:
     label: str
     score: int
 
+
 @dataclass
 class Category:
     key: str
     checks: List[Check]
+
     @property
     def total(self) -> int:
         return sum(c.score for c in self.checks)
+
 
 @dataclass
 class SectorRow:
     symbol: str
     categories: Dict[str, Category]
+
     @property
     def total(self) -> int:
         return sum(cat.total for cat in self.categories.values())
+
 
 # ---------- tiny render helpers ----------
 def pct_style(p: float, mono: bool = False) -> str:
@@ -64,6 +70,7 @@ def pct_style(p: float, mono: bool = False) -> str:
     if p >= 0.20: return "black on dark_orange3"
     return "white on red3"
 
+
 def score_cell(score: int, max_score: int, mono: bool = False) -> Text:
     p = (score / max_score) if max_score else 0.0
     t = Text(f"{score}/{max_score} ({int(round(p * 100))}%)")
@@ -72,10 +79,12 @@ def score_cell(score: int, max_score: int, mono: bool = False) -> Text:
         t.stylize(style)
     return t
 
+
 def chip(s: int, mono: bool = False) -> Text:
     if mono:
         return Text("+" if s >= 2 else "~" if s == 1 else "-")
     return Text("●", style=("green3" if s >= 2 else "gold1" if s == 1 else "red3"))
+
 
 # ---------- demo dataset (used only if you pass --demo) ----------
 def build_demo_sector(symbol: str, rng: random.Random) -> SectorRow:
@@ -85,9 +94,11 @@ def build_demo_sector(symbol: str, rng: random.Random) -> SectorRow:
         cats[key] = Category(key, checks)
     return SectorRow(symbol, cats)
 
+
 def build_demo_dataset(symbols: List[str], seed: int) -> List[SectorRow]:
     rng = random.Random(seed)
     return [build_demo_sector(s, rng) for s in symbols]
+
 
 # ---------- JSON / live -> rows ----------
 def build_sector_from_json(item: dict) -> SectorRow:
@@ -108,6 +119,7 @@ def build_sector_from_json(item: dict) -> SectorRow:
         cats[key] = Category(key, checks)
     return SectorRow(symbol=item.get("symbol", "?"), categories=cats)
 
+
 def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[SectorRow]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -118,9 +130,11 @@ def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[Se
             rows.append(s)
     return rows
 
+
 def load_live_dataset(sectors: List[str], period: str, interval: str, ttl: int) -> List[SectorRow]:
     payload = compute_scores(sectors=sectors, period=period, interval=interval, ttl_sec=ttl)
     return [build_sector_from_json(obj) for obj in payload]
+
 
 # ---------- rendering ----------
 def render_header(console: Console, mono: bool = False) -> None:
@@ -141,6 +155,7 @@ def render_header(console: Console, mono: bool = False) -> None:
     )
     console.print(Panel.fit(legend, title=title, border_style="cyan"))
 
+
 def render_overview(console: Console, rows: List[SectorRow], mono: bool = False) -> None:
     tbl = Table(title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False)
     tbl.add_column("Sector", justify="left", style="bold cyan")
@@ -154,6 +169,7 @@ def render_overview(console: Console, rows: List[SectorRow], mono: bool = False)
         cells.append(score_cell(row_data.total, MAX_TOTAL, mono))
         tbl.add_row(*cells)
     console.print(tbl)
+
 
 def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bool = False) -> None:
     if not rows:
@@ -174,6 +190,65 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
             t.add_row(*row_cells)
         console.print(t)
 
+
+# ---------- Pi Grid (compact, no legend) ----------
+MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
+
+def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False) -> None:
+    """Compact single-grid view for Raspberry Pi / small terminals (no legend)."""
+    if not rows:
+        console.print("[yellow]No data to display.[/yellow]")
+        return
+
+    ranked = sorted(rows, key=lambda r: r.total, reverse=True)
+
+    # Minimal title line; comment out if you want zero header.
+    console.rule("[bold cyan]Market Health – Pi Grid[/bold cyan]")
+
+    # --- Auto-fit column count if cols <= 0 ---
+    TILE_W = 10  # uniform tile width; tweak if you want denser tiles
+    GAP = 2
+    if cols is None or cols <= 0:
+        term_w = max(1, console.size.width)
+        cols = max(1, min(len(ranked), term_w // (TILE_W + GAP)))
+
+    # --- Build cells with uniform width and full-tile background color ---
+    cells: List[Panel] = []
+    for i, r in enumerate(ranked, 1):
+        pct = (r.total / MAX_TOTAL) if MAX_TOTAL else 0.0
+        pct_int = int(round(pct * 100))
+        style = pct_style(pct, mono)  # uses your existing color thresholds
+
+        label = Text(f"{r.symbol}\n{pct_int}%", justify="center")
+        if style:
+            label.stylize(style)
+
+        cells.append(
+            Panel(
+                label,
+                box=box.SQUARE,
+                padding=(0, 1),
+                border_style="cyan",
+                style=style if not mono else "",
+                width=TILE_W,
+                title=f"#{i}",
+                title_align="left",
+            )
+        )
+
+    # --- Print the grid row-by-row ---
+    from math import ceil
+    row_count = ceil(len(cells) / cols)
+    for r in range(row_count):
+        chunk = cells[r * cols : (r + 1) * cols]
+        if not chunk:
+            continue
+        row_tbl = Table.grid(padding=(0, 1))
+        for _ in chunk:
+            row_tbl.add_column(justify="center")
+        row_tbl.add_row(*chunk)
+        console.print(row_tbl)
+
 # ---------- CLI ----------
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
@@ -188,7 +263,11 @@ def parse_args():
     p.add_argument("--period", type=str, default="1y")
     p.add_argument("--interval", type=str, default="1d")
     p.add_argument("--ttl", type=int, default=300, help="In-process cache TTL for data fetches")
+    p.add_argument("--pi-grid", action="store_true", help="Compact Raspberry Pi grid view (one small grid)")
+    p.add_argument("--grid-cols", type=int, default=4, help="Number of columns in the Pi grid")
+
     return p.parse_args()
+
 
 def main():
     args = parse_args()
@@ -216,18 +295,26 @@ def main():
 
     def render_once():
         console.print()
-        render_header(console, mono=args.mono)
-        rows = load_rows()
-        if rows:
+
+    rows = load_rows()
+    if rows:
+        use_pi_grid = getattr(args, "pi_grid", False)
+        grid_cols = getattr(args, "grid_cols", 4)
+
+        if use_pi_grid and "render_pi_grid" in globals():
+            # Pi Grid prints its own legend; don't print header twice.
+            render_pi_grid(console, rows, cols=grid_cols, mono=args.mono)
+        else:
+            render_header(console, mono=args.mono)
             render_overview(console, rows, mono=args.mono)
             render_details(console, rows, top_k=args.topk, mono=args.mono)
+    else:
+        if args.json_path:
+            console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
         else:
-            if args.json_path:
-                console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
-            else:
-                console.print("[yellow]No data to display.[/yellow]")
+            console.print("[yellow]No data to display.[/yellow]")
 
-    if args.watch and args.watch > 0:
+    if getattr(args, "watch", 0) and args.watch > 0:
         try:
             while True:
                 console.clear()
@@ -237,6 +324,7 @@ def main():
             return
     else:
         render_once()
+
 
 if __name__ == "__main__":
     main()
