@@ -38,12 +38,22 @@ def parse_args() -> argparse.Namespace:
 
 
 def _category_total(cat_node: dict) -> int:
-    """Safely sum scores in a category node: {'checks': [{'label','score'}, ...]}."""
-    checks = cat_node.get("checks", [])
-    try:
-        return sum(int(c.get("score", 0)) for c in checks)
-    except Exception:
+    """
+    Sum scores in a category node like:
+      {"checks": [{"label": "...", "score": 3}, ...]}
+    Ignores missing/invalid entries without a broad Exception.
+    """
+    checks = cat_node.get("checks")
+    if not isinstance(checks, list) or not checks:
         return 0
+
+    def _to_int(x) -> int:
+        try:
+            return int(x)
+        except (TypeError, ValueError):
+            return 0
+
+    return sum(_to_int(c.get("score")) for c in checks if isinstance(c, dict))
 
 
 def _as_csv_rows(payload: List[Dict]) -> List[List[str]]:

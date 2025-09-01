@@ -93,6 +93,74 @@ python market_ui.py --sectors XLK XLF XLY XLV
 
 ---
 
+## Scoring framework (A–F categories)
+
+Your framework is organized into **6 categories (A–F)**. Each category contains **6 checks/variables** for a total of **36 distinct factors**. These roll up into each sector’s score and color.
+
+### A — Catalyst Health
+**Focus:** external events, sentiment, and “catalysts.”  
+**Variables:**
+- **News** — recent headlines, sentiment, or price/volume proxy spikes
+- **Analysts** — upgrades/downgrades, price targets, recommendations
+- **Event** — scheduled catalysts (earnings, product launches, regulatory)
+- **Insiders** — insider buying/selling activity
+- **Peers/Macro** — sector‑wide or macro catalysts impacting the symbol
+- **Guidance** — outlook revisions and earnings guidance
+
+### B — Trend & Structure
+**Focus:** technical price/volume structure.  
+**Variables:**
+- **Stacked MAs** — alignment 9EMA > 20EMA > 50SMA
+- **RS vs SPY** — 5‑day relative strength versus SPY
+- **BB Mid** — reclaim of the 20‑day SMA (Bollinger mid)
+- **20D Break** — breakout above the 20‑day high
+- **Vol ×** — volume expansion vs. 20‑day average
+- **Hold 20EMA** — pullbacks respecting the 20EMA
+
+### C — Position & Flow
+**Focus:** positioning, flows, participation.  
+**Variables:**
+- **EM Fit** — fit to an exponential moving structure
+- **OI/Flow** — options open interest & flow activity
+- **Blocks/DP** — large prints / dark‑pool activity
+- **Leaders% > 20D** — % of leaders above 20‑day MA
+- **Money Flow** — net inflows/outflows
+- **SI/Days** — short interest vs. average daily volume
+
+### D — Risk & Volatility
+**Focus:** volatility, correlation, risk control.  
+**Variables:**
+- **ATR%** — Average True Range as % of price
+- **IV%** — implied volatility proxy (e.g., BB width)
+- **Correlation** — 20‑day correlation vs. SPY
+- **Event Risk** — earnings/event risk placeholder
+- **Gap Plan** — gap‑risk strategy placeholder
+- **Sizing/RR** — position sizing & risk/reward vs ATR/EMA
+
+### E — Environment & Regime
+**Focus:** broader market/sector regime.  
+**Variables:**
+- **SPY Trend** — SPY alignment with 20/50‑day averages
+- **Sector Rank** — relative rank of sector ETF (e.g., 5‑bar return)
+- **Breadth** — sector breadth / internal trend health
+- **VIX Regime** — VIX vs. its 20‑day SMA (calm vs stressed)
+- **3‑Day RS** — short‑term RS vs. SPY
+- **Drivers** — macro drivers alignment (placeholder)
+
+### F — Execution & Frictions
+**Focus:** trade management and execution discipline.  
+**Variables:**
+- **Trigger** — defined trade trigger present
+- **Invalidation** — clear stop/invalid level
+- **Targets** — realistic upside targets
+- **Time Stop** — time‑based exit rule
+- **Slippage** — liquidity / bid‑ask cost
+- **Alerts** — monitoring/alerting in place
+
+> **Summary:** 36 checks total (6 × 6). A–C emphasize catalysts/technicals/positioning; D–E cover risk and environment; F captures execution discipline.
+
+---
+
 ## Rendering from JSON
 
 You can render without fetching live data by pointing to a JSON file:
@@ -108,11 +176,11 @@ python market_ui.py --json scores.json --pi-grid --grid-cols 0
   {
     "symbol": "XLK",
     "A": [{"label": "News", "score": 2}, {"label": "Analysts", "score": 1}],
-    "B": [{"label": "..." , "score": 0}], 
-    "C": [{"label": "..." , "score": 2}], 
-    "D": [{"label": "..." , "score": 1}], 
-    "E": [{"label": "..." , "score": 1}], 
-    "F": [{"label": "..." , "score": 0}]
+    "B": [{"label": "...", "score": 0}],
+    "C": [{"label": "...", "score": 2}],
+    "D": [{"label": "...", "score": 1}],
+    "E": [{"label": "...", "score": 1}],
+    "F": [{"label": "...", "score": 0}]
   }
 ]
 ```
