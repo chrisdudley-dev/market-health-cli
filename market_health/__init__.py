@@ -68,3 +68,5 @@ def compute_scores(
 
 
 __all__ = ["compute_scores", "SECTORS_DEFAULT", "CHECK_LABELS", "__version__"]
+
+__version__ = "0.2.3"
