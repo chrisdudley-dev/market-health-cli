@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "setuptools-scm[toml]>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "market-health-cli"
+dynamic = ["version"]                       # version is provided by setuptools-scm
+description = "Terminal market-health dashboard with a compact Pi grid (Rich)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Christopher Dudley" }]
+license = { text = "MIT" }
+dependencies = [
+    "rich>=13.7",
+    "numpy",
+    "pandas",
+    "yfinance"
+]
+
+[project.scripts]
+market-health = "market_ui:main"
+market-health-pi = "market_ui:main"
+
+[tool.setuptools]
+packages = ["market_health"]
+py-modules = ["market_ui"]
+include-package-data = true
+
+# setuptools-scm pulls version from Git tags like v0.2.3
+[tool.setuptools_scm]
+tag_regex = '^v?(?P<version>\\d+\\.\\d+\\.\\d+)$'
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+fallback_version = "0.0.0"

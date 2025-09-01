@@ -6,6 +6,14 @@ import json
 import random
 import time
 import datetime as dt
+
+try:
+    from requests.exceptions import RequestException
+except ImportError:
+    # fallback if requests isn't installed (e.g., in demo-only envs)
+    class RequestException(Exception):  # type: ignore
+        pass
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -17,6 +25,8 @@ from rich import box
 
 # Pull scores + default sectors from the engine (do not re-define here)
 from market_health.engine import compute_scores, SECTORS_DEFAULT
+
+LAST_BANDS = {}  # symbol -> last committed band index (0..4) for hysteresis
 
 CATEGORY_NAMES: Dict[str, str] = {
     "A": "Catalyst Health", "B": "Trend & Structure", "C": "Position & Flow",
@@ -60,8 +70,51 @@ class SectorRow:
     def total(self) -> int:
         return sum(cat.total for cat in self.categories.values())
 
+    @property
+    def pct(self) -> int:
+        return int(round((self.total / MAX_TOTAL) * 100))
+
 
 # ---------- tiny render helpers ----------
+
+def _row_symbol_and_score(row):
+    sym = getattr(row, "symbol", getattr(row, "ticker", "?"))
+    for attr in ("pct", "score", "percent", "value"):
+        val = getattr(row, attr, None)
+        if val is not None:
+            try:
+                return sym, int(round(float(val)))
+            except (TypeError, ValueError):
+                pass
+    total = getattr(row, "total", None)
+    if isinstance(total, (int, float)) and MAX_TOTAL:
+        pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+        return sym, max(0, min(100, pct))
+    return sym, 0
+
+
+def _export_rows(rows, fmt: str) -> str:
+    """Build a JSON or CSV string from rows."""
+    import json, io, csv
+
+    recs = []
+    for r in rows:
+        sym, score = _row_symbol_and_score(r)
+        recs.append({"symbol": sym, "score": score})
+
+    if fmt == "json":
+        return json.dumps(recs, separators=(",", ":")) + "\n"
+
+    if fmt == "csv":
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=["symbol", "score"])
+        w.writeheader()
+        w.writerows(recs)
+        return buf.getvalue()
+
+    raise ValueError("fmt must be 'json' or 'csv'")
+
+
 def pct_style(p: float, mono: bool = False) -> str:
     if mono: return ""
     if p >= 0.80: return "black on green3"
@@ -192,79 +245,192 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
 
 
 # ---------- Pi Grid (compact, no legend) ----------
-MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 
-def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False) -> None:
-    """Compact single-grid view for Raspberry Pi / small terminals (no legend)."""
-    if not rows:
-        console.print("[yellow]No data to display.[/yellow]")
-        return
+def render_pi_grid(
+        console,
+        rows,
+        grid_cols: int = 0,
+        mono: bool = False,
+        rating_scheme: str = "hybrid",
+        quantiles=(10, 30, 70, 90),
+        hysteresis: int = 0,
+) -> None:
+    from rich.table import Table
+    from rich.text import Text
+    from rich.panel import Panel
+    from rich import box
 
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)
+    labels = [
+        ("Strong Sell", "SS"),
+        ("Sell", "S"),
+        ("Hold", "H"),
+        ("Buy", "B"),
+        ("Strong Buy", "SB"),
+    ]
 
-    # Minimal title line; comment out if you want zero header.
-    console.rule("[bold cyan]Market Health – Pi Grid[/bold cyan]")
+    def _fixed_bounds():
+        return [20, 40, 60, 80]
 
-    # --- Auto-fit column count if cols <= 0 ---
-    TILE_W = 10  # uniform tile width; tweak if you want denser tiles
-    GAP = 2
-    if cols is None or cols <= 0:
-        term_w = max(1, console.size.width)
-        cols = max(1, min(len(ranked), term_w // (TILE_W + GAP)))
+    def _quantile_bounds(vals, qs=(10, 30, 70, 90)):
+        xs = sorted(int(v) for v in vals if v is not None)
+        if not xs:
+            return _fixed_bounds()
 
-    # --- Build cells with uniform width and full-tile background color ---
-    cells: List[Panel] = []
-    for i, r in enumerate(ranked, 1):
-        pct = (r.total / MAX_TOTAL) if MAX_TOTAL else 0.0
-        pct_int = int(round(pct * 100))
-        style = pct_style(pct, mono)  # uses your existing color thresholds
+        def pct_fn(p):
+            k = max(0, min(len(xs) - 1, round((p / 100) * (len(xs) - 1))))
+            return xs[k]
 
-        label = Text(f"{r.symbol}\n{pct_int}%", justify="center")
-        if style:
-            label.stylize(style)
+        return [pct_fn(q) for q in qs]
 
-        cells.append(
+    def _choose_bounds(vals, scheme="hybrid", qs=(10, 30, 70, 90), guard=5):
+        f = _fixed_bounds()
+        if scheme == "fixed":
+            return f
+        qb = _quantile_bounds(vals, qs)
+        if scheme == "quantile":
+            return qb
+        return [max(fi - guard, min(fi + guard, qi)) for fi, qi in zip(f, qb)]
+
+    def _band_index(score_val: int, cuts) -> int:
+        c1, c2, c3, c4 = cuts
+        if score_val < c1:   return 0
+        if score_val < c2:   return 1
+        if score_val < c3:   return 2
+        if score_val < c4:   return 3
+        return 4
+
+    def _label_for_band(bi: int):
+        return labels[bi]  # (long, short)
+
+    def _panel_style(score_val: int) -> str:
+        if mono:
+            return ""
+        if score_val >= 80: return "on green3"
+        if score_val >= 60: return "on chartreuse3"
+        if score_val >= 40: return "on yellow3"
+        if score_val >= 20: return "on dark_orange3"
+        return "on red3"
+
+    def _get_pct(row) -> int:
+        # 1) try explicit numeric fields (supports alt data sources)
+        for attr in ("pct", "score", "percent", "value"):
+            val = getattr(row, attr, None)
+            if val is not None:
+                try:
+                    return int(round(float(val)))
+                except (ValueError, TypeError):
+                    pass
+        # 2) fallback for SectorRow: compute from total
+        total = getattr(row, "total", None)
+        if isinstance(total, (int, float)) and MAX_TOTAL:
+            pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+            return max(0, min(100, pct))
+        return 0
+
+    # compute bounds once per render
+    cross_section = [_get_pct(r) for r in rows]
+    cut_points = _choose_bounds(cross_section, scheme=rating_scheme, qs=quantiles, guard=5)
+
+    # hysteresis helpers
+    def _lower_of_band(i: int) -> int:
+        return 0 if i == 0 else cut_points[i - 1]
+
+    tiles = []
+    for r, pct_val in zip(rows, cross_section):
+        sym = getattr(r, "symbol", getattr(r, "ticker", "?"))
+        raw_band = _band_index(pct_val, cut_points)
+
+        # apply hysteresis (if enabled)
+        if hysteresis and sym in LAST_BANDS:
+            last = LAST_BANDS[sym]
+            commit = last
+            if raw_band > last:
+                # moving up: must clear lower bound of new band by >= hysteresis
+                lower_needed = _lower_of_band(raw_band) + hysteresis
+                if pct_val >= lower_needed:
+                    commit = raw_band
+            elif raw_band < last:
+                # moving down: must drop under lower bound of current band by >= hysteresis
+                boundary = _lower_of_band(last)
+                if pct_val < boundary - hysteresis:
+                    commit = raw_band
+            band_idx = commit
+        else:
+            band_idx = raw_band
+
+        LAST_BANDS[sym] = band_idx
+        _, short_lbl = _label_for_band(band_idx)
+
+        text = Text(justify="center", no_wrap=True)
+        text.append(f"{sym}\n", style="bold")
+        text.append(f"{pct_val:>3d}%\n", style="bold")
+        text.append(short_lbl, style="bold")
+
+        tiles.append(
             Panel(
-                label,
-                box=box.SQUARE,
+                text,
+                box=box.ROUNDED,
                 padding=(0, 1),
-                border_style="cyan",
-                style=style if not mono else "",
-                width=TILE_W,
-                title=f"#{i}",
-                title_align="left",
+                style=_panel_style(pct_val),
+                border_style="black" if not mono else "white",
             )
         )
 
-    # --- Print the grid row-by-row ---
-    from math import ceil
-    row_count = ceil(len(cells) / cols)
-    for r in range(row_count):
-        chunk = cells[r * cols : (r + 1) * cols]
-        if not chunk:
-            continue
-        row_tbl = Table.grid(padding=(0, 1))
-        for _ in chunk:
-            row_tbl.add_column(justify="center")
-        row_tbl.add_row(*chunk)
-        console.print(row_tbl)
+    # layout
+    def _chunk(seq, n):
+        for i in range(0, len(seq), n):
+            yield seq[i:i + n]
+
+    cols = grid_cols if grid_cols and grid_cols > 0 else max(1, min(10, (console.size.width - 2) // 12))
+    grid = Table.grid(padding=(0, 1))
+    for _ in range(cols):
+        grid.add_column(no_wrap=True)
+
+    for row_tiles in _chunk(tiles, cols):
+        if len(row_tiles) < cols:
+            row_tiles = row_tiles + [""] * (cols - len(row_tiles))
+        grid.add_row(*row_tiles)
+
+    console.print(grid)
+
 
 # ---------- CLI ----------
 def parse_args():
-    p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
-    p.add_argument("--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include")
-    p.add_argument("--topk", type=int, default=3, help="How many top sectors to expand in details")
-    p.add_argument("--mono", action="store_true", help="Monochrome (no colors)")
-    p.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds")
-    # data sources
-    p.add_argument("--json", dest="json_path", type=str, help="If set, load from JSON instead of live")
-    p.add_argument("--demo", action="store_true", help="Use random demo data (ignores --json and live)")
-    # live compute options (used when no --json and not --demo)
-    p.add_argument("--period", type=str, default="1y")
-    p.add_argument("--interval", type=str, default="1d")
-    p.add_argument("--ttl", type=int, default=300, help="In-process cache TTL for data fetches")
-    p.add_argument("--pi-grid", action="store_true", help="Compact Raspberry Pi grid view (one small grid)")
-    p.add_argument("--grid-cols", type=int, default=4, help="Number of columns in the Pi grid")
+    p = argparse.ArgumentParser(description="Market Health – terminal dashboard (with Pi Grid mode)")
+
+    # existing flags
+    p.add_argument("--demo", action="store_true", help="Use generated demo data")
+    p.add_argument("--json-path", type=str, default=None, help="Path to JSON dataset to render")
+    p.add_argument("--sectors", nargs="*", default=None, help="Override sector tickers, e.g. --sectors XLK XLF XLY")
+    p.add_argument("--period", type=str, default="1y", help="Lookback period for live fetch (yfinance), e.g. 6mo, 1y")
+    p.add_argument("--interval", type=str, default="1d", help="Sampling interval, e.g. 1d, 1h")
+    p.add_argument("--ttl", type=int, default=300, help="Cache TTL (seconds) for live computations")
+    p.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds (0=once)")
+    p.add_argument("--topk", type=int, default=3, help="Top-K sectors to show in details (non-grid view)")
+    p.add_argument("--mono", action="store_true", help="Monochrome output (disable color)")
+    p.add_argument("--pi-grid", action="store_true", help="Render compact single-grid (Pi display) view")
+    p.add_argument("--grid-cols", type=int, default=4, help="Columns in Pi grid (0 = auto-fit)")
+    p.add_argument("--hysteresis", type=int, default=0,
+                   help="Points required to cross a rating band (reduces flip-flop in --watch)")
+    p.add_argument("--export", choices=["json", "csv"],
+                   help="Print rows as JSON/CSV and exit")
+    p.add_argument("--version", action="version", version="market-health-cli 0.2.0")
+
+    # NEW: rating controls
+    p.add_argument(
+        "--rating-scheme",
+        choices=["fixed", "quantile", "hybrid"],
+        default="hybrid",
+        help="Map 0–100 score to SB/B/H/S/SS (default: hybrid quantile/fixed)",
+    )
+    p.add_argument(
+        "--quantiles",
+        type=str,
+        default="10,30,70,90",
+        help="Cutpoints for quantile scheme (comma-separated), e.g. 10,30,70,90",
+    )
+    # (optional hysteresis — wire it later if you want)
+    # p.add_argument("--hysteresis", type=int, default=0, help="Pts needed to cross a band before label changes")
 
     return p.parse_args()
 
@@ -278,43 +444,68 @@ def main():
     )
 
     def load_rows() -> List[SectorRow]:
+        # fall back to engine defaults if user didn't pass --sectors
+        sector_list = args.sectors or SECTORS_DEFAULT
+
         if args.demo:
-            return build_demo_dataset(args.sectors, seed=42)
+            return build_demo_dataset(sector_list, seed=42)
+
         if args.json_path:
             try:
                 return load_json_dataset(args.json_path, args.sectors)
-            except (OSError, json.JSONDecodeError) as e:
-                console.print(f"[red]Failed to read JSON: {e}[/red]")
+            except (OSError, json.JSONDecodeError) as err:
+                console.print(f"[red]Failed to read JSON: {err}[/red]")
                 return []
-        # live from engine
+
+        # live from engine (catch common failure modes, not a broad Exception)
         try:
-            return load_live_dataset(args.sectors, args.period, args.interval, args.ttl)
-        except Exception as e:
-            console.print(f"[red]Failed to compute live scores: {e}[/red]")
+            return load_live_dataset(sector_list, args.period, args.interval, args.ttl)
+        except (OSError, ValueError, RuntimeError, KeyError, RequestException) as err:
+            console.print(f"[red]Failed to compute live scores: {err}[/red]")
             return []
+
+    # ----- export mode (machine-friendly) -----
+    if getattr(args, "export", None):
+        rows_export = load_rows()
+        text = _export_rows(rows_export, args.export)  # choices guard guarantees valid fmt
+        print(text, end="")  # stdout (not Rich), no extra newline
+        return
 
     def render_once():
         console.print()
+        if args.pi_grid:
+            console.rule("Market Health – Pi Grid")
+            rows_local = load_rows()
+            if rows_local:
+                render_pi_grid(
+                    console,
+                    rows_local,
+                    grid_cols=args.grid_cols,
+                    mono=args.mono,
+                    rating_scheme=args.rating_scheme,
+                    quantiles=tuple(int(x) for x in args.quantiles.split(",")),
+                    hysteresis=args.hysteresis,
+                )
+            else:
+                if args.json_path:
+                    console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
+                else:
+                    console.print("[yellow]No data to display.[/yellow]")
+            return
 
-    rows = load_rows()
-    if rows:
-        use_pi_grid = getattr(args, "pi_grid", False)
-        grid_cols = getattr(args, "grid_cols", 4)
-
-        if use_pi_grid and "render_pi_grid" in globals():
-            # Pi Grid prints its own legend; don't print header twice.
-            render_pi_grid(console, rows, cols=grid_cols, mono=args.mono)
+        # non-Pi view
+        render_header(console, mono=args.mono)
+        rows_local = load_rows()
+        if rows_local:
+            render_overview(console, rows_local, mono=args.mono)
+            render_details(console, rows_local, top_k=args.topk, mono=args.mono)
         else:
-            render_header(console, mono=args.mono)
-            render_overview(console, rows, mono=args.mono)
-            render_details(console, rows, top_k=args.topk, mono=args.mono)
-    else:
-        if args.json_path:
-            console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
-        else:
-            console.print("[yellow]No data to display.[/yellow]")
+            if args.json_path:
+                console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
+            else:
+                console.print("[yellow]No data to display.[/yellow]")
 
-    if getattr(args, "watch", 0) and args.watch > 0:
+    if args.watch and args.watch > 0:
         try:
             while True:
                 console.clear()
