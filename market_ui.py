@@ -70,20 +70,26 @@ class SectorRow:
     def total(self) -> int:
         return sum(cat.total for cat in self.categories.values())
 
+    @property
+    def pct(self) -> int:
+        return int(round((self.total / MAX_TOTAL) * 100))
+
 
 # ---------- tiny render helpers ----------
 
 def _row_symbol_and_score(row):
     sym = getattr(row, "symbol", getattr(row, "ticker", "?"))
-    # mirror the same logic we use in the grid
     for attr in ("pct", "score", "percent", "value"):
-        if hasattr(row, attr):
-            val = getattr(row, attr)
-            if val is not None:
-                try:
-                    return sym, int(round(float(val)))
-                except (TypeError, ValueError):
-                    pass
+        val = getattr(row, attr, None)
+        if val is not None:
+            try:
+                return sym, int(round(float(val)))
+            except (TypeError, ValueError):
+                pass
+    total = getattr(row, "total", None)
+    if isinstance(total, (int, float)) and MAX_TOTAL:
+        pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+        return sym, max(0, min(100, pct))
     return sym, 0
 
 
@@ -306,14 +312,19 @@ def render_pi_grid(
         return "on red3"
 
     def _get_pct(row) -> int:
+        # 1) try explicit numeric fields (supports alt data sources)
         for attr in ("pct", "score", "percent", "value"):
-            if hasattr(row, attr):
-                val = getattr(row, attr)
-                if val is not None:
-                    try:
-                        return int(round(float(val)))
-                    except (ValueError, TypeError):
-                        pass
+            val = getattr(row, attr, None)
+            if val is not None:
+                try:
+                    return int(round(float(val)))
+                except (ValueError, TypeError):
+                    pass
+        # 2) fallback for SectorRow: compute from total
+        total = getattr(row, "total", None)
+        if isinstance(total, (int, float)) and MAX_TOTAL:
+            pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+            return max(0, min(100, pct))
         return 0
 
     # compute bounds once per render
