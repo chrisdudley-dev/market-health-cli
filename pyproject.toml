@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "market-health-cli"
+version = "0.1.0"
+description = "Terminal market-health dashboard with a compact Pi grid (Rich)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "Christopher Dudley"}]
+license = {text = "MIT"}
+dependencies = ["rich>=13.7", "numpy", "pandas", "yfinance"]
+
+[project.scripts]
+market-health = "market_ui:main"
+market-health-pi = "market_ui:main"
+
+[tool.setuptools]
+packages = ["market_health"]
+py-modules = ["market_ui"]
+include-package-data = true
