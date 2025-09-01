@@ -8,9 +8,7 @@ Market Health public API.
 
 from __future__ import annotations
 from typing import Any, Optional
-
-__version__ = "0.2.0"
-
+# (removed old __version__ line)
 # Lazy, safe import: only catch ImportError (not all exceptions).
 try:
     from . import engine as _engine  # type: ignore
