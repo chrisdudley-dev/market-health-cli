@@ -63,11 +63,16 @@ class SectorRow:
 
 # ---------- tiny render helpers ----------
 def pct_style(p: float, mono: bool = False) -> str:
-    if mono: return ""
-    if p >= 0.80: return "black on green3"
-    if p >= 0.60: return "black on chartreuse3"
-    if p >= 0.40: return "black on khaki1"
-    if p >= 0.20: return "black on dark_orange3"
+    if mono:
+        return ""
+    if p >= 0.80:
+        return "black on green3"
+    if p >= 0.60:
+        return "black on chartreuse3"
+    if p >= 0.40:
+        return "black on khaki1"
+    if p >= 0.20:
+        return "black on dark_orange3"
     return "white on red3"
 
 
