@@ -18,6 +18,13 @@ build/
 *.egg-info/
 .venv/
 
-# local backup artifacts
+# local backups
 *.bak.*
 *.bak.fix.*
+*.bak.nohang.*
+*.bak.mhgrid*
+*.bak.mhgriddefault*
+
+# generated outputs
+sectors.json
+scores.csv
