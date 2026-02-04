@@ -44,6 +44,8 @@ def _yf_download(*args, **kwargs):
     fn = _DOWNLOAD_OVERRIDE_FN or yf.download
     return fn(*args, **kwargs)
 # in-process cache for throttling web calls
+_DOWNLOAD_FN = None
+
 _DOWNLOAD_CACHE: Dict[tuple[str, str, str], tuple[float, pd.DataFrame]] = {}
 
 # price-field names used when normalizing yfinance frames
@@ -237,10 +239,10 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
                 tickers = {str(t[1]) for t in frame.columns}
                 fields_first = [str(t[0]).strip() for t in frame.columns]
                 if len(tickers) == 1 and list(tickers)[0].upper() == sym.upper():
-                    frame = frame.copy();
+                    frame = frame.copy()
                     frame.columns = [str(t[0]).title() for t in frame.columns]
                 elif any(f.title() in PRICE_FIELDS for f in fields_first):
-                    frame = frame.copy();
+                    frame = frame.copy()
                     frame.columns = [str(t[0]).title() for t in frame.columns]
                 else:
                     frame = frame.droplevel(0, axis=1)
@@ -254,7 +256,8 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
         return frame
 
     def first_valid(frame: pd.DataFrame) -> bool:
-        if frame is None or frame.empty: return False
+        if frame is None or frame.empty:
+            return False
         cols = set(map(str, frame.columns))
         return any(c in cols for c in ["Close", "Adj Close"])
 
@@ -278,10 +281,12 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
                                                       auto_adjust=m["auto_adjust"])
                 frame = normalize_cols(ticker, frame)
                 if not first_valid(frame):
-                    time.sleep(0.25);
+                    time.sleep(0.25)
                     continue
-                if len(frame) >= 60: return frame
-                if best_short is None or len(frame) > len(best_short): best_short = frame
+                if len(frame) >= 60:
+                    return frame
+                if best_short is None or len(frame) > len(best_short):
+                    best_short = frame
             except (ValueError, KeyError, TypeError, RuntimeError, OSError, ConnectionError):
                 pass
             time.sleep(0.25)
@@ -293,10 +298,14 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
         key = (tk, period, interval)
         cached = _DOWNLOAD_CACHE.get(key)
         if cached and (now - cached[0] < max(1, ttl_sec)):
-            out[tk] = cached[1];
+            out[tk] = cached[1]
             continue
-        frame = try_modes(tk)
-        if (frame is None or frame.empty) and cached: frame = cached[1]
+        if _DOWNLOAD_FN is not None:
+            frame = _DOWNLOAD_FN(tk, period=period, interval=interval)
+        else:
+            frame = try_modes(tk)
+        if (frame is None or frame.empty) and cached:
+            frame = cached[1]
         _DOWNLOAD_CACHE[key] = (time.time(), frame if frame is not None else pd.DataFrame())
         out[tk] = _DOWNLOAD_CACHE[key][1]
         time.sleep(0.25)
@@ -305,10 +314,12 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
 
 # ---------- B: Trend & Structure ----------
 def score_trend_structure(df: pd.DataFrame, spy_close: pd.Series) -> List[int]:
-    if df.empty: return [0, 0, 0, 0, 0, 0]
+    if df.empty:
+        return [0, 0, 0, 0, 0, 0]
     close = get_close(df)
-    if len(close) < 60: return [0, 0, 0, 0, 0, 0]
-    high = get_high(df);
+    if len(close) < 60:
+        return [0, 0, 0, 0, 0, 0]
+    high = get_high(df)
     vol = get_volume(df)
     e9, e20, s50 = ema(close, 9), ema(close, 20), sma(close, 50)
     mid20 = sma(close, 20)
@@ -335,7 +346,8 @@ def score_trend_structure(df: pd.DataFrame, spy_close: pd.Series) -> List[int]:
 # ---------- E: Environment & Regime ----------
 def score_environment(sym: str, df: pd.DataFrame, spy_close: pd.Series, vix_close: pd.Series,
                       sector_ranks: Dict[str, int]) -> List[int]:
-    if df.empty: return [0, 0, 0, 0, 0, 1]
+    if df.empty:
+        return [0, 0, 0, 0, 0, 1]
     close = get_close(df)
     if len(close) < 60 or spy_close is None or len(spy_close) < 60:
         return [0, 0, 0, 0, 0, 1]
@@ -346,7 +358,7 @@ def score_environment(sym: str, df: pd.DataFrame, spy_close: pd.Series, vix_clos
     c2 = 2 if (rank is not None and rank <= 3) else (1 if (rank is not None and rank <= 6) else 0)
     c3 = 2 if last(close) > last(e20) > last(s50) else (1 if last(close) > last(s50) else 0)
     if vix_close is not None and len(vix_close) >= 21:
-        vix20 = sma(vix_close, 20);
+        vix20 = sma(vix_close, 20)
         c4 = 2 if last(vix_close) < last(vix20) else 0
     else:
         c4 = 1
@@ -411,12 +423,16 @@ def compute_position_flow_checks(df: pd.DataFrame) -> List[dict]:
         lo_g, hi_g = good
         lo_n, hi_n = neutral
         if higher_is_better:
-            if lo_g <= x <= hi_g:   return 2
-            if lo_n <= x <= hi_n:   return 1
+            if lo_g <= x <= hi_g:
+                return 2
+            if lo_n <= x <= hi_n:
+                return 1
             return 0
         else:
-            if lo_g <= x <= hi_g:   return 2
-            if lo_n <= x <= hi_n:   return 1
+            if lo_g <= x <= hi_g:
+                return 2
+            if lo_n <= x <= hi_n:
+                return 1
             return 0
 
     checks: List[dict] = []
@@ -487,10 +503,14 @@ def compute_scores(sectors: List[str] = None,
                    *,
                    period: str = "1y",
                    interval: str = "1d",
-                   ttl_sec: int = 300) -> List[Dict]:
+                   ttl_sec: int = 300,
+                   download_fn=None,
+) -> List[Dict]:
     """
     Build sector score objects by fetching price data and computing category checks.
     """
+    global _DOWNLOAD_FN
+    _DOWNLOAD_FN = download_fn
     sectors = sectors or SECTORS_DEFAULT
     need = list(set(sectors + ["SPY", "^VIX"]))
 
@@ -543,11 +563,11 @@ def compute_scores(sectors: List[str] = None,
 
         cats = {
             "A": {"checks": a_checks},
-            "B": {"checks": [asdict(CheckScore(l, s)) for l, s in zip(CHECK_LABELS["B"], b_scores)]},
-            "C": {"checks": [asdict(CheckScore(l, s)) for l, s in zip(CHECK_LABELS["C"], neutral())]},
+            "B": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["B"], b_scores)]},
+            "C": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["C"], neutral())]},
             "D": {"checks": d_checks},
-            "E": {"checks": [asdict(CheckScore(l, s)) for l, s in zip(CHECK_LABELS["E"], e_scores)]},
-            "F": {"checks": [asdict(CheckScore(l, s)) for l, s in zip(CHECK_LABELS["F"], neutral())]},
+            "E": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["E"], e_scores)]},
+            "F": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["F"], neutral())]},
         }
 
         out.append({"symbol": sym, "categories": cats})
