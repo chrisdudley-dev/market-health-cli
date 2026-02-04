@@ -5,7 +5,6 @@ import pandas as pd
 
 
 def _make_df(symbol: str, n: int = 160) -> pd.DataFrame:
-    # deterministic pseudo-data so tests never hit the network
     seed = abs(hash(symbol)) % (2**32)
     rng = np.random.default_rng(seed)
 
@@ -27,30 +26,25 @@ def _make_df(symbol: str, n: int = 160) -> pd.DataFrame:
     )
 
 
-def test_compute_scores_offline(monkeypatch):
-    import market_health.engine as eng
-
-    def fake_download_many(tickers, *args, **kwargs):
-        return {tk: _make_df(tk) for tk in tickers}
-
-    # Patch at the best available layer (robust across refactors)
-    if hasattr(eng, "download_many"):
-        monkeypatch.setattr(eng, "download_many", fake_download_many)
-    elif hasattr(eng, "_yf_download"):
-        monkeypatch.setattr(
-            eng, "_yf_download", lambda *a, **k: _make_df(str(a[0]) if a else "SPY")
-        )
-    elif hasattr(eng, "yf") and hasattr(eng.yf, "download"):
-        monkeypatch.setattr(
-            eng.yf, "download", lambda *a, **k: _make_df(str(a[0]) if a else "SPY")
-        )
-
+def test_compute_scores_offline_uses_injected_downloader():
     from market_health import compute_scores
 
-    sectors = ["XLI", "XLB", "XLRE"]
-    res = compute_scores(sectors=sectors, period="6mo", interval="1d", ttl_sec=0)
+    calls = []
 
-    # Ensure JSON-serializable and contains all sector tickers somewhere in the payload
+    def fake_download(ticker, *args, **kwargs):
+        calls.append(str(ticker))
+        return _make_df(str(ticker))
+
+    sectors = ["XLI", "XLB", "XLRE"]
+    res = compute_scores(
+        sectors=sectors,
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
+
+    assert calls, "Expected injected downloader to be called"
     blob = json.dumps(res, sort_keys=True)
     for s in sectors:
         assert s in blob

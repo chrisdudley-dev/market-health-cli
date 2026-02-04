@@ -9,12 +9,40 @@ import pandas as pd
 import yfinance as yf
 
 
+import threading
 # --- HTTP timeout for yfinance (prevents indefinite hangs) ---
 HTTP_TIMEOUT = float(os.getenv("MARKET_HEALTH_HTTP_TIMEOUT", "12"))
+# PROVIDER_INJECT_V1
+_DOWNLOAD_LOCK = threading.RLock()
+_DOWNLOAD_OVERRIDE_FN = None  # optional callable compatible with yfinance.download
+
+class _DownloadOverride:
+    def __init__(self, fn):
+        self.fn = fn
+        self._old = None
+
+    def __enter__(self):
+        global _DOWNLOAD_OVERRIDE_FN
+        if self.fn is None:
+            return None
+        _DOWNLOAD_LOCK.acquire()
+        self._old = _DOWNLOAD_OVERRIDE_FN
+        _DOWNLOAD_OVERRIDE_FN = self.fn
+        return None
+
+    def __exit__(self, exc_type, exc, tb):
+        global _DOWNLOAD_OVERRIDE_FN
+        if self.fn is None:
+            return False
+        _DOWNLOAD_OVERRIDE_FN = self._old
+        _DOWNLOAD_LOCK.release()
+        return False
+# /PROVIDER_INJECT_V1
+
 def _yf_download(*args, **kwargs):
     kwargs.setdefault("timeout", HTTP_TIMEOUT)
-    return yf.download(*args, **kwargs)
-
+    fn = _DOWNLOAD_OVERRIDE_FN or yf.download
+    return fn(*args, **kwargs)
 # in-process cache for throttling web calls
 _DOWNLOAD_CACHE: Dict[tuple[str, str, str], tuple[float, pd.DataFrame]] = {}
 
@@ -527,3 +555,12 @@ def compute_scores(sectors: List[str] = None,
     return out
 
 # ---------------------------------------------------------------------------
+
+# PROVIDER_INJECT_WRAP_V1
+_compute_scores_impl = compute_scores
+
+def compute_scores(*args, download_fn=None, **kwargs):
+    with _DownloadOverride(download_fn):
+        return _compute_scores_impl(*args, **kwargs)
+# /PROVIDER_INJECT_WRAP_V1
+
