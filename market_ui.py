@@ -95,7 +95,9 @@ def _row_symbol_and_score(row):
 
 def _export_rows(rows, fmt: str) -> str:
     """Build a JSON or CSV string from rows."""
-    import json, io, csv
+    import json
+    import io
+    import csv
 
     recs = []
     for r in rows:
@@ -103,9 +105,11 @@ def _export_rows(rows, fmt: str) -> str:
         recs.append({"symbol": sym, "score": score})
 
     if fmt == "json":
+
         return json.dumps(recs, separators=(",", ":")) + "\n"
 
     if fmt == "csv":
+
         buf = io.StringIO()
         w = csv.DictWriter(buf, fieldnames=["symbol", "score"])
         w.writeheader()
@@ -116,11 +120,16 @@ def _export_rows(rows, fmt: str) -> str:
 
 
 def pct_style(p: float, mono: bool = False) -> str:
-    if mono: return ""
-    if p >= 0.80: return "black on green3"
-    if p >= 0.60: return "black on chartreuse3"
-    if p >= 0.40: return "black on khaki1"
-    if p >= 0.20: return "black on dark_orange3"
+    if mono:
+        return ""
+    if p >= 0.80:
+        return "black on green3"
+    if p >= 0.60:
+        return "black on chartreuse3"
+    if p >= 0.40:
+        return "black on khaki1"
+    if p >= 0.20:
+        return "black on dark_orange3"
     return "white on red3"
 
 
@@ -293,10 +302,14 @@ def render_pi_grid(
 
     def _band_index(score_val: int, cuts) -> int:
         c1, c2, c3, c4 = cuts
-        if score_val < c1:   return 0
-        if score_val < c2:   return 1
-        if score_val < c3:   return 2
-        if score_val < c4:   return 3
+        if score_val < c1:
+            return 0
+        if score_val < c2:
+            return 1
+        if score_val < c3:
+            return 2
+        if score_val < c4:
+            return 3
         return 4
 
     def _label_for_band(bi: int):
@@ -305,10 +318,14 @@ def render_pi_grid(
     def _panel_style(score_val: int) -> str:
         if mono:
             return ""
-        if score_val >= 80: return "on green3"
-        if score_val >= 60: return "on chartreuse3"
-        if score_val >= 40: return "on yellow3"
-        if score_val >= 20: return "on dark_orange3"
+        if score_val >= 80:
+            return "on green3"
+        if score_val >= 60:
+            return "on chartreuse3"
+        if score_val >= 40:
+            return "on yellow3"
+        if score_val >= 20:
+            return "on dark_orange3"
         return "on red3"
 
     def _get_pct(row) -> int:
@@ -448,6 +465,7 @@ def main():
         sector_list = args.sectors or SECTORS_DEFAULT
 
         if args.demo:
+
             return build_demo_dataset(sector_list, seed=42)
 
         if args.json_path:

@@ -21,27 +21,30 @@ CHECK_LABELS:   Optional[Any] = getattr(_engine, "CHECK_LABELS",   None) if _eng
 
 
 def compute_scores(
-        sectors=None,
-        period: str = "1y",
-        interval: str = "1d",
-        ttl: int = 300,
-        *,
-        demo: bool = False,
-        json_path: str | None = None,
-        seed: int = 42,
+    sectors=None,
+    period: str = "1y",
+    interval: str = "1d",
+    ttl: int = 300,
+    *,
+    demo: bool = False,
+    json_path: str | None = None,
+    seed: int = 42,
+    ttl_sec: int = 0,
+    download_fn=None,
 ):
     """
-    Return a list of SectorRow-like objects from the engine.
+    Public API wrapper.
 
-    Calls functions in engine.py if they exist:
-      - build_demo_dataset(sectors, seed)
-      - load_json_dataset(json_path, sectors)
-      - load_live_dataset(sectors, period, interval, ttl)
+    Priority:
+      1) demo -> engine.build_demo_dataset(...)
+      2) json_path -> engine.load_json_dataset(...)
+      3) live -> engine.compute_scores(...), passing through download_fn/ttl_sec when supported
+         (fallback to engine.load_live_dataset(...) if present for older engines)
     """
     if _engine is None:
         raise ImportError("market_health.engine could not be imported")
 
-    # Determine sector list (fallback to engine default if available)
+    # Determine sectors (fallback to engine default if available)
     if sectors is None:
         sectors = getattr(_engine, "SECTORS_DEFAULT", None)
     if sectors is None:
@@ -59,12 +62,29 @@ def compute_scores(
             raise NotImplementedError("engine.load_json_dataset(...) is missing")
         return fn(json_path, sectors)
 
+    # Prefer engine.compute_scores (current implementation)
+    fn = getattr(_engine, "compute_scores", None)
+    if callable(fn):
+        import inspect
+        sig = inspect.signature(fn)
+        cand = dict(
+            sectors=sectors,
+            period=period,
+            interval=interval,
+            ttl=ttl,
+            ttl_sec=ttl_sec,
+            download_fn=download_fn,
+        )
+        kwargs = {k: v for k, v in cand.items() if k in sig.parameters}
+        return fn(**kwargs)
+
+    # Fallback for older engines
     fn = getattr(_engine, "load_live_dataset", None)
     if fn is None:
-        raise NotImplementedError("engine.load_live_dataset(...) is missing")
-    return fn(sectors, period, interval, ttl)
+        raise NotImplementedError("engine.compute_scores(...) and engine.load_live_dataset(...) are both missing")
+    import inspect
+    sig = inspect.signature(fn)
+    cand = dict(sectors=sectors, period=period, interval=interval, ttl=ttl)
+    kwargs = {k: v for k, v in cand.items() if k in sig.parameters}
+    return fn(**kwargs)
 
-
-__all__ = ["compute_scores", "SECTORS_DEFAULT", "CHECK_LABELS", "__version__"]
-
-__version__ = "0.2.3"

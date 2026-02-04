@@ -19,12 +19,11 @@ import os
 
 # CONSOLE_FORCE_INJECT_V1
 # Force Rich to emit ANSI when stdout is captured (welcome/banner rendering).
+from market_health.engine import compute_scores, SECTORS_DEFAULT
 FORCE_TERMINAL = os.getenv('MARKET_HEALTH_FORCE_TERMINAL','').strip() not in ('', '0', 'false', 'False')
 NO_COLOR = os.getenv('MARKET_HEALTH_NO_COLOR','').strip() not in ('', '0', 'false', 'False')
 # /CONSOLE_FORCE_INJECT_V1
 # Pull scores + default sectors from the engine (do not re-define here)
-from market_health.engine import compute_scores, SECTORS_DEFAULT
-
 CATEGORY_NAMES: Dict[str, str] = {
     "A": "Catalyst Health", "B": "Trend & Structure", "C": "Position & Flow",
     "D": "Risk & Volatility", "E": "Environment & Regime", "F": "Execution & Frictions",
@@ -70,11 +69,16 @@ class SectorRow:
 
 # ---------- tiny render helpers ----------
 def pct_style(p: float, mono: bool = False) -> str:
-    if mono: return ""
-    if p >= 0.80: return "black on green3"
-    if p >= 0.60: return "black on chartreuse3"
-    if p >= 0.40: return "black on khaki1"
-    if p >= 0.20: return "black on dark_orange3"
+    if mono:
+        return ""
+    if p >= 0.80:
+        return "black on green3"
+    if p >= 0.60:
+        return "black on chartreuse3"
+    if p >= 0.40:
+        return "black on khaki1"
+    if p >= 0.20:
+        return "black on dark_orange3"
     return "white on red3"
 
 
@@ -255,6 +259,7 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
             band = "RED"
 
         if mono:
+
             style = ""
         else:
             style = (
