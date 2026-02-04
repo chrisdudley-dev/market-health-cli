@@ -1,4 +1,5 @@
-import json, random
+import json
+import random
 SECTORS = ["XLC","XLF","XLI","XLB","XLRE","XLU","XLP","XLY","XLK","XLE"]
 LABELS = {
     "A":["News","Analysts","Event","Insiders","Peers/Macro","Guidance"],

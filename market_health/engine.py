@@ -1,10 +1,19 @@
+
 # engine.py
 from __future__ import annotations
+import os
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
+
+# --- HTTP timeout for yfinance (prevents indefinite hangs) ---
+HTTP_TIMEOUT = float(os.getenv("MARKET_HEALTH_HTTP_TIMEOUT", "12"))
+def _yf_download(*args, **kwargs):
+    kwargs.setdefault("timeout", HTTP_TIMEOUT)
+    return yf.download(*args, **kwargs)
 
 # in-process cache for throttling web calls
 _DOWNLOAD_CACHE: Dict[tuple[str, str, str], tuple[float, pd.DataFrame]] = {}
@@ -234,7 +243,7 @@ def safe_download(symbols: List[str], period: str = "1y", interval: str = "1d", 
         for m in modes:
             try:
                 if m["fn"] == "download":
-                    frame = yf.download(ticker, period=m["period"], interval=m["interval"],
+                    frame = _yf_download(ticker, period=m["period"], interval=m["interval"],
                                         auto_adjust=m["auto_adjust"], progress=False, threads=False)
                 else:
                     frame = yf.Ticker(ticker).history(period=m["period"], interval=m["interval"],

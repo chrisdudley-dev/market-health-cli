@@ -3,3 +3,21 @@ __pycache__/
 .idea/
 *.pyc
 scores.json
+
+# editor / os
+*.iml
+.DS_Store
+
+# python tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+
+# local backup artifacts
+*.bak.*
+*.bak.fix.*
