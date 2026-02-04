@@ -15,6 +15,13 @@ from rich.panel import Panel
 from rich.text import Text
 from rich import box
 
+import os
+
+# CONSOLE_FORCE_INJECT_V1
+# Force Rich to emit ANSI when stdout is captured (welcome/banner rendering).
+FORCE_TERMINAL = os.getenv('MARKET_HEALTH_FORCE_TERMINAL','').strip() not in ('', '0', 'false', 'False')
+NO_COLOR = os.getenv('MARKET_HEALTH_NO_COLOR','').strip() not in ('', '0', 'false', 'False')
+# /CONSOLE_FORCE_INJECT_V1
 # Pull scores + default sectors from the engine (do not re-define here)
 from market_health.engine import compute_scores, SECTORS_DEFAULT
 
