@@ -48,3 +48,11 @@ def test_compute_scores_offline_uses_injected_downloader():
     blob = json.dumps(res, sort_keys=True)
     for s in sectors:
         assert s in blob
+
+    for item in res:
+        h = item.get("health", {})
+        assert isinstance(h.get("core_pct"), int)
+        assert isinstance(h.get("trend_pct"), int)
+        assert isinstance(h.get("env_pct"), int)
+        assert h.get("band") in {"GREEN", "YELLOW", "RED"}
+    

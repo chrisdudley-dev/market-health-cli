@@ -206,12 +206,24 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
     if not rows:
         console.print("[yellow]No data to display.[/yellow]")
         return
-
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)
-
     # Minimal title line; comment out if you want zero header.
     console.rule("[bold cyan]Market Health – Pi Grid[/bold cyan]")
 
+    # Rank rows for Pi Grid: trend gate first, then core(B+E), then total
+    def _rank_row(r):
+        b = r.categories.get("B")
+        e = r.categories.get("E")
+        b_tot = b.total if b else 0
+        e_tot = e.total if e else 0
+        core_tot = b_tot + e_tot
+        # Rank by the SAME thing the grid shows (core=B+E), then trend, then env, then symbol.
+        trend_pct = int(round(100 * b_tot / b_max)) if b_max else 0
+        gate = 1 if trend_pct >= 45 else 0
+        return (gate, core_tot, b_tot, e_tot, r.symbol)
+
+    ranked_rows = sorted(rows, key=_rank_row, reverse=True)
+    rows = ranked_rows  # ranked
+    ranked = rows  # ranked
     # --- Auto-fit column count if cols <= 0 ---
     TILE_W = 10  # uniform tile width; tweak if you want denser tiles
     GAP = 2
@@ -222,11 +234,34 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
     # --- Build cells with uniform width and full-tile background color ---
     cells: List[Panel] = []
     for i, r in enumerate(ranked, 1):
-        pct = (r.total / MAX_TOTAL) if MAX_TOTAL else 0.0
-        pct_int = int(round(pct * 100))
-        style = pct_style(pct, mono)  # uses your existing color thresholds
+        b = r.categories.get("B")
+        e = r.categories.get("E")
+        b_tot = b.total if b else 0
+        e_tot = e.total if e else 0
+        b_max = 2 * len(b.checks) if b else 0
+        e_max = 2 * len(e.checks) if e else 0
+        core_max = b_max + e_max
+        core_pct = int(round(100 * (b_tot + e_tot) / core_max)) if core_max else 0
+        trend_pct = int(round(100 * b_tot / b_max)) if b_max else 0
 
-        label = Text(f"{r.symbol}\n{pct_int}%", justify="center")
+        # Trend gate: weak structure forces RED regardless of core.
+        if trend_pct < 45:
+            band = "RED"
+        elif core_pct >= 70:
+            band = "GREEN"
+        elif core_pct >= 55:
+            band = "YELLOW"
+        else:
+            band = "RED"
+
+        if mono:
+            style = ""
+        else:
+            style = (
+                "black on green3" if band == "GREEN"
+                else ("black on khaki1" if band == "YELLOW" else "white on red3")
+            )
+        label = Text(f"{r.symbol}\n{core_pct}%", justify="center")
         if style:
             label.stylize(style)
 

@@ -482,6 +482,40 @@ def compute_position_flow_checks(df: pd.DataFrame) -> List[dict]:
 
 
 # ---------- Public API ----------
+def _health_pct(item: dict, keys: list[str]) -> int:
+    cats = item.get("categories", {}) or {}
+    tot = 0
+    mx = 0
+    for k in keys:
+        checks = (cats.get(k, {}) or {}).get("checks", []) or []
+        for c in checks:
+            if isinstance(c, dict) and "score" in c:
+                tot += int(c["score"])
+                mx += 2
+    return round(100 * tot / mx) if mx else 0
+
+def _health_band(core: int, trend: int) -> str:
+    # trend gate: weak structure = avoid
+    if trend < 45:
+        return "RED"
+    if core >= 70:
+        return "GREEN"
+    if core >= 55:
+        return "YELLOW"
+    return "RED"
+
+def _annotate_health(item: dict) -> None:
+    trend = _health_pct(item, ["B"])
+    env = _health_pct(item, ["E"])
+    core = _health_pct(item, ["B", "E"])
+    item["health"] = {
+        "core_pct": int(core),
+        "trend_pct": int(trend),
+        "env_pct": int(env),
+        "band": _health_band(core, trend),
+    }
+
+
 def compute_scores(sectors: List[str] = None,
                    _seed: int = 7,  # unused (kept for API compatibility)
                    *,
@@ -552,6 +586,8 @@ def compute_scores(sectors: List[str] = None,
 
         out.append({"symbol": sym, "categories": cats})
 
+    for _it in out:
+        _annotate_health(_it)
     return out
 
 # ---------------------------------------------------------------------------
