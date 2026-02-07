@@ -1,7 +1,10 @@
-﻿name: Build & Attach Release
+name: Build & Attach Release
 on:
   push:
     tags: ["v*"]
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,6 +20,8 @@ jobs:
           name: dist
           path: dist/*
   release:
+    permissions:
+      contents: write
     needs: build
     runs-on: ubuntu-latest
     steps:
