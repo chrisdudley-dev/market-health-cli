@@ -128,8 +128,6 @@ def pct_style(p: float, mono: bool = False) -> str:
         return "black on chartreuse3"
     if p >= 0.40:
         return "black on khaki1"
-    if p >= 0.20:
-        return "black on dark_orange3"
     return "white on red3"
 
 
@@ -209,8 +207,8 @@ def render_header(console: Console, mono: bool = False) -> None:
         return
     legend = (
         "[green3]●[/green3]=good  [gold1]●[/gold1]=mixed  [red3]●[/red3]=weak   "
-        "[white on red3] 0–19% [/white on red3] "
-        "[black on dark_orange3] 20–39% [/black on dark_orange3] "
+        "[white on red3] 0–39% [/white on red3] "
+        ""
         "[black on khaki1] 40–59% [/black on khaki1] "
         "[black on chartreuse3] 60–79% [/black on chartreuse3] "
         "[black on green3] 80–100% [/black on green3]"
@@ -315,18 +313,35 @@ def render_pi_grid(
     def _label_for_band(bi: int):
         return labels[bi]  # (long, short)
 
-    def _panel_style(score_val: int) -> str:
-        if mono:
-            return ""
-        if score_val >= 80:
-            return "on green3"
-        if score_val >= 60:
-            return "on chartreuse3"
-        if score_val >= 40:
-            return "on yellow3"
-        if score_val >= 20:
-            return "on dark_orange3"
-        return "on red3"
+    def _panel_style(band_or_pct: int) -> str:
+          if mono:
+              return ""
+          # Primary mode: band index (0..4) from the SAME logic that chooses S/B/H
+          # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 buckets.
+          try:
+              v = int(band_or_pct)
+          except Exception:
+              v = 0
+
+          # If it looks like a percent, bucket it
+          if v > 4:
+              if v >= 80:
+                  return "on green3"
+              if v >= 60:
+                  return "on chartreuse3"
+              if v >= 40:
+                  return "on yellow3"
+              return "on red3"
+
+          # Band index mapping (0=worst .. 4=best)
+          bi = max(0, min(4, v))
+          if bi >= 4:
+              return "on green3"
+          if bi >= 3:
+              return "on chartreuse3"
+          if bi >= 2:
+              return "on yellow3"
+          return "on red3"
 
     def _get_pct(row) -> int:
         # 1) try explicit numeric fields (supports alt data sources)
@@ -376,8 +391,8 @@ def render_pi_grid(
             band_idx = raw_band
 
         LAST_BANDS[sym] = band_idx
+        band_used = band_idx
         _, short_lbl = _label_for_band(band_idx)
-
         text = Text(justify="center", no_wrap=True)
         text.append(f"{sym}\n", style="bold")
         text.append(f"{pct_val:>3d}%\n", style="bold")
@@ -388,7 +403,7 @@ def render_pi_grid(
                 text,
                 box=box.ROUNDED,
                 padding=(0, 1),
-                style=_panel_style(pct_val),
+                style=_panel_style(band_used),
                 border_style="black" if not mono else "white",
             )
         )
