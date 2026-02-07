@@ -396,7 +396,7 @@ def compute_position_flow_checks(df: pd.DataFrame) -> List[dict]:
     close = get_close(df)
     vol = get_volume(df)
     high = get_high(df)
-    low = get_high(df)  # NOTE: get_low helper not present; using get_high for symmetry? If you have get_low, swap here.
+    low = get_low(df)
 
     # If you have a get_low helper, replace the line above with:
     # low = get_low(df)
@@ -564,7 +564,7 @@ def compute_scores(sectors: List[str] = None,
         cats = {
             "A": {"checks": a_checks},
             "B": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["B"], b_scores)]},
-            "C": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["C"], neutral())]},
+            "C": {"checks": compute_position_flow_checks(df_sym)},
             "D": {"checks": d_checks},
             "E": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["E"], e_scores)]},
             "F": {"checks": [asdict(CheckScore(label, score)) for label, score in zip(CHECK_LABELS["F"], neutral())]},
