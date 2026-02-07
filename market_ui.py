@@ -267,14 +267,7 @@ def render_pi_grid(
     from rich.panel import Panel
     from rich import box
 
-    labels = [
-        ("Strong Sell", "SS"),
-        ("Sell", "S"),
-        ("Hold", "H"),
-        ("Buy", "B"),
-        ("Strong Buy", "SB"),
-    ]
-
+    labels = [("Stress","S"), ("Stress","S"), ("Balanced","B"), ("Healthy","H"), ("Healthy","H")]
     def _fixed_bounds():
         return [20, 40, 60, 80]
 
