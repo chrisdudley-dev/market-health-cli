@@ -203,6 +203,80 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
 # ---------- Pi Grid (compact, no legend) ----------
 MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 
+
+
+# POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
+
+def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> None:
+    """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
+    try:
+        import os, json
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich import box
+
+        path = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+        if not os.path.isfile(path):
+            return
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        positions = data.get("positions") or []
+        source = (data.get("source") or {})
+        src_type = source.get("type") or "unknown"
+
+        if not positions:
+            msg = (
+                "No positions imported yet.\n"
+                "Export a Thinkorswim Position Statement CSV to:\n"
+                "  ~/imports/thinkorswim\n"
+                "Then run:\n"
+                "  jerboa-market-health-positions-refresh"
+            )
+            if mono:
+                console.print("Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)")
+            else:
+                console.print(Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan"))
+            return
+
+        t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
+        t.add_column("Sym", style="bold cyan")
+        t.add_column("Type")
+        t.add_column("Qty", justify="right")
+        t.add_column("Details")
+
+        for p in positions[:max_rows]:
+            sym = str(p.get("symbol", "?"))
+            typ = str(p.get("asset_type", "?"))
+            qty = str(p.get("qty", ""))
+
+            details = ""
+            if typ == "option":
+                opt = p.get("option") or {}
+                details = f"{opt.get('expiry','?')}  {opt.get('strike','?')}  {opt.get('right','?')}"
+
+            t.add_row(sym, typ, qty, details)
+
+        title = f"Positions ({len(positions)})  •  source={src_type}"
+        if mono:
+            console.print(title)
+            for p in positions[:max_rows]:
+                sym = str(p.get("symbol", "?"))
+                typ = str(p.get("asset_type", "?"))
+                qty = str(p.get("qty", ""))
+                det = ""
+                if typ == "option":
+                    opt = p.get("option") or {}
+                    det = f"{opt.get('expiry','?')} {opt.get('strike','?')} {opt.get('right','?')}"
+                console.print(f"- {sym}  {typ}  qty={qty}  {det}".rstrip())
+        else:
+            console.print(Panel(t, title=title, border_style="cyan"))
+
+    except Exception:
+        # Never break the widget for positions issues
+        return
+
 def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False) -> None:
     """Compact single-grid view for Raspberry Pi / small terminals (no legend)."""
     if not rows:
@@ -259,6 +333,9 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
         console.print(row_tbl)
 
 # ---------- CLI ----------
+
+    # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
+    _render_positions_panel(console, mono=mono)
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
     p.add_argument("--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include")
