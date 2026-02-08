@@ -1,11 +1,41 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+FORCE=0
+if [ "${1:-}" = "--force" ]; then
+  FORCE=1
+  shift
+fi
+
 REPO="${HOME}/projects/market-health-cli"
 [ -d "$REPO" ] || REPO="/mnt/ssd/projects/market-health-cli"
 cd "$REPO" || { echo "ERROR: repo not found"; exit 1; }
 
-# Under systemd, suppress verbose stdout (keep stderr) so logs stay clean.
+# Gate: only run during regular NYSE session unless forced.
+# (Simple weekday + 09:30–16:00 America/New_York. Keeps timer productive; avoids weekend churn.)
+if [ "$FORCE" -ne 1 ]; then
+  python3 - <<'PY' || exit 0
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
+now = datetime.now(ZoneInfo("America/New_York"))
+# Mon-Fri only
+if now.weekday() >= 5:
+    raise SystemExit(1)
+
+open_t  = time(9, 30)
+close_t = time(16, 0)
+t = now.time()
+
+# Only refresh inside session
+if not (open_t <= t <= close_t):
+    raise SystemExit(1)
+
+raise SystemExit(0)
+PY
+fi
+
+# Run underlying refresh. Under systemd, suppress verbose stdout (keep logs clean).
 if [ -n "${INVOCATION_ID:-}" ]; then
   scripts/cache/refresh_market_health_cache.sh "$@" >/dev/null
 else
@@ -13,7 +43,7 @@ else
 fi
 rc=$?
 
-# Single breadcrumb only when run under systemd, only on success.
+# One breadcrumb only under systemd, only on success.
 if [ "$rc" -eq 0 ] && [ -n "${INVOCATION_ID:-}" ]; then
   echo "OK: refreshed market cache (environment.v1.json)"
 fi
