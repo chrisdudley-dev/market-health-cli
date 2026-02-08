@@ -112,6 +112,11 @@ with open(p, "w", encoding="utf-8") as f:
 PY
 
 # Journald: one line max, only when meaningful
+
+# JERBOA_UI_EXPORT_V1
+# Update UI contract (React/web reads this single file)
+"${HOME}/bin/jerboa-market-health-ui-export" --quiet || true
+
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$status" = "error" ]; then
     echo "ERR: refresh-all failed (market_rc=$mkt_rc positions_rc=$pos_rc)"
