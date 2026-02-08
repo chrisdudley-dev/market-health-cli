@@ -22,6 +22,7 @@ for name in \
   jerboa-market-health-refresh \
   jerboa-market-health-positions-refresh \
   jerboa-market-health-refresh-all \
+  jerboa-market-health-ui-export \
   jerboa-market-health-status \
   jerboa-market-health-alert
 do
