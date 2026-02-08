@@ -1,6 +1,21 @@
 [Unit]
 Description=Jerboa Market Health - refresh ALL caches (market + positions)
+OnFailure=jerboa-market-health-refresh-all-failure.service
 
 [Service]
 Type=oneshot
 ExecStart=%h/bin/jerboa-market-health-refresh-all
+TimeoutStartSec=5min
+
+# Gentle “be nice to the Pi” defaults
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+# Safe hardening (should not interfere with home-cache writes)
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes

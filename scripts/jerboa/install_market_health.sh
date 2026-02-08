@@ -2,8 +2,6 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Prefer git to find repo root; fallback to two-levels up from scripts/jerboa/
 REPO="$(
   cd "$SCRIPT_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || true
 )"
@@ -13,7 +11,6 @@ fi
 
 BIN="${HOME}/bin"
 UNITDIR="${HOME}/.config/systemd/user"
-
 mkdir -p "$BIN" "$UNITDIR"
 
 echo "== Repo root =="
@@ -24,7 +21,9 @@ echo "== Install symlinks -> repo-managed wrappers =="
 for name in \
   jerboa-market-health-refresh \
   jerboa-market-health-positions-refresh \
-  jerboa-market-health-refresh-all
+  jerboa-market-health-refresh-all \
+  jerboa-market-health-status \
+  jerboa-market-health-alert
 do
   src="$REPO/scripts/jerboa/bin/$name"
   dst="$BIN/$name"
@@ -41,6 +40,8 @@ install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-
                "$UNITDIR/jerboa-market-health-refresh-all.service"
 install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all.timer" \
                "$UNITDIR/jerboa-market-health-refresh-all.timer"
+install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all-failure.service" \
+               "$UNITDIR/jerboa-market-health-refresh-all-failure.service"
 
 echo "== Reload + enable timer =="
 systemctl --user daemon-reload
@@ -58,10 +59,7 @@ systemd-run --user --unit=jerboa-mh-install-probe --wait --collect \
 echo "== Probe logs (last 120 lines) =="
 journalctl --user -u jerboa-mh-install-probe -n 120 --no-pager || true
 
-echo "== Cache timestamps =="
-ls -lh --time-style=long-iso \
-  ~/.cache/jerboa/environment.v1.json \
-  ~/.cache/jerboa/market_health.sectors.json \
-  ~/.cache/jerboa/positions.v1.json
+echo "== Status line (for banner) =="
+"$HOME/bin/jerboa-market-health-status" || true
 
 echo "DONE: install complete"
