@@ -183,6 +183,10 @@ def build_sector_from_json(item: dict) -> SectorRow:
 def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[SectorRow]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
+    # ENV_V1_JSON_SUPPORT_V1: allow environment.v1.json (object) as input; use its sector list
+    if isinstance(data, dict) and 'sectors' in data:
+        data = data['sectors']
+
     rows: List[SectorRow] = []
     for item in data:
         s = build_sector_from_json(item)
