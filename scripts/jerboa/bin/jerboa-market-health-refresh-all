@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+LOCKDIR="${HOME}/.cache/jerboa/locks"
+mkdir -p "$LOCKDIR"
+LOCKFILE="$LOCKDIR/market-health-refresh-all.lock"
+
+# Non-blocking lock: if a run is already in progress, just exit cleanly.
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+  exit 0
+fi
+
+FORCE=0
+if [ "${1:-}" = "--force" ]; then
+  FORCE=1
+  shift
+fi
+
+# 1) Positions refresh: always try (quiet no-op if no CSV; ensures cache exists)
+rc=0
+if ! "${HOME}/bin/jerboa-market-health-positions-refresh" ; then
+  rc=1
+fi
+
+# 2) Market refresh: keep its gating unless forced
+if [ "$FORCE" -eq 1 ]; then
+  if ! "${HOME}/bin/jerboa-market-health-refresh" --force "$@" ; then
+    rc=1
+  fi
+else
+  if ! "${HOME}/bin/jerboa-market-health-refresh" "$@" ; then
+    rc=1
+  fi
+fi
+
+# Systemd-only completion breadcrumb on total success
+if [ "$rc" -eq 0 ] && [ -n "${INVOCATION_ID:-}" ]; then
+  echo "OK: refresh-all complete"
+fi
+
+exit "$rc"

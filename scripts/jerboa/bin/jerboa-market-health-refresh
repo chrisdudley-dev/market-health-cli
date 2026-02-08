@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+REPO="${HOME}/projects/market-health-cli"
+[ -d "$REPO" ] || REPO="/mnt/ssd/projects/market-health-cli"
+cd "$REPO" || { echo "ERROR: repo not found"; exit 1; }
+
+# Under systemd, suppress verbose stdout (keep stderr) so logs stay clean.
+if [ -n "${INVOCATION_ID:-}" ]; then
+  scripts/cache/refresh_market_health_cache.sh "$@" >/dev/null
+else
+  scripts/cache/refresh_market_health_cache.sh "$@"
+fi
+rc=$?
+
+# Single breadcrumb only when run under systemd, only on success.
+if [ "$rc" -eq 0 ] && [ -n "${INVOCATION_ID:-}" ]; then
+  echo "OK: refreshed market cache (environment.v1.json)"
+fi
+exit "$rc"
