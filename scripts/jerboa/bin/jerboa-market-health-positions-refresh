@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 REPO="${HOME}/projects/market-health-cli"
 [ -d "$REPO" ] || REPO="/mnt/ssd/projects/market-health-cli"
 cd "$REPO" || { echo "ERROR: repo not found"; exit 1; }
 
-# Pass-through explicit CSV
+# Explicit CSV pass-through
 if [ "${1:-}" = "--csv" ] && [ -n "${2:-}" ]; then
   exec scripts/cache/refresh_positions_cache.sh "$@"
 fi
 
-# Auto-pick best candidate CSV. If none found, ensure empty cache exists quietly and exit 0.
+# Auto-pick best candidate CSV
 CSV="$(
 python3 - <<'PY'
 import os, glob, csv
@@ -21,7 +20,6 @@ dirs = [
     os.path.expanduser("~/imports/tos"),
     os.path.expanduser("~/Downloads"),
 ]
-
 wanted = {
     "symbol", "qty", "quantity", "net qty", "description",
     "mark", "market value", "average price", "avg price", "trade price",
@@ -31,7 +29,6 @@ def norm(x: str) -> str:
     return " ".join((x or "").strip().lower().split())
 
 best = ("", -1, 0.0)  # (path, score, mtime)
-
 for d in dirs:
     if not os.path.isdir(d):
         continue
@@ -57,13 +54,34 @@ if best[1] >= 2:
 PY
 )"
 
-if [ -z "${CSV:-}" ]; then
-  # Quietly ensure an empty cache exists so the widget always has something to read.
-  python3 - <<'PY'
+if [ -n "${CSV:-}" ]; then
+  exec scripts/cache/refresh_positions_cache.sh --csv "$CSV"
+fi
+
+# No CSV found: ensure empty cache exists, but DON'T rewrite if it's already the same placeholder.
+python3 - <<'PY'
 import json, os
 from datetime import datetime, timezone
 
 out = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+os.makedirs(os.path.dirname(out), exist_ok=True)
+
+# If placeholder already exists (empty positions, source none), leave it untouched.
+try:
+    with open(out, "r", encoding="utf-8") as f:
+        d = json.load(f)
+    if (
+        d.get("schema") == "positions.v1"
+        and isinstance(d.get("positions"), list) and len(d["positions"]) == 0
+        and isinstance(d.get("source"), dict) and d["source"].get("type") == "none"
+    ):
+        raise SystemExit(0)
+except FileNotFoundError:
+    pass
+except Exception:
+    # If unreadable/corrupt, fall through and rewrite a clean placeholder.
+    pass
+
 payload = {
   "schema": "positions.v1",
   "asof": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -71,12 +89,8 @@ payload = {
   "positions": [],
   "summary": {"count": 0, "equities": 0, "options": 0, "symbols": []},
 }
-os.makedirs(os.path.dirname(out), exist_ok=True)
 with open(out, "w", encoding="utf-8") as f:
     json.dump(payload, f, indent=2, sort_keys=True)
     f.write("\n")
 PY
-  exit 0
-fi
-
-exec scripts/cache/refresh_positions_cache.sh --csv "$CSV"
+exit 0
