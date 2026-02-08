@@ -7,12 +7,12 @@ Type=oneshot
 ExecStart=%h/bin/jerboa-market-health-refresh-all
 TimeoutStartSec=5min
 
-# Gentle “be nice to the Pi” defaults
+# Be gentle to the Pi
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=6
 
-# Safe hardening (should not interfere with home-cache writes)
+# Safe hardening (still allows writing under $HOME)
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
