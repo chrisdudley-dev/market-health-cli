@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Prefer git to find repo root; fallback to two-levels up from scripts/jerboa/
+REPO="$(
+  cd "$SCRIPT_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || true
+)"
+if [ -z "${REPO:-}" ]; then
+  REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+
 BIN="${HOME}/bin"
 UNITDIR="${HOME}/.config/systemd/user"
 
 mkdir -p "$BIN" "$UNITDIR"
+
+echo "== Repo root =="
+echo "$REPO"
+echo
 
 echo "== Install symlinks -> repo-managed wrappers =="
 for name in \

@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(
+  cd "$SCRIPT_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || true
+)"
+if [ -z "${REPO:-}" ]; then
+  REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+
 BIN="${HOME}/bin"
 UNITDIR="${HOME}/.config/systemd/user"
 
-echo "== Repo =="
+echo "== Repo root =="
 echo "$REPO"
 echo
 
