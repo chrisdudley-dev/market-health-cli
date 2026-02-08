@@ -22,7 +22,6 @@ LOCK="${LOCKDIR}/market_health_refresh_all.lock"
 mkdir -p "$LOCKDIR"
 exec 9>"$LOCK"
 if ! flock -n 9; then
-  # Another run is active; don't pile up work.
   exit 0
 fi
 
@@ -41,11 +40,12 @@ else
   "${HOME}/bin/jerboa-market-health-positions-refresh"
 fi
 
-# Market refresh: pass through remaining args (excluding --force), and apply --force only here.
+# Market refresh:
+# IMPORTANT: do NOT use ${ARGS[@]:-} (can inject an empty arg). Use "${ARGS[@]}" only.
 if [ "$FORCE" -eq 1 ]; then
-  "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]:-}"
+  "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}"
 else
-  "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]:-}"
+  "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}"
 fi
 
 a_env="$(mtime "$ENV_JSON")"
@@ -58,7 +58,7 @@ changed_pos=0
 [ "$a_sect" -gt "$b_sect" ] && changed_market=1
 [ "$a_pos"  -gt "$b_pos"  ] && changed_pos=1
 
-# Under systemd: emit ONE breadcrumb only if something changed (keeps logs meaningful).
+# Under systemd: emit ONE breadcrumb only if something changed
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$changed_market" -eq 1 ] || [ "$changed_pos" -eq 1 ]; then
     echo "OK: refresh-all updated (market=${changed_market} positions=${changed_pos})"
