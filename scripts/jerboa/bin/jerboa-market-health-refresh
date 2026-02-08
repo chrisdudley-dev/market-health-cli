@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# JERBOA_SUPPRESS_BREADCRUMBS_V1
+SUPPRESS_BREADCRUMBS="${JERBOA_SUPPRESS_BREADCRUMBS:-0}"
 
 FORCE=0
 if [ "${1:-}" = "--force" ]; then
@@ -45,6 +47,8 @@ rc=$?
 
 # One breadcrumb only under systemd, only on success.
 if [ "$rc" -eq 0 ] && [ -n "${INVOCATION_ID:-}" ]; then
+  if [ "${SUPPRESS_BREADCRUMBS}" != "1" ]; then
   echo "OK: refreshed market cache (environment.v1.json)"
+  fi
 fi
 exit "$rc"

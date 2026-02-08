@@ -62,9 +62,9 @@ fi
 
 # Market refresh (safe arg passing)
 if [ "$FORCE" -eq 1 ]; then
-  "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}" || mkt_rc=$?
 else
-  "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}" || mkt_rc=$?
 fi
 
 a_env="$(mtime "$ENV_JSON")"
