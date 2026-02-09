@@ -37,12 +37,8 @@ done
 hash -r
 
 echo "== Install systemd units -> ~/.config/systemd/user (copy from repo) =="
-install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all.service
-# UI server unit
-# jerboa-market-health-ui.service" \
-               "$UNITDIR/jerboa-market-health-refresh-all.service
-# UI server unit
-# jerboa-market-health-ui.service"
+install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all.service" \
+               "$UNITDIR/jerboa-market-health-refresh-all.service"
 install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all.timer" \
                "$UNITDIR/jerboa-market-health-refresh-all.timer"
 install -m 0644 "$REPO/scripts/jerboa/systemd/user/jerboa-market-health-refresh-all-failure.service" \
