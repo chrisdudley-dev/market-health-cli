@@ -493,10 +493,15 @@ def render_pi_grid(
         if len(row_tiles) < cols:
             row_tiles = row_tiles + [""] * (cols - len(row_tiles))
         grid.add_row(*row_tiles)
-
-    console.print(grid)
-
-
+    # PI_GRID_TITLE_PANEL_V1: wrap sector grid in a titled panel (like Positions)
+    console.print(
+        Panel.fit(
+            grid,
+            title="Market Health – Pi Grid",
+            border_style="cyan" if not mono else "white",
+            box=box.ROUNDED,
+        )
+    )
 # ---------- CLI ----------
 
     # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
@@ -581,7 +586,6 @@ def main():
     def render_once():
         console.print()
         if args.pi_grid:
-            console.rule("Market Health – Pi Grid")
             rows_local = load_rows()
             if rows_local:
                 render_pi_grid(
