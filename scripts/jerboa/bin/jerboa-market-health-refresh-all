@@ -115,7 +115,7 @@ PY
 
 # JERBOA_UI_EXPORT_V1
 # Update UI contract (React/web reads this single file)
-"${HOME}/bin/jerboa-market-health-ui-export" --quiet || true
+"${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
 
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$status" = "error" ]; then

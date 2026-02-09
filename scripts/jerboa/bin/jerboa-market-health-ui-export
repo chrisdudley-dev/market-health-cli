@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# JERBOA_UI_EXPORT_QUIET_V1
+QUIET="${JERBOA_UI_EXPORT_QUIET:-0}"
+if [ -n "${INVOCATION_ID:-}" ]; then QUIET=1; fi
+if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+export JERBOA_UI_EXPORT_QUIET="$QUIET"
 
 OUT_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
 STATE="${HOME}/.cache/jerboa/state/market_health_refresh_all.state.json"
@@ -127,5 +132,5 @@ PY
 
 # Only speak when interactive and a rewrite happened (python exits 0 even if unchanged)
 if [ "$QUIET" -ne 1 ]; then
-  echo "OK: wrote UI contract -> $OUT_JSON"
+[ "${QUIET}" != "1" ] && echo "OK: wrote UI contract -> $OUT_JSON"
 fi
