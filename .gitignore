@@ -28,3 +28,11 @@ build/
 # generated outputs
 sectors.json
 scores.csv
+secrets/
+.secrets/
+*.token.json
+*token*.json
+*.oauth.json
+*schwab*.json
+.env
+.env.*
