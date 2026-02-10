@@ -1,96 +1,121 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-REPO="${HOME}/projects/market-health-cli"
-[ -d "$REPO" ] || REPO="/mnt/ssd/projects/market-health-cli"
-cd "$REPO" || { echo "ERROR: repo not found"; exit 1; }
 
-# Explicit CSV pass-through
-if [ "${1:-}" = "--csv" ] && [ -n "${2:-}" ]; then
-  exec scripts/cache/refresh_positions_cache.sh "$@"
-fi
+# Resolve repo root relative to this script
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+cd "$REPO_ROOT"
 
-# Auto-pick best candidate CSV
-CSV="$(
-python3 - <<'PY'
-import os, glob, csv
-from pathlib import Path
+OUT="${HOME}/.cache/jerboa/positions.v1.json"
+SCHWAB_JSON=""
+CSV=""
+SEARCH_DIRS=()
 
-dirs = [
-    os.path.expanduser("~/imports/thinkorswim"),
-    os.path.expanduser("~/imports/tos"),
-    os.path.expanduser("~/Downloads"),
-]
-wanted = {
-    "symbol", "qty", "quantity", "net qty", "description",
-    "mark", "market value", "average price", "avg price", "trade price",
+usage() {
+  cat <<USAGE
+Usage:
+  jerboa-market-health-positions-refresh [--out PATH]
+    [--csv PATH] [--search-dir DIR ...]
+    [--schwab-json PATH | --schwab-sample]
+
+Env (optional):
+  JERBOA_POSITIONS_SOURCE=schwab-sample
+  JERBOA_POSITIONS_SOURCE=schwab-json:/path/to/accounts.json
+  (unset) -> default ToS CSV behavior (auto-search + instructions)
+USAGE
 }
 
-def norm(x: str) -> str:
-    return " ".join((x or "").strip().lower().split())
+# env-based default (lets refresh-all use it without changing refresh-all yet)
+case "${JERBOA_POSITIONS_SOURCE:-}" in
+  schwab-sample)
+    SCHWAB_JSON="${REPO_ROOT}/docs/examples/schwab_accounts.sample.json"
+    ;;
+  schwab-json:*)
+    SCHWAB_JSON="${JERBOA_POSITIONS_SOURCE#schwab-json:}"
+    ;;
+esac
 
-best = ("", -1, 0.0)  # (path, score, mtime)
-for d in dirs:
-    if not os.path.isdir(d):
-        continue
-    for p in glob.glob(os.path.join(d, "*.csv")):
-        try:
-            mt = Path(p).stat().st_mtime
-            with open(p, "r", encoding="utf-8", errors="replace", newline="") as f:
-                r = csv.reader(f)
-                header = next(r, [])
-            cols = {norm(c) for c in header if c is not None}
-            score = sum(1 for w in wanted if w in cols)
-            name = os.path.basename(p).lower()
-            if any(k in name for k in ("pos", "position", "positions", "statement", "account")):
-                score += 2
-            if score > best[1] or (score == best[1] and mt > best[2]):
-                best = (p, score, mt)
-        except Exception:
-            continue
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --out) OUT="${2:-}"; shift 2;;
+    --csv) CSV="${2:-}"; shift 2;;
+    --search-dir) SEARCH_DIRS+=("${2:-}"); shift 2;;
+    --schwab-json) SCHWAB_JSON="${2:-}"; shift 2;;
+    --schwab-sample) SCHWAB_JSON="${REPO_ROOT}/docs/examples/schwab_accounts.sample.json"; shift;;
+    -h|--help) usage; exit 0;;
+    *)
+      echo "ERR: unknown arg: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
-# Require a minimum match to avoid grabbing random CSVs
-if best[1] >= 2:
-    print(best[0])
-PY
-)"
+mkdir -p "$(dirname "$OUT")"
 
-if [ -n "${CSV:-}" ]; then
-  exec scripts/cache/refresh_positions_cache.sh --csv "$CSV"
+# Schwab JSON path (offline for now)
+if [ -n "$SCHWAB_JSON" ]; then
+  if [ ! -f "$SCHWAB_JSON" ]; then
+    echo "ERR: Schwab JSON not found: $SCHWAB_JSON" >&2
+    exit 2
+  fi
+  exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --schwab-json "$SCHWAB_JSON" --out "$OUT"
 fi
 
-# No CSV found: ensure empty cache exists, but DON'T rewrite if it's already the same placeholder.
-python3 - <<'PY'
-import json, os
-from datetime import datetime, timezone
+# ToS CSV: explicit path wins
+if [ -n "$CSV" ]; then
+  exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$CSV" --out "$OUT"
+fi
 
-out = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
-os.makedirs(os.path.dirname(out), exist_ok=True)
+# ToS CSV: auto-search
+CANDIDATES=(
+  "${HOME}/Downloads"
+  "${HOME}/Desktop"
+  "${HOME}/Documents"
+)
+for d in "${SEARCH_DIRS[@]}"; do
+  CANDIDATES+=("$d")
+done
 
-# If placeholder already exists (empty positions, source none), leave it untouched.
-try:
-    with open(out, "r", encoding="utf-8") as f:
-        d = json.load(f)
-    if (
-        d.get("schema") == "positions.v1"
-        and isinstance(d.get("positions"), list) and len(d["positions"]) == 0
-        and isinstance(d.get("source"), dict) and d["source"].get("type") == "none"
-    ):
-        raise SystemExit(0)
-except FileNotFoundError:
-    pass
-except Exception:
-    # If unreadable/corrupt, fall through and rewrite a clean placeholder.
-    pass
+best=""
+best_ts="0"
 
-payload = {
+for d in "${CANDIDATES[@]}"; do
+  [ -d "$d" ] || continue
+  # find recent-ish CSVs that smell like positions exports
+  while IFS= read -r line; do
+    t="${line%% *}"
+    p="${line#* }"
+    name="$(basename "$p" | tr '[:upper:]' '[:lower:]')"
+    if echo "$name" | rg -q '(pos|position|positions|statement|account).*\.(csv)$'; then
+      if awk "BEGIN{exit !($t > $best_ts)}"; then
+        best_ts="$t"
+        best="$p"
+      fi
+    fi
+  done < <(find "$d" -maxdepth 2 -type f -iname '*.csv' -printf '%T@ %p\n' 2>/dev/null || true)
+done
+
+if [ -n "$best" ]; then
+  exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$best" --out "$OUT"
+fi
+
+# No CSV found: leave placeholder behavior consistent and helpful
+if [ ! -f "$OUT" ]; then
+  cat > "$OUT" <<JSON
+{
   "schema": "positions.v1",
-  "asof": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-  "source": {"type": "none"},
+  "generated_at": "$(date -Is)",
+  "source": {"type":"none","note":"no positions source found"},
   "positions": [],
-  "summary": {"count": 0, "equities": 0, "options": 0, "symbols": []},
+  "summary": {"count":0,"equities":0,"options":0}
 }
-with open(out, "w", encoding="utf-8") as f:
-    json.dump(payload, f, indent=2, sort_keys=True)
-    f.write("\n")
-PY
+JSON
+fi
+
+echo "Positions: none (no CSV found)."
+echo "Put a Thinkorswim positions export CSV in one of these folders, then rerun:"
+printf "  - %s\n" "${CANDIDATES[@]}"
+echo
+echo "Or run Schwab offline mode:"
+echo "  jerboa-market-health-positions-refresh --schwab-sample"
 exit 0
