@@ -1,0 +1,28 @@
+{
+  "securitiesAccount": {
+    "positions": [
+      {
+        "longQuantity": 2,
+        "averagePrice": 190.12,
+        "marketValue": 392.00,
+        "instrument": {
+          "assetType": "EQUITY",
+          "symbol": "AAPL"
+        }
+      },
+      {
+        "longQuantity": 1,
+        "averagePrice": 3.25,
+        "marketValue": 4.10,
+        "instrument": {
+          "assetType": "OPTION",
+          "symbol": "SPY_020725C500",
+          "underlyingSymbol": "SPY",
+          "putCall": "CALL",
+          "optionExpirationDate": "2025-02-07",
+          "strikePrice": 500
+        }
+      }
+    ]
+  }
+}

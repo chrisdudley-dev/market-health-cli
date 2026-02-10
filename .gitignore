@@ -36,3 +36,8 @@ secrets/
 *schwab*.json
 .env
 .env.*
+
+# === ALLOW SAFE DOC EXAMPLES (keep secrets ignored elsewhere) ===
+!docs/examples/
+!docs/examples/*.json.example
+!docs/examples/*.sample.json
