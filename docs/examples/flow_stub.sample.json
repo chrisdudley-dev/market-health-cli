@@ -1,0 +1,9 @@
+{
+  "schema": "flow.stub.v1",
+  "generated_at": "2026-02-10T00:00:00Z",
+  "source": { "type": "stub", "note": "sample-only; replace with real provider later" },
+  "symbols": {
+    "SPY": { "call_put_ratio": 1.12, "net_premium": 2500000, "oi_change": 0.03 },
+    "AAPL": { "call_put_ratio": 0.88, "net_premium": -420000, "oi_change": -0.01 }
+  }
+}
