@@ -1,0 +1,9 @@
+{
+  "schema": "iv.stub.v1",
+  "generated_at": "2026-02-10T00:00:00Z",
+  "source": { "type": "stub", "note": "sample-only; replace with real provider later" },
+  "symbols": {
+    "SPY":  { "iv": 0.18, "iv_rank_1y": 0.42, "iv_percentile_1y": 0.55 },
+    "AAPL": { "iv": 0.22, "iv_rank_1y": 0.61, "iv_percentile_1y": 0.70 }
+  }
+}
