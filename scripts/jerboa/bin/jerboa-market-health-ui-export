@@ -12,6 +12,10 @@ ENV_JSON="${HOME}/.cache/jerboa/environment.v1.json"
 SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
 POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
 
+# Ensure python can import from repo checkout regardless of invocation dir
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+cd "$REPO_ROOT"
+
 mkdir -p "$(dirname "$OUT_JSON")"
 
 QUIET=0
@@ -88,6 +92,54 @@ for item in pos_list:
     if len(symbols) >= 12:
         break
 
+
+  # --- Category A: events/catalysts provider boundary (graceful) ---
+ev_cfg_p = Path(os.path.expanduser("~/.config/jerboa/event_provider.json"))
+
+events = {
+    "schema": "events.v1",
+    "status": "no_provider",
+    "generated_at": "",
+    "source": {"type": "null"},
+    "points": [],
+    "errors": [],
+}
+try:
+    from market_health.providers.event_provider import load_event_provider  # type: ignore
+    evp = load_event_provider()
+    seed = symbols[:50] if symbols else ["SPY"]
+    evb = evp.get_events(seed)
+    events = {
+        "schema": evb.schema,
+        "status": evb.status,
+        "generated_at": evb.generated_at,
+        "source": evb.source,
+        "points": [
+            {
+                "ts": pt.ts,
+                "symbol": pt.symbol,
+                "type": pt.type,
+                "headline": pt.headline,
+                "impact": pt.impact,
+                "confidence": pt.confidence,
+                "extra": pt.extra,
+            }
+            for pt in evb.points
+        ],
+        "errors": evb.errors,
+    }
+except Exception as e:
+    events = {
+        "schema": "events.v1",
+        "status": "error",
+        "generated_at": "",
+        "source": {"type": "error"},
+        "points": [],
+        "errors": [str(e)],
+    }
+
+events_list = events.get("points") if isinstance(events, dict) and isinstance(events.get("points"), list) else []
+
 payload = {
     "schema": "jerboa.market_health.ui.v1",
     "asof": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -97,9 +149,12 @@ payload = {
         "environment": meta(env_p),
         "sectors": meta(sect_p),
         "positions": meta(pos_p),
+          "events_provider": meta(ev_cfg_p),
     },
     "summary": {
         "positions_count": len(pos_list),
+          "events_count": len(events_list),
+          "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
         "symbols_sample": symbols,
     },
     # Keep full data for now (still one file); React reads just what it needs.
@@ -108,6 +163,7 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
+          "events": events,
     },
 }
 
