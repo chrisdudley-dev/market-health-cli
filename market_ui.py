@@ -388,13 +388,13 @@ def render_pi_grid(
           if mono:
               return ""
           # Primary mode: band index (0..4) from the SAME logic that chooses S/B/H
-          # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 buckets.
+          # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 bands.
           try:
               v = int(band_or_pct)
           except Exception:
               v = 0
 
-          # If it looks like a percent, bucket it
+          # If it looks like a percent, band it
           if v > 4:
               if v >= 80:
                   return "on green3"
