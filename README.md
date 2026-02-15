@@ -93,11 +93,29 @@ python market_ui.py --sectors XLK XLF XLY XLV
 
 ---
 
-## Scoring framework (A–F categories)
+## Dimensions (A–E)
+
+The UI uses five mnemonic **Dimensions (A–E)**. The letter codes are stable identifiers; the human-facing names come from the ui.v1 contract (`dimensions_meta`).
+
+| Code | Dimension | Meaning |
+|---|---|---|
+| A | Announcements | catalysts/events/news/earnings/macro |
+| B | Backdrop | context/regime (currently reflected across trend/structure + environment/regime) |
+| C | Crowding | flow/positioning/participation (“who’s in this”) |
+| D | Danger | risk/volatility/correlation stress |
+| E | Execution | frictions, liquidity, sizing constraints (migration in progress) |
+
+Migration note:
+- The scoring engine currently computes **A–F check groups** (6 × 6 = 36 checks).
+- During the transition, **Backdrop** is effectively represented by today’s **B** (Trend & Structure) and **E** (Environment & Regime).
+- **Execution** is currently **F** (Execution & Frictions) and is planned to migrate into **E**.
+
+## Scoring framework (current A–F check groups)
+
 
 Your framework is organized into **6 categories (A–F)**. Each category contains **6 checks/variables** for a total of **36 distinct factors**. These roll up into each sector’s score and color.
 
-### A — Catalyst Health
+### A — Announcements
 **Focus:** external events, sentiment, and “catalysts.”  
 **Variables:**
 - **News** — recent headlines, sentiment, or price/volume proxy spikes
@@ -107,7 +125,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Peers/Macro** — sector‑wide or macro catalysts impacting the symbol
 - **Guidance** — outlook revisions and earnings guidance
 
-### B — Trend & Structure
+### B — Backdrop (Trend & Structure)
 **Focus:** technical price/volume structure.  
 **Variables:**
 - **Stacked MAs** — alignment 9EMA > 20EMA > 50SMA
@@ -117,7 +135,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Vol ×** — volume expansion vs. 20‑day average
 - **Hold 20EMA** — pullbacks respecting the 20EMA
 
-### C — Position & Flow
+### C — Crowding (Position & Flow)
 **Focus:** positioning, flows, participation.  
 **Variables:**
 - **EM Fit** — fit to an exponential moving structure
@@ -127,7 +145,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Money Flow** — net inflows/outflows
 - **SI/Days** — short interest vs. average daily volume
 
-### D — Risk & Volatility
+### D — Danger (Risk & Volatility)
 **Focus:** volatility, correlation, risk control.  
 **Variables:**
 - **ATR%** — Average True Range as % of price
@@ -137,7 +155,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Gap Plan** — gap‑risk strategy placeholder
 - **Sizing/RR** — position sizing & risk/reward vs ATR/EMA
 
-### E — Environment & Regime
+### E — Environment & Regime (Backdrop)
 **Focus:** broader market/sector regime.  
 **Variables:**
 - **SPY Trend** — SPY alignment with 20/50‑day averages
@@ -147,7 +165,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **3‑Day RS** — short‑term RS vs. SPY
 - **Drivers** — macro drivers alignment (placeholder)
 
-### F — Execution & Frictions
+### F — Execution & Frictions (future: E Execution)
 **Focus:** trade management and execution discipline.  
 **Variables:**
 - **Trigger** — defined trade trigger present
@@ -157,7 +175,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Slippage** — liquidity / bid‑ask cost
 - **Alerts** — monitoring/alerting in place
 
-> **Summary:** 36 checks total (6 × 6). A–C emphasize catalysts/technicals/positioning; D–E cover risk and environment; F captures execution discipline.
+> **Summary:** 36 checks total (6 × 6). A = Announcements; B/E form Backdrop context; C = Crowding; D = Danger; F = Execution (planned to move into E).
 
 ---
 
