@@ -35,7 +35,7 @@ def _shape_signature(d):
     return [f"{p}\t{t}" for p, t in walk(d)]
 
 def _assert_envelope(contract: dict):
-    assert set(contract.keys()) == {"schema", "asof", "status_line", "meta", "summary", "data"}
+    assert set(contract.keys()) == {"schema", "asof", "status_line", "dimensions_meta", "categories_meta", "meta", "summary", "data"}
     assert contract["schema"] == "jerboa.market_health.ui.v1"
     assert isinstance(contract["status_line"], str) and contract["status_line"].strip()
     datetime.fromisoformat(contract["asof"].replace("Z", "+00:00"))
