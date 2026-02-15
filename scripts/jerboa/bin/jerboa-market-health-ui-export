@@ -140,8 +140,37 @@ except Exception as e:
 
 events_list = events.get("points") if isinstance(events, dict) and isinstance(events.get("points"), list) else []
 
+DIMENSIONS_META = {
+    "A": {
+        "display_name": "Announcements",
+        "subtitle": "Catalysts / News / Macro",
+        "description": "Catalysts/events/news/earnings/macro drivers.",
+    },
+    "B": {
+        "display_name": "Backdrop",
+        "subtitle": "Regime / Environment",
+        "description": "Environment/regime context (trend, conditions).",
+    },
+    "C": {
+        "display_name": "Crowding",
+        "subtitle": "Flow / Positioning",
+        "description": "Flow/positioning/participation; who is in the trade.",
+    },
+    "D": {
+        "display_name": "Danger",
+        "subtitle": "Risk / Vol / Correlation",
+        "description": "Risk/volatility/correlation stress signals.",
+    },
+    "E": {
+        "display_name": "Execution",
+        "subtitle": "Liquidity / Frictions",
+        "description": "Liquidity, frictions, and sizing constraints.",
+    },
+}
 payload = {
     "schema": "jerboa.market_health.ui.v1",
+    "dimensions_meta": DIMENSIONS_META,
+    "categories_meta": DIMENSIONS_META,
     "asof": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     "status_line": status_line,
     "meta": {
