@@ -18,10 +18,9 @@ from rich import box
 # Pull scores + default sectors from the engine (do not re-define here)
 from market_health.engine import compute_scores, SECTORS_DEFAULT
 
-CATEGORY_NAMES: Dict[str, str] = {
-    "A": "Catalyst Health", "B": "Trend & Structure", "C": "Position & Flow",
-    "D": "Risk & Volatility", "E": "Environment & Regime", "F": "Execution & Frictions",
-}
+from market_health.ui_contract_meta import dimension_heading
+
+
 CHECK_LABELS: Dict[str, List[str]] = {
     "A": ["News", "Analysts", "Event", "Insiders", "Peers/Macro", "Guidance"],
     "B": ["Stacked MAs", "RS vs SPY", "BB Mid", "20D Break", "Vol x", "Hold 20EMA"],
@@ -193,7 +192,7 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
         t.add_column("Cat Total", justify="center")
         for key in "ABCDEF":
             cat = row_data.categories[key]
-            row_cells: List[Text] = [Text(f"{key}  {CATEGORY_NAMES[key]}")]
+            row_cells: List[Text] = [Text(dimension_heading(key))]
             row_cells.extend([chip(ch.score, mono) for ch in cat.checks])
             row_cells.append(score_cell(cat.total, MAX_PER_CATEGORY, mono))
             t.add_row(*row_cells)
