@@ -8,6 +8,8 @@ cd "$REPO_ROOT"
 OUT="${HOME}/.cache/jerboa/positions.v1.json"
 SCHWAB_JSON=""
 CSV=""
+POS_DIR="${HOME}/.config/jerboa/positions"
+
 SEARCH_DIRS=()
 
 usage() {
@@ -51,6 +53,8 @@ while [ $# -gt 0 ]; do
 done
 
 mkdir -p "$(dirname "$OUT")"
+mkdir -p "$POS_DIR"
+chmod 700 "$POS_DIR" 2>/dev/null || true
 
 # Schwab JSON path (offline for now)
 if [ -n "$SCHWAB_JSON" ]; then
@@ -58,16 +62,19 @@ if [ -n "$SCHWAB_JSON" ]; then
     echo "ERR: Schwab JSON not found: $SCHWAB_JSON" >&2
     exit 2
   fi
+  echo "Using Schwab JSON: $SCHWAB_JSON"
   exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --schwab-json "$SCHWAB_JSON" --out "$OUT"
 fi
 
 # ToS CSV: explicit path wins
 if [ -n "$CSV" ]; then
+  echo "Using ToS CSV: $CSV"
   exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$CSV" --out "$OUT"
 fi
 
 # ToS CSV: auto-search
 CANDIDATES=(
+  "${POS_DIR}"
   "${HOME}/Downloads"
   "${HOME}/Desktop"
   "${HOME}/Documents"
@@ -96,6 +103,7 @@ for d in "${CANDIDATES[@]}"; do
 done
 
 if [ -n "$best" ]; then
+  echo "Using ToS CSV: $best"
   exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$best" --out "$OUT"
 fi
 
