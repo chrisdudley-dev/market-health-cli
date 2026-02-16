@@ -48,7 +48,7 @@ def _read_json(p: Path) -> Dict[str, Any]:
 def _write_json_secure(p: Path, obj: Dict[str, Any]) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text(json.dumps(_sanitize_for_disk(obj), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text("token exchange complete (tokens not stored)\n", encoding="utf-8")
     os.replace(tmp, p)
     try:
         os.chmod(p, 0o600)
@@ -135,7 +135,6 @@ def token_is_fresh(tok: Dict[str, Any], leeway: int = 60) -> bool:
         return False
     return time.time() < float(exp) - float(leeway)
 
-
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Schwab OAuth walkthrough: print auth URL, paste redirect URL, save token cache"
@@ -198,11 +197,7 @@ def main() -> int:
         "scope": tok.get("scope"),
     }
     _write_json_secure(token_path, tok_disk)
-
-    exp = tok.get("expires_at")
-    fresh = token_is_fresh(tok)
-    print(f"\nOK: wrote token cache -> {token_path}")
-    print(f"fresh={fresh} expires_at={exp}\n")
+    print(f"OK: wrote token marker -> {token_path} (tokens not stored)")
     return 0
 
 
