@@ -13,6 +13,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
 
+import getpass
+
+def _sanitize_for_disk(obj):
+    """Drop secrets before writing JSON to disk."""
+    if not isinstance(obj, dict):
+        return obj
+    out = dict(obj)
+    for k in (
+        "client_secret",
+        "password",
+        "access_token",
+        "refresh_token",
+        "id_token",
+    ):
+        out.pop(k, None)
+    return out
+
 
 @dataclass(frozen=True)
 class Cfg:
@@ -31,7 +48,7 @@ def _read_json(p: Path) -> Dict[str, Any]:
 def _write_json_secure(p: Path, obj: Dict[str, Any]) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    tmp.write_text(json.dumps(_sanitize_for_disk(obj), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(tmp, p)
     try:
         os.chmod(p, 0o600)
@@ -50,7 +67,8 @@ def _chmod_dir_private(p: Path) -> None:
 def load_cfg(path: str) -> Cfg:
     p = Path(os.path.expanduser(path))
     d = _read_json(p)
-    need = ["client_id", "client_secret", "redirect_uri", "auth_url", "token_url"]
+    d["client_secret"] = d.get("client_secret") or os.environ.get("SCHWAB_CLIENT_SECRET") or getpass.getpass("SCHWAB_CLIENT_SECRET: ")
+    need = ["client_id", "redirect_uri", "auth_url", "token_url"]
     missing = [k for k in need if not d.get(k)]
     if missing:
         raise SystemExit(f"ERR: missing keys in {p}: {', '.join(missing)}")
@@ -173,7 +191,13 @@ def main() -> int:
             pass
 
     token_path = Path(os.path.expanduser(args.token))
-    _write_json_secure(token_path, tok)
+    tok_disk = {
+        "expires_at": tok.get("expires_at"),
+        "expires_in": tok.get("expires_in"),
+        "token_type": tok.get("token_type"),
+        "scope": tok.get("scope"),
+    }
+    _write_json_secure(token_path, tok_disk)
 
     exp = tok.get("expires_at")
     fresh = token_is_fresh(tok)

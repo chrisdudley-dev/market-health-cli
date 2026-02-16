@@ -98,9 +98,7 @@ def main() -> int:
     except Exception as e:
         print(f"ERR: {e}", file=sys.stderr)
         return 2
-    print(
-        f"OK: access_token present (len={len(access)}) expires_at={tok.get('expires_at', '?')}"
-    )
+    print("OK: access token present")
     return 0
 
 
