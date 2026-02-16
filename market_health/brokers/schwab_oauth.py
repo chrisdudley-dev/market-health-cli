@@ -40,7 +40,11 @@ def _write_json(path: str, obj: Dict[str, Any]) -> None:
 def load_config(path: str = DEFAULT_CONFIG_PATH) -> SchwabOAuthConfig:
     p = os.path.expanduser(path)
     d = _read_json(p)
-    missing = [k for k in ("client_id", "client_secret", "redirect_uri", "auth_url", "token_url") if not d.get(k)]
+    missing = [
+        k
+        for k in ("client_id", "client_secret", "redirect_uri", "auth_url", "token_url")
+        if not d.get(k)
+    ]
     if missing:
         raise ValueError(f"Missing required config keys in {p}: {', '.join(missing)}")
     return SchwabOAuthConfig(
@@ -62,7 +66,9 @@ def build_authorize_url(cfg: SchwabOAuthConfig, state: str = "mh") -> str:
     }
     if cfg.scope:
         q["scope"] = cfg.scope
-    return cfg.auth_url + ("&" if "?" in cfg.auth_url else "?") + urllib.parse.urlencode(q)
+    return (
+        cfg.auth_url + ("&" if "?" in cfg.auth_url else "?") + urllib.parse.urlencode(q)
+    )
 
 
 def token_is_fresh(token: Dict[str, Any], leeway_sec: int = 60) -> bool:

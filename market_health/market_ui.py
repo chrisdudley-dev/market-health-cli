@@ -124,12 +124,14 @@ def build_sector_from_json(item: dict) -> SectorRow:
     return SectorRow(symbol=item.get("symbol", "?"), categories=cats)
 
 
-def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[SectorRow]:
+def load_json_dataset(
+    path: str, sectors_filter: Optional[List[str]]
+) -> List[SectorRow]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
     # ENV_V1_JSON_SUPPORT_V1: allow environment.v1.json (object) as input; use its sector list
-    if isinstance(data, dict) and 'sectors' in data:
-        data = data['sectors']
+    if isinstance(data, dict) and "sectors" in data:
+        data = data["sectors"]
 
     rows: List[SectorRow] = []
     for item in data:
@@ -139,8 +141,12 @@ def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[Se
     return rows
 
 
-def load_live_dataset(sectors: List[str], period: str, interval: str, ttl: int) -> List[SectorRow]:
-    payload = compute_scores(sectors=sectors, period=period, interval=interval, ttl_sec=ttl)
+def load_live_dataset(
+    sectors: List[str], period: str, interval: str, ttl: int
+) -> List[SectorRow]:
+    payload = compute_scores(
+        sectors=sectors, period=period, interval=interval, ttl_sec=ttl
+    )
     return [build_sector_from_json(obj) for obj in payload]
 
 
@@ -150,7 +156,9 @@ def render_header(console: Console, mono: bool = False) -> None:
     title = f"[bold]Market Health – Sector Union[/bold]  •  {ts}"
     if mono:
         console.print(title)
-        console.print("Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%")
+        console.print(
+            "Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%"
+        )
         console.print()
         return
     legend = (
@@ -164,8 +172,12 @@ def render_header(console: Console, mono: bool = False) -> None:
     console.print(Panel.fit(legend, title=title, border_style="cyan"))
 
 
-def render_overview(console: Console, rows: List[SectorRow], mono: bool = False) -> None:
-    tbl = Table(title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False)
+def render_overview(
+    console: Console, rows: List[SectorRow], mono: bool = False
+) -> None:
+    tbl = Table(
+        title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
+    )
     tbl.add_column("Sector", justify="left", style="bold cyan")
     for key in "ABCDEF":
         tbl.add_column(key, justify="center")
@@ -173,16 +185,22 @@ def render_overview(console: Console, rows: List[SectorRow], mono: bool = False)
     for row_data in rows:
         cells: List[Text] = [Text(row_data.symbol)]
         for key in "ABCDEF":
-            cells.append(score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono))
+            cells.append(
+                score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono)
+            )
         cells.append(score_cell(row_data.total, MAX_TOTAL, mono))
         tbl.add_row(*cells)
     console.print(tbl)
 
 
-def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bool = False) -> None:
+def render_details(
+    console: Console, rows: List[SectorRow], top_k: int, mono: bool = False
+) -> None:
     if not rows:
         return
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[:max(1, min(top_k, len(rows)))]
+    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[
+        : max(1, min(top_k, len(rows)))
+    ]
     for row_data in ranked:
         console.rule(f"[bold magenta]Details[/bold magenta] – {row_data.symbol}")
         t = Table(box=box.MINIMAL_HEAVY_HEAD, show_lines=True)
@@ -203,13 +221,14 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
 MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 
 
-
 # POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
+
 
 def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> None:
     """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
     try:
-        import os, json
+        import os
+        import json
         from rich.panel import Panel
         from rich.table import Table
         from rich import box
@@ -222,7 +241,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
             data = json.load(f)
 
         positions = data.get("positions") or []
-        source = (data.get("source") or {})
+        source = data.get("source") or {}
         src_type = source.get("type") or "unknown"
 
         if not positions:
@@ -234,9 +253,13 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
                 "  jerboa-market-health-positions-refresh"
             )
             if mono:
-                console.print("Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)")
+                console.print(
+                    "Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)"
+                )
             else:
-                console.print(Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan"))
+                console.print(
+                    Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan")
+                )
             return
 
         t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
@@ -253,7 +276,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
             details = ""
             if typ == "option":
                 opt = p.get("option") or {}
-                details = f"{opt.get('expiry','?')}  {opt.get('strike','?')}  {opt.get('right','?')}"
+                details = f"{opt.get('expiry', '?')}  {opt.get('strike', '?')}  {opt.get('right', '?')}"
 
             t.add_row(sym, typ, qty, details)
 
@@ -267,7 +290,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
                 det = ""
                 if typ == "option":
                     opt = p.get("option") or {}
-                    det = f"{opt.get('expiry','?')} {opt.get('strike','?')} {opt.get('right','?')}"
+                    det = f"{opt.get('expiry', '?')} {opt.get('strike', '?')} {opt.get('right', '?')}"
                 console.print(f"- {sym}  {typ}  qty={qty}  {det}".rstrip())
         else:
             console.print(Panel(t, title=title, border_style="cyan"))
@@ -276,7 +299,10 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
         # Never break the widget for positions issues
         return
 
-def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False) -> None:
+
+def render_pi_grid(
+    console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False
+) -> None:
     """Compact single-grid view for Raspberry Pi / small terminals (no legend)."""
     if not rows:
         console.print("[yellow]No data to display.[/yellow]")
@@ -320,6 +346,7 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
 
     # --- Print the grid row-by-row ---
     from math import ceil
+
     row_count = ceil(len(cells) / cols)
     for r in range(row_count):
         chunk = cells[r * cols : (r + 1) * cols]
@@ -331,25 +358,48 @@ def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono:
         row_tbl.add_row(*chunk)
         console.print(row_tbl)
 
-# ---------- CLI ----------
+    # ---------- CLI ----------
 
     # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
     _render_positions_panel(console, mono=mono)
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
-    p.add_argument("--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include")
-    p.add_argument("--topk", type=int, default=3, help="How many top sectors to expand in details")
+    p.add_argument(
+        "--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include"
+    )
+    p.add_argument(
+        "--topk", type=int, default=3, help="How many top sectors to expand in details"
+    )
     p.add_argument("--mono", action="store_true", help="Monochrome (no colors)")
     p.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds")
     # data sources
-    p.add_argument("--json", dest="json_path", type=str, help="If set, load from JSON instead of live")
-    p.add_argument("--demo", action="store_true", help="Use random demo data (ignores --json and live)")
+    p.add_argument(
+        "--json",
+        dest="json_path",
+        type=str,
+        help="If set, load from JSON instead of live",
+    )
+    p.add_argument(
+        "--demo",
+        action="store_true",
+        help="Use random demo data (ignores --json and live)",
+    )
     # live compute options (used when no --json and not --demo)
     p.add_argument("--period", type=str, default="1y")
     p.add_argument("--interval", type=str, default="1d")
-    p.add_argument("--ttl", type=int, default=300, help="In-process cache TTL for data fetches")
-    p.add_argument("--pi-grid", action="store_true", help="Compact Raspberry Pi grid view (one small grid)")
-    p.add_argument("--grid-cols", type=int, default=4, help="Number of columns in the Pi grid")
+    p.add_argument(
+        "--ttl", type=int, default=300, help="In-process cache TTL for data fetches"
+    )
+    p.add_argument(
+        "--pi-grid",
+        action="store_true",
+        help="Compact Raspberry Pi grid view (one small grid)",
+    )
+    p.add_argument(
+        "--grid-cols", type=int, default=4, help="Number of columns in the Pi grid"
+    )
 
     return p.parse_args()
 

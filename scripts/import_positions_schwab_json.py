@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 from __future__ import annotations
 
 import argparse
@@ -12,13 +13,24 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from market_health.brokers.schwab_positions import load_json, normalize_schwab_accounts_json  # noqa: E402
+from market_health.brokers.schwab_positions import (
+    load_json,
+    normalize_schwab_accounts_json,
+)  # noqa: E402
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Import saved Schwab accounts JSON -> positions.v1.json (offline)")
-    ap.add_argument("--in", dest="inp", required=True, help="Path to saved Schwab accounts JSON")
-    ap.add_argument("--out", default=str(Path("/tmp") / "positions.v1.from_schwab.json"), help="Output positions.v1 path")
+    ap = argparse.ArgumentParser(
+        description="Import saved Schwab accounts JSON -> positions.v1.json (offline)"
+    )
+    ap.add_argument(
+        "--in", dest="inp", required=True, help="Path to saved Schwab accounts JSON"
+    )
+    ap.add_argument(
+        "--out",
+        default=str(Path("/tmp") / "positions.v1.from_schwab.json"),
+        help="Output positions.v1 path",
+    )
     args = ap.parse_args()
 
     inp = os.path.expanduser(args.inp)

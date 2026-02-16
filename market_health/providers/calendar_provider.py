@@ -7,26 +7,30 @@ from typing import Any, Dict, List
 
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/jerboa/calendar_provider.json")
 
+
 @dataclass(frozen=True)
 class CalendarEvent:
     ts: str
     symbol: str
-    kind: str                 # earnings | ex_dividend | split | macro | ...
+    kind: str  # earnings | ex_dividend | split | macro | ...
     label: str
     extra: Dict[str, Any]
 
+
 @dataclass(frozen=True)
 class CalendarBundle:
-    schema: str               # "calendar.v1"
-    status: str               # "ok" | "no_provider" | "error"
+    schema: str  # "calendar.v1"
+    status: str  # "ok" | "no_provider" | "error"
     generated_at: str
     source: Dict[str, Any]
     events: List[CalendarEvent]
     errors: List[str]
 
+
 class CalendarProvider:
     def get_calendar(self, symbols: List[str]) -> CalendarBundle:
         raise NotImplementedError
+
 
 class NullCalendarProvider(CalendarProvider):
     def get_calendar(self, symbols: List[str]) -> CalendarBundle:
@@ -39,14 +43,17 @@ class NullCalendarProvider(CalendarProvider):
             errors=[],
         )
 
+
 def _read_json(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 class StubCalendarProvider(CalendarProvider):
     """
     Offline-only provider reading docs/examples/calendar_stub.sample.json shape.
     """
+
     def __init__(self, stub_path: str):
         self.stub_path = os.path.expanduser(stub_path)
 
@@ -77,8 +84,12 @@ class StubCalendarProvider(CalendarProvider):
             return CalendarBundle(
                 schema="calendar.v1",
                 status="error",
-                generated_at=str(doc.get("generated_at", "")) if isinstance(doc, dict) else "",
-                source=doc.get("source", {"type": "stub"}) if isinstance(doc, dict) else {"type": "stub"},
+                generated_at=str(doc.get("generated_at", ""))
+                if isinstance(doc, dict)
+                else "",
+                source=doc.get("source", {"type": "stub"})
+                if isinstance(doc, dict)
+                else {"type": "stub"},
                 events=[],
                 errors=["invalid stub: missing list at key 'events'"],
             )
@@ -97,7 +108,9 @@ class StubCalendarProvider(CalendarProvider):
                     symbol=sym,
                     kind=str(item.get("kind", "")).strip(),
                     label=str(item.get("label", "")).strip(),
-                    extra=item.get("extra", {}) if isinstance(item.get("extra", {}), dict) else {},
+                    extra=item.get("extra", {})
+                    if isinstance(item.get("extra", {}), dict)
+                    else {},
                 )
             )
 
@@ -105,10 +118,13 @@ class StubCalendarProvider(CalendarProvider):
             schema="calendar.v1",
             status="ok",
             generated_at=str(doc.get("generated_at", "")),
-            source=doc.get("source", {"type": "stub"}) if isinstance(doc, dict) else {"type": "stub"},
+            source=doc.get("source", {"type": "stub"})
+            if isinstance(doc, dict)
+            else {"type": "stub"},
             events=out,
             errors=[],
         )
+
 
 def load_calendar_provider(config_path: str = DEFAULT_CONFIG_PATH) -> CalendarProvider:
     p = os.path.expanduser(config_path)

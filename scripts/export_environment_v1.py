@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 from __future__ import annotations
 
 # EXPORT_ENVIRONMENT_V1_SYS_PATH: ensure repo root on sys.path for local runs
 import sys
 from pathlib import Path as _Path
+
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 del _Path
 
@@ -21,11 +23,15 @@ from market_health.engine import compute_scores, SECTORS_DEFAULT
 MAX_PER_CATEGORY = 12
 MAX_TOTAL = MAX_PER_CATEGORY * 6
 
+
 def _git_rev() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], text=True
+        ).strip()
     except Exception:
         return "unknown"
+
 
 def _safe_int(x: Any, lo: int = 0, hi: int = 2) -> int:
     try:
@@ -33,6 +39,7 @@ def _safe_int(x: Any, lo: int = 0, hi: int = 2) -> int:
     except Exception:
         v = 0
     return max(lo, min(hi, v))
+
 
 def _sector_totals(item: Dict[str, Any]) -> Dict[str, int]:
     totals: Dict[str, int] = {}
@@ -46,6 +53,7 @@ def _sector_totals(item: Dict[str, Any]) -> Dict[str, int]:
         totals[key] = s
     return totals
 
+
 def _band_3(pct: int) -> str:
     # 3-color banding consistent with the “simple widget” concept:
     # 0–39 = RED, 40–59 = YELLOW, 60–100 = GREEN
@@ -55,14 +63,27 @@ def _band_3(pct: int) -> str:
         return "YELLOW"
     return "RED"
 
+
 def main() -> int:
-    p = argparse.ArgumentParser(description="Export Market Health environment output (environment.v1.json)")
-    p.add_argument("--out", default=str(Path.home() / ".cache/jerboa/environment.v1.json"))
-    p.add_argument("--legacy", default=str(Path.home() / ".cache/jerboa/market_health.sectors.json"))
+    p = argparse.ArgumentParser(
+        description="Export Market Health environment output (environment.v1.json)"
+    )
+    p.add_argument(
+        "--out", default=str(Path.home() / ".cache/jerboa/environment.v1.json")
+    )
+    p.add_argument(
+        "--legacy",
+        default=str(Path.home() / ".cache/jerboa/market_health.sectors.json"),
+    )
     p.add_argument("--period", default="6mo")
     p.add_argument("--interval", default="1d")
     p.add_argument("--ttl-sec", type=int, default=3600)
-    p.add_argument("--sectors", nargs="*", default=None, help="Override sectors (defaults to engine SECTORS_DEFAULT)")
+    p.add_argument(
+        "--sectors",
+        nargs="*",
+        default=None,
+        help="Override sectors (defaults to engine SECTORS_DEFAULT)",
+    )
     args = p.parse_args()
 
     out_path = Path(os.path.expanduser(args.out))
@@ -89,22 +110,26 @@ def main() -> int:
         pct = int(round((total / MAX_TOTAL) * 100)) if MAX_TOTAL else 0
         pct = max(0, min(100, pct))
 
-        sectors_out.append({
-            "symbol": sym,
-            "band": _band_3(pct),
-            "pct": pct,
-            "total": total,
-            "max_total": MAX_TOTAL,
-            "buckets": totals,
-            # Keep the underlying check structure for deeper views:
-            "categories": (item.get("categories") or {}),
-        })
+        sectors_out.append(
+            {
+                "symbol": sym,
+                "band": _band_3(pct),
+                "pct": pct,
+                "total": total,
+                "max_total": MAX_TOTAL,
+                "buckets": totals,
+                # Keep the underlying check structure for deeper views:
+                "categories": (item.get("categories") or {}),
+            }
+        )
 
         # Legacy shape: list of items with symbol + categories (what your current JSON loader expects)
-        legacy_out.append({
-            "symbol": sym,
-            "categories": (item.get("categories") or {}),
-        })
+        legacy_out.append(
+            {
+                "symbol": sym,
+                "categories": (item.get("categories") or {}),
+            }
+        )
 
     env = {
         "schema": "environment.v1",
@@ -113,12 +138,17 @@ def main() -> int:
         "sectors": sectors_out,
     }
 
-    out_path.write_text(json.dumps(env, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    legacy_path.write_text(json.dumps(legacy_out, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    out_path.write_text(
+        json.dumps(env, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    legacy_path.write_text(
+        json.dumps(legacy_out, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
     print(f"OK: wrote {out_path}")
     print(f"OK: wrote {legacy_path}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

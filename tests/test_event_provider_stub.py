@@ -5,11 +5,13 @@ from market_health.providers.event_provider import NullEventProvider, StubEventP
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = REPO_ROOT / "docs" / "examples" / "events_stub.sample.json"
 
+
 def test_null_provider_degrades_gracefully():
     p = NullEventProvider()
     b = p.get_events(["SPY"])
     assert b.status == "no_provider"
     assert b.points == []
+
 
 def test_stub_provider_normalizes_fixture():
     p = StubEventProvider(str(SAMPLE))

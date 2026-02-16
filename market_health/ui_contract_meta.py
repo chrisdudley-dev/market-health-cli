@@ -5,14 +5,19 @@ from __future__ import annotations
 
 _DIM_META_CACHE = None
 
+
 def _load_dimensions_meta():
     global _DIM_META_CACHE
     if _DIM_META_CACHE is not None:
         return _DIM_META_CACHE
     try:
-        import json, os
+        import json
+        import os
         from pathlib import Path
-        ui_json = os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json")
+
+        ui_json = os.environ.get(
+            "JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"
+        )
         p = Path(os.path.expanduser(ui_json))
         d = json.loads(p.read_text("utf-8"))
         meta = d.get("dimensions_meta") or d.get("categories_meta") or {}
@@ -20,6 +25,7 @@ def _load_dimensions_meta():
     except Exception:
         _DIM_META_CACHE = {}
     return _DIM_META_CACHE
+
 
 def dimension_heading(code: str) -> str:
     meta = _load_dimensions_meta()

@@ -40,7 +40,15 @@ def validate_positions_v1(doc: Any) -> List[str]:
         if not isinstance(symbol, str) or not symbol.strip():
             _err(errors, f"positions[{i}].symbol must be a non-empty string")
 
-        for k in ("qty", "avg_price", "mark_price", "market_value", "cost_basis", "unrealized_pl", "strike"):
+        for k in (
+            "qty",
+            "avg_price",
+            "mark_price",
+            "market_value",
+            "cost_basis",
+            "unrealized_pl",
+            "strike",
+        ):
             if k in p and not isinstance(p.get(k), (int, float)):
                 _err(errors, f"positions[{i}].{k} must be a number if present")
 
@@ -82,7 +90,7 @@ def main() -> int:
         for e in errors[:50]:
             print(f"- {e}")
         if len(errors) > 50:
-            print(f"... and {len(errors)-50} more")
+            print(f"... and {len(errors) - 50} more")
         return 1
 
     n = len(doc.get("positions") or [])

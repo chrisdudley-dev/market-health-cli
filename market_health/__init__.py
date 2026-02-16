@@ -8,6 +8,7 @@ Market Health public API.
 
 from __future__ import annotations
 from typing import Any, Optional
+
 # (removed old __version__ line)
 # Lazy, safe import: only catch ImportError (not all exceptions).
 try:
@@ -16,8 +17,12 @@ except ImportError:
     _engine = None  # type: ignore
 
 # Soft-exports (only if engine provides them)
-SECTORS_DEFAULT: Optional[Any] = getattr(_engine, "SECTORS_DEFAULT", None) if _engine else None
-CHECK_LABELS:   Optional[Any] = getattr(_engine, "CHECK_LABELS",   None) if _engine else None
+SECTORS_DEFAULT: Optional[Any] = (
+    getattr(_engine, "SECTORS_DEFAULT", None) if _engine else None
+)
+CHECK_LABELS: Optional[Any] = (
+    getattr(_engine, "CHECK_LABELS", None) if _engine else None
+)
 
 
 def compute_scores(
@@ -48,7 +53,9 @@ def compute_scores(
     if sectors is None:
         sectors = getattr(_engine, "SECTORS_DEFAULT", None)
     if sectors is None:
-        raise ValueError("No sectors provided and SECTORS_DEFAULT not found in engine.py")
+        raise ValueError(
+            "No sectors provided and SECTORS_DEFAULT not found in engine.py"
+        )
 
     if demo:
         fn = getattr(_engine, "build_demo_dataset", None)
@@ -66,6 +73,7 @@ def compute_scores(
     fn = getattr(_engine, "compute_scores", None)
     if callable(fn):
         import inspect
+
         sig = inspect.signature(fn)
         cand = dict(
             sectors=sectors,
@@ -81,10 +89,12 @@ def compute_scores(
     # Fallback for older engines
     fn = getattr(_engine, "load_live_dataset", None)
     if fn is None:
-        raise NotImplementedError("engine.compute_scores(...) and engine.load_live_dataset(...) are both missing")
+        raise NotImplementedError(
+            "engine.compute_scores(...) and engine.load_live_dataset(...) are both missing"
+        )
     import inspect
+
     sig = inspect.signature(fn)
     cand = dict(sectors=sectors, period=period, interval=interval, ttl=ttl)
     kwargs = {k: v for k, v in cand.items() if k in sig.parameters}
     return fn(**kwargs)
-

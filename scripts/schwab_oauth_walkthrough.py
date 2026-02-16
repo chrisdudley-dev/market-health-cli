@@ -5,14 +5,13 @@ import argparse
 import base64
 import json
 import os
-import sys
 import time
 import urllib.parse
 import urllib.request
 import urllib.error
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 @dataclass(frozen=True)
@@ -74,7 +73,9 @@ def build_authorize_url(cfg: Cfg, state: str = "mh") -> str:
     }
     if cfg.scope:
         q["scope"] = cfg.scope
-    return cfg.auth_url + ("&" if "?" in cfg.auth_url else "?") + urllib.parse.urlencode(q)
+    return (
+        cfg.auth_url + ("&" if "?" in cfg.auth_url else "?") + urllib.parse.urlencode(q)
+    )
 
 
 def extract_code_from_redirect_url(url: str) -> str:
@@ -89,14 +90,18 @@ def extract_code_from_redirect_url(url: str) -> str:
 
 def oauth_token_post(cfg: Cfg, form: Dict[str, str]) -> Dict[str, Any]:
     # Schwab token endpoint: Basic base64(client_id:client_secret)
-    basic = base64.b64encode(f"{cfg.client_id}:{cfg.client_secret}".encode("utf-8")).decode("ascii")
+    basic = base64.b64encode(
+        f"{cfg.client_id}:{cfg.client_secret}".encode("utf-8")
+    ).decode("ascii")
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Authorization": f"Basic {basic}",
         "Accept": "application/json",
     }
     body = urllib.parse.urlencode(form).encode("utf-8")
-    req = urllib.request.Request(cfg.token_url, data=body, headers=headers, method="POST")
+    req = urllib.request.Request(
+        cfg.token_url, data=body, headers=headers, method="POST"
+    )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
@@ -114,9 +119,19 @@ def token_is_fresh(tok: Dict[str, Any], leeway: int = 60) -> bool:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Schwab OAuth walkthrough: print auth URL, paste redirect URL, save token cache")
-    ap.add_argument("--config", default="~/.config/jerboa/schwab_oauth.json", help="OAuth config JSON")
-    ap.add_argument("--token", default="~/.cache/jerboa/schwab.token.json", help="Token cache JSON (written with 0600)")
+    ap = argparse.ArgumentParser(
+        description="Schwab OAuth walkthrough: print auth URL, paste redirect URL, save token cache"
+    )
+    ap.add_argument(
+        "--config",
+        default="~/.config/jerboa/schwab_oauth.json",
+        help="OAuth config JSON",
+    )
+    ap.add_argument(
+        "--token",
+        default="~/.cache/jerboa/schwab.token.json",
+        help="Token cache JSON (written with 0600)",
+    )
     ap.add_argument("--state", default="mh", help="OAuth state param")
     args = ap.parse_args()
 
@@ -129,8 +144,10 @@ def main() -> int:
     auth_url = build_authorize_url(cfg, state=args.state)
     print("\n1) Open this URL in a browser and complete login/consent:\n")
     print(auth_url)
-    print("\n2) After redirect, paste the FULL redirect URL here.\n"
-          "   (Even if the page doesn't load, copy the URL from the address bar.)\n")
+    print(
+        "\n2) After redirect, paste the FULL redirect URL here.\n"
+        "   (Even if the page doesn't load, copy the URL from the address bar.)\n"
+    )
 
     try:
         redirect_url = input("Redirect URL: ").strip()

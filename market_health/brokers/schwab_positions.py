@@ -41,7 +41,11 @@ def _find_positions_lists(obj: Any, max_depth: int = 8) -> List[List[Dict[str, A
         if isinstance(x, dict):
             for k, v in x.items():
                 # common key
-                if isinstance(k, str) and k.lower() == "positions" and isinstance(v, list):
+                if (
+                    isinstance(k, str)
+                    and k.lower() == "positions"
+                    and isinstance(v, list)
+                ):
                     if v and all(isinstance(it, dict) for it in v):
                         found.append(v)  # candidate
                 walk(v, depth + 1)
@@ -56,7 +60,9 @@ def _find_positions_lists(obj: Any, max_depth: int = 8) -> List[List[Dict[str, A
 _OPT_SYM_RE = re.compile(r"^([A-Z]+)_(\d{6})([CP])(\d+(?:\.\d+)?)$", re.ASCII)
 
 
-def _parse_option_symbol(sym: str) -> Tuple[Optional[str], Optional[str], Optional[float], Optional[str]]:
+def _parse_option_symbol(
+    sym: str,
+) -> Tuple[Optional[str], Optional[str], Optional[float], Optional[str]]:
     """
     Try to parse simple option sym like SPY_020725C500 -> underlying, expiry(YYYY-MM-DD), strike, right
     """
@@ -64,7 +70,9 @@ def _parse_option_symbol(sym: str) -> Tuple[Optional[str], Optional[str], Option
     if not m:
         return None, None, None, None
     underlying, mmddyy, right, strike_s = m.groups()
-    mm = int(mmddyy[0:2]); dd = int(mmddyy[2:4]); yy = int(mmddyy[4:6])
+    mm = int(mmddyy[0:2])
+    dd = int(mmddyy[2:4])
+    yy = int(mmddyy[4:6])
     yyyy = 2000 + yy
     expiry = f"{yyyy:04d}-{mm:02d}-{dd:02d}"
     try:
@@ -157,10 +165,22 @@ def normalize_schwab_accounts_json(raw: Any, source_path: str = "") -> Dict[str,
 
         # option fields (best effort)
         if asset_type == "option":
-            underlying = _as_str(inst.get("underlyingSymbol") or inst.get("underlying") or p.get("underlying")).strip()
-            expiry = _as_str(inst.get("optionExpirationDate") or inst.get("expirationDate") or p.get("expiry")).strip()
-            strike = _as_float(inst.get("strikePrice") or inst.get("strike") or p.get("strike"))
-            right_raw = _as_str(inst.get("putCall") or inst.get("right")).strip().upper()
+            underlying = _as_str(
+                inst.get("underlyingSymbol")
+                or inst.get("underlying")
+                or p.get("underlying")
+            ).strip()
+            expiry = _as_str(
+                inst.get("optionExpirationDate")
+                or inst.get("expirationDate")
+                or p.get("expiry")
+            ).strip()
+            strike = _as_float(
+                inst.get("strikePrice") or inst.get("strike") or p.get("strike")
+            )
+            right_raw = (
+                _as_str(inst.get("putCall") or inst.get("right")).strip().upper()
+            )
 
             right = None
             if right_raw.startswith("C"):

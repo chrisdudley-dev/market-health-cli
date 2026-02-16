@@ -3,9 +3,11 @@ import json
 import os
 import subprocess
 
+
 def _load_contract_from_cache(home: Path) -> dict:
     p = home / ".cache" / "jerboa" / "market_health.ui.v1.json"
     return json.loads(p.read_text("utf-8"))
+
 
 def test_dimensions_meta_exists_and_is_complete(tmp_path):
     # Run exporter (same approach used elsewhere)
@@ -14,7 +16,13 @@ def test_dimensions_meta_exists_and_is_complete(tmp_path):
     env["QUIET"] = "1"
 
     # exporter script writes to ~/.cache/jerboa/market_health.ui.v1.json under HOME
-    subprocess.run(["scripts/jerboa/bin/jerboa-market-health-ui-export"], env=env, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["scripts/jerboa/bin/jerboa-market-health-ui-export"],
+        env=env,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
     contract = _load_contract_from_cache(tmp_path)
 

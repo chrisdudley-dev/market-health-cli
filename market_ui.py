@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import annotations
+from market_health.ui_contract_meta import dimension_heading
 
 import argparse
 import json
@@ -14,6 +15,7 @@ except ImportError:
     class RequestException(Exception):  # type: ignore
         pass
 
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -27,8 +29,6 @@ from rich import box
 from market_health.engine import compute_scores, SECTORS_DEFAULT
 
 LAST_BANDS = {}  # symbol -> last committed band index (0..4) for hysteresis
-
-from market_health.ui_contract_meta import dimension_heading
 
 
 CHECK_LABELS: Dict[str, List[str]] = {
@@ -76,6 +76,7 @@ class SectorRow:
 
 # ---------- tiny render helpers ----------
 
+
 def _row_symbol_and_score(row):
     sym = getattr(row, "symbol", getattr(row, "ticker", "?"))
     for attr in ("pct", "score", "percent", "value"):
@@ -104,11 +105,9 @@ def _export_rows(rows, fmt: str) -> str:
         recs.append({"symbol": sym, "score": score})
 
     if fmt == "json":
-
         return json.dumps(recs, separators=(",", ":")) + "\n"
 
     if fmt == "csv":
-
         buf = io.StringIO()
         w = csv.DictWriter(buf, fieldnames=["symbol", "score"])
         w.writeheader()
@@ -179,12 +178,14 @@ def build_sector_from_json(item: dict) -> SectorRow:
     return SectorRow(symbol=item.get("symbol", "?"), categories=cats)
 
 
-def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[SectorRow]:
+def load_json_dataset(
+    path: str, sectors_filter: Optional[List[str]]
+) -> List[SectorRow]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
     # ENV_V1_JSON_SUPPORT_V1: allow environment.v1.json (object) as input; use its sector list
-    if isinstance(data, dict) and 'sectors' in data:
-        data = data['sectors']
+    if isinstance(data, dict) and "sectors" in data:
+        data = data["sectors"]
 
     rows: List[SectorRow] = []
     for item in data:
@@ -194,8 +195,12 @@ def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[Se
     return rows
 
 
-def load_live_dataset(sectors: List[str], period: str, interval: str, ttl: int) -> List[SectorRow]:
-    payload = compute_scores(sectors=sectors, period=period, interval=interval, ttl_sec=ttl)
+def load_live_dataset(
+    sectors: List[str], period: str, interval: str, ttl: int
+) -> List[SectorRow]:
+    payload = compute_scores(
+        sectors=sectors, period=period, interval=interval, ttl_sec=ttl
+    )
     return [build_sector_from_json(obj) for obj in payload]
 
 
@@ -205,7 +210,9 @@ def render_header(console: Console, mono: bool = False) -> None:
     title = f"[bold]Market Health – Sector Union[/bold]  •  {ts}"
     if mono:
         console.print(title)
-        console.print("Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%")
+        console.print(
+            "Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%"
+        )
         console.print()
         return
     legend = (
@@ -219,8 +226,12 @@ def render_header(console: Console, mono: bool = False) -> None:
     console.print(Panel.fit(legend, title=title, border_style="cyan"))
 
 
-def render_overview(console: Console, rows: List[SectorRow], mono: bool = False) -> None:
-    tbl = Table(title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False)
+def render_overview(
+    console: Console, rows: List[SectorRow], mono: bool = False
+) -> None:
+    tbl = Table(
+        title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
+    )
     tbl.add_column("Sector", justify="left", style="bold cyan")
     for key in "ABCDEF":
         tbl.add_column(key, justify="center")
@@ -228,16 +239,22 @@ def render_overview(console: Console, rows: List[SectorRow], mono: bool = False)
     for row_data in rows:
         cells: List[Text] = [Text(row_data.symbol)]
         for key in "ABCDEF":
-            cells.append(score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono))
+            cells.append(
+                score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono)
+            )
         cells.append(score_cell(row_data.total, MAX_TOTAL, mono))
         tbl.add_row(*cells)
     console.print(tbl)
 
 
-def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bool = False) -> None:
+def render_details(
+    console: Console, rows: List[SectorRow], top_k: int, mono: bool = False
+) -> None:
     if not rows:
         return
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[:max(1, min(top_k, len(rows)))]
+    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[
+        : max(1, min(top_k, len(rows)))
+    ]
     for row_data in ranked:
         console.rule(f"[bold magenta]Details[/bold magenta] – {row_data.symbol}")
         t = Table(box=box.MINIMAL_HEAVY_HEAD, show_lines=True)
@@ -257,13 +274,14 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
 # ---------- Pi Grid (compact, no legend) ----------
 
 
-
 # POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
+
 
 def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> None:
     """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
     try:
-        import os, json
+        import os
+        import json
         from rich.panel import Panel
         from rich.table import Table
         from rich import box
@@ -276,7 +294,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
             data = json.load(f)
 
         positions = data.get("positions") or []
-        source = (data.get("source") or {})
+        source = data.get("source") or {}
         src_type = source.get("type") or "unknown"
 
         if not positions:
@@ -288,9 +306,13 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
                 "  jerboa-market-health-positions-refresh"
             )
             if mono:
-                console.print("Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)")
+                console.print(
+                    "Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)"
+                )
             else:
-                console.print(Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan"))
+                console.print(
+                    Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan")
+                )
             return
 
         t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
@@ -307,7 +329,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
             details = ""
             if typ == "option":
                 opt = p.get("option") or {}
-                details = f"{opt.get('expiry','?')}  {opt.get('strike','?')}  {opt.get('right','?')}"
+                details = f"{opt.get('expiry', '?')}  {opt.get('strike', '?')}  {opt.get('right', '?')}"
 
             t.add_row(sym, typ, qty, details)
 
@@ -321,7 +343,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
                 det = ""
                 if typ == "option":
                     opt = p.get("option") or {}
-                    det = f"{opt.get('expiry','?')} {opt.get('strike','?')} {opt.get('right','?')}"
+                    det = f"{opt.get('expiry', '?')} {opt.get('strike', '?')} {opt.get('right', '?')}"
                 console.print(f"- {sym}  {typ}  qty={qty}  {det}".rstrip())
         else:
             console.print(Panel(t, title=title, border_style="cyan"))
@@ -330,21 +352,29 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
         # Never break the widget for positions issues
         return
 
+
 def render_pi_grid(
-        console,
-        rows,
-        grid_cols: int = 0,
-        mono: bool = False,
-        rating_scheme: str = "hybrid",
-        quantiles=(10, 30, 70, 90),
-        hysteresis: int = 0,
+    console,
+    rows,
+    grid_cols: int = 0,
+    mono: bool = False,
+    rating_scheme: str = "hybrid",
+    quantiles=(10, 30, 70, 90),
+    hysteresis: int = 0,
 ) -> None:
     from rich.table import Table
     from rich.text import Text
     from rich.panel import Panel
     from rich import box
 
-    labels = [("Stress","S"), ("Stress","S"), ("Balanced","B"), ("Healthy","H"), ("Healthy","H")]
+    labels = [
+        ("Stress", "S"),
+        ("Stress", "S"),
+        ("Balanced", "B"),
+        ("Healthy", "H"),
+        ("Healthy", "H"),
+    ]
+
     def _fixed_bounds():
         return [20, 40, 60, 80]
 
@@ -384,34 +414,34 @@ def render_pi_grid(
         return labels[bi]  # (long, short)
 
     def _panel_style(band_or_pct: int) -> str:
-          if mono:
-              return ""
-          # Primary mode: band index (0..4) from the SAME logic that chooses S/B/H
-          # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 bands.
-          try:
-              v = int(band_or_pct)
-          except Exception:
-              v = 0
+        if mono:
+            return ""
+        # Primary mode: band index (0..4) from the SAME logic that chooses S/B/H
+        # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 bands.
+        try:
+            v = int(band_or_pct)
+        except Exception:
+            v = 0
 
-          # If it looks like a percent, band it
-          if v > 4:
-              if v >= 80:
-                  return "on green3"
-              if v >= 60:
-                  return "on chartreuse3"
-              if v >= 40:
-                  return "on yellow3"
-              return "on red3"
+        # If it looks like a percent, band it
+        if v > 4:
+            if v >= 80:
+                return "on green3"
+            if v >= 60:
+                return "on chartreuse3"
+            if v >= 40:
+                return "on yellow3"
+            return "on red3"
 
-          # Band index mapping (0=worst .. 4=best)
-          bi = max(0, min(4, v))
-          if bi >= 4:
-              return "on green3"
-          if bi >= 3:
-              return "on chartreuse3"
-          if bi >= 2:
-              return "on yellow3"
-          return "on red3"
+        # Band index mapping (0=worst .. 4=best)
+        bi = max(0, min(4, v))
+        if bi >= 4:
+            return "on green3"
+        if bi >= 3:
+            return "on chartreuse3"
+        if bi >= 2:
+            return "on yellow3"
+        return "on red3"
 
     def _get_pct(row) -> int:
         # 1) try explicit numeric fields (supports alt data sources)
@@ -431,7 +461,9 @@ def render_pi_grid(
 
     # compute bounds once per render
     cross_section = [_get_pct(r) for r in rows]
-    cut_points = _choose_bounds(cross_section, scheme=rating_scheme, qs=quantiles, guard=5)
+    cut_points = _choose_bounds(
+        cross_section, scheme=rating_scheme, qs=quantiles, guard=5
+    )
 
     # hysteresis helpers
     def _lower_of_band(i: int) -> int:
@@ -481,9 +513,13 @@ def render_pi_grid(
     # layout
     def _chunk(seq, n):
         for i in range(0, len(seq), n):
-            yield seq[i:i + n]
+            yield seq[i : i + n]
 
-    cols = grid_cols if grid_cols and grid_cols > 0 else max(1, min(10, (console.size.width - 2) // 12))
+    cols = (
+        grid_cols
+        if grid_cols and grid_cols > 0
+        else max(1, min(10, (console.size.width - 2) // 12))
+    )
     grid = Table.grid(padding=(0, 1))
     for _ in range(cols):
         grid.add_column(no_wrap=True)
@@ -501,29 +537,69 @@ def render_pi_grid(
             box=box.ROUNDED,
         )
     )
-# ---------- CLI ----------
+    # ---------- CLI ----------
 
     # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
     _render_positions_panel(console, mono=mono)
+
+
 def parse_args():
-    p = argparse.ArgumentParser(description="Market Health – terminal dashboard (with Pi Grid mode)")
+    p = argparse.ArgumentParser(
+        description="Market Health – terminal dashboard (with Pi Grid mode)"
+    )
 
     # existing flags
     p.add_argument("--demo", action="store_true", help="Use generated demo data")
-    p.add_argument("--json-path", type=str, default=None, help="Path to JSON dataset to render")
-    p.add_argument("--sectors", nargs="*", default=None, help="Override sector tickers, e.g. --sectors XLK XLF XLY")
-    p.add_argument("--period", type=str, default="1y", help="Lookback period for live fetch (yfinance), e.g. 6mo, 1y")
-    p.add_argument("--interval", type=str, default="1d", help="Sampling interval, e.g. 1d, 1h")
-    p.add_argument("--ttl", type=int, default=300, help="Cache TTL (seconds) for live computations")
-    p.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds (0=once)")
-    p.add_argument("--topk", type=int, default=3, help="Top-K sectors to show in details (non-grid view)")
-    p.add_argument("--mono", action="store_true", help="Monochrome output (disable color)")
-    p.add_argument("--pi-grid", action="store_true", help="Render compact single-grid (Pi display) view")
-    p.add_argument("--grid-cols", type=int, default=4, help="Columns in Pi grid (0 = auto-fit)")
-    p.add_argument("--hysteresis", type=int, default=0,
-                   help="Points required to cross a rating band (reduces flip-flop in --watch)")
-    p.add_argument("--export", choices=["json", "csv"],
-                   help="Print rows as JSON/CSV and exit")
+    p.add_argument(
+        "--json-path", type=str, default=None, help="Path to JSON dataset to render"
+    )
+    p.add_argument(
+        "--sectors",
+        nargs="*",
+        default=None,
+        help="Override sector tickers, e.g. --sectors XLK XLF XLY",
+    )
+    p.add_argument(
+        "--period",
+        type=str,
+        default="1y",
+        help="Lookback period for live fetch (yfinance), e.g. 6mo, 1y",
+    )
+    p.add_argument(
+        "--interval", type=str, default="1d", help="Sampling interval, e.g. 1d, 1h"
+    )
+    p.add_argument(
+        "--ttl", type=int, default=300, help="Cache TTL (seconds) for live computations"
+    )
+    p.add_argument(
+        "--watch", type=int, default=0, help="Auto-refresh every N seconds (0=once)"
+    )
+    p.add_argument(
+        "--topk",
+        type=int,
+        default=3,
+        help="Top-K sectors to show in details (non-grid view)",
+    )
+    p.add_argument(
+        "--mono", action="store_true", help="Monochrome output (disable color)"
+    )
+    p.add_argument(
+        "--pi-grid",
+        action="store_true",
+        help="Render compact single-grid (Pi display) view",
+    )
+    p.add_argument(
+        "--grid-cols", type=int, default=4, help="Columns in Pi grid (0 = auto-fit)"
+    )
+    p.add_argument(
+        "--hysteresis",
+        type=int,
+        default=0,
+        help="Points required to cross a rating band (reduces flip-flop in --watch)",
+    )
+    p.add_argument(
+        "--export", choices=["json", "csv"], help="Print rows as JSON/CSV and exit"
+    )
     p.add_argument("--version", action="version", version="market-health-cli 0.2.0")
 
     # NEW: rating controls
@@ -558,7 +634,6 @@ def main():
         sector_list = args.sectors or SECTORS_DEFAULT
 
         if args.demo:
-
             return build_demo_dataset(sector_list, seed=42)
 
         if args.json_path:
@@ -578,7 +653,9 @@ def main():
     # ----- export mode (machine-friendly) -----
     if getattr(args, "export", None):
         rows_export = load_rows()
-        text = _export_rows(rows_export, args.export)  # choices guard guarantees valid fmt
+        text = _export_rows(
+            rows_export, args.export
+        )  # choices guard guarantees valid fmt
         print(text, end="")  # stdout (not Rich), no extra newline
         return
 
@@ -598,7 +675,9 @@ def main():
                 )
             else:
                 if args.json_path:
-                    console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
+                    console.print(
+                        f"[yellow]No matching sectors in {args.json_path}[/yellow]"
+                    )
                 else:
                     console.print("[yellow]No data to display.[/yellow]")
             return
@@ -611,7 +690,9 @@ def main():
             render_details(console, rows_local, top_k=args.topk, mono=args.mono)
         else:
             if args.json_path:
-                console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
+                console.print(
+                    f"[yellow]No matching sectors in {args.json_path}[/yellow]"
+                )
             else:
                 console.print("[yellow]No data to display.[/yellow]")
 

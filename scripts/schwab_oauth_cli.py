@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 from __future__ import annotations
 
 import argparse
@@ -7,6 +8,7 @@ import sys
 
 # Allow running from repo checkout without installing the package
 from pathlib import Path as _Path
+
 _REPO_ROOT = _Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
@@ -25,13 +27,29 @@ from market_health.brokers.schwab_oauth import (
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Schwab OAuth helper (local-only secrets + token cache)")
-    ap.add_argument("--config", default=DEFAULT_CONFIG_PATH, help="Path to local OAuth config JSON")
-    ap.add_argument("--token", default=DEFAULT_TOKEN_PATH, help="Path to local token JSON cache")
-    ap.add_argument("--status", action="store_true", help="Show token status (no network calls)")
-    ap.add_argument("--print-auth-url", action="store_true", help="Print the authorize URL")
-    ap.add_argument("--exchange-code", default="", help="Exchange authorization code for tokens (network call)")
-    ap.add_argument("--refresh", action="store_true", help="Refresh token now (network call)")
+    ap = argparse.ArgumentParser(
+        description="Schwab OAuth helper (local-only secrets + token cache)"
+    )
+    ap.add_argument(
+        "--config", default=DEFAULT_CONFIG_PATH, help="Path to local OAuth config JSON"
+    )
+    ap.add_argument(
+        "--token", default=DEFAULT_TOKEN_PATH, help="Path to local token JSON cache"
+    )
+    ap.add_argument(
+        "--status", action="store_true", help="Show token status (no network calls)"
+    )
+    ap.add_argument(
+        "--print-auth-url", action="store_true", help="Print the authorize URL"
+    )
+    ap.add_argument(
+        "--exchange-code",
+        default="",
+        help="Exchange authorization code for tokens (network call)",
+    )
+    ap.add_argument(
+        "--refresh", action="store_true", help="Refresh token now (network call)"
+    )
     args = ap.parse_args()
 
     cfg_path = os.path.expanduser(args.config)
@@ -44,7 +62,7 @@ def main() -> int:
             return 0
         fresh = token_is_fresh(tok)
         print(f"TOKEN: {tok_path}")
-        print(f"fresh={fresh} expires_at={tok.get('expires_at','?')}")
+        print(f"fresh={fresh} expires_at={tok.get('expires_at', '?')}")
         return 0
 
     try:
@@ -80,7 +98,9 @@ def main() -> int:
     except Exception as e:
         print(f"ERR: {e}", file=sys.stderr)
         return 2
-    print(f"OK: access_token present (len={len(access)}) expires_at={tok.get('expires_at','?')}")
+    print(
+        f"OK: access_token present (len={len(access)}) expires_at={tok.get('expires_at', '?')}"
+    )
     return 0
 
 

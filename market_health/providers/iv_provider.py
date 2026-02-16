@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/jerboa/iv_provider.json")
+
 
 @dataclass(frozen=True)
 class IVPoint:
@@ -15,18 +16,21 @@ class IVPoint:
     iv_percentile_1y: float
     extra: Dict[str, Any]
 
+
 @dataclass(frozen=True)
 class IVBundle:
-    schema: str                 # "iv.v1"
-    status: str                 # "ok" | "no_provider" | "error"
+    schema: str  # "iv.v1"
+    status: str  # "ok" | "no_provider" | "error"
     generated_at: str
     source: Dict[str, Any]
     points: List[IVPoint]
     errors: List[str]
 
+
 class IVProvider:
     def get_iv(self, symbols: List[str]) -> IVBundle:
         raise NotImplementedError
+
 
 class NullIVProvider(IVProvider):
     def get_iv(self, symbols: List[str]) -> IVBundle:
@@ -39,9 +43,11 @@ class NullIVProvider(IVProvider):
             errors=[],
         )
 
+
 def _read_json(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
 
 def _as_float(v: Any, default: float = 0.0) -> float:
     try:
@@ -49,10 +55,12 @@ def _as_float(v: Any, default: float = 0.0) -> float:
     except Exception:
         return default
 
+
 class StubIVProvider(IVProvider):
     """
     Offline-only provider reading docs/examples/iv_stub.sample.json shape.
     """
+
     def __init__(self, stub_path: str):
         self.stub_path = os.path.expanduser(stub_path)
 
@@ -83,8 +91,12 @@ class StubIVProvider(IVProvider):
             return IVBundle(
                 schema="iv.v1",
                 status="error",
-                generated_at=str(doc.get("generated_at", "")) if isinstance(doc, dict) else "",
-                source=doc.get("source", {"type": "stub"}) if isinstance(doc, dict) else {"type": "stub"},
+                generated_at=str(doc.get("generated_at", ""))
+                if isinstance(doc, dict)
+                else "",
+                source=doc.get("source", {"type": "stub"})
+                if isinstance(doc, dict)
+                else {"type": "stub"},
                 points=[],
                 errors=["invalid stub: missing object at key 'symbols'"],
             )
@@ -101,7 +113,11 @@ class StubIVProvider(IVProvider):
                     iv=_as_float(row.get("iv", 0.0)),
                     iv_rank_1y=_as_float(row.get("iv_rank_1y", 0.0)),
                     iv_percentile_1y=_as_float(row.get("iv_percentile_1y", 0.0)),
-                    extra={k: v for k, v in row.items() if k not in ("iv", "iv_rank_1y", "iv_percentile_1y")},
+                    extra={
+                        k: v
+                        for k, v in row.items()
+                        if k not in ("iv", "iv_rank_1y", "iv_percentile_1y")
+                    },
                 )
             )
 
@@ -109,10 +125,13 @@ class StubIVProvider(IVProvider):
             schema="iv.v1",
             status="ok",
             generated_at=str(doc.get("generated_at", "")),
-            source=doc.get("source", {"type": "stub"}) if isinstance(doc, dict) else {"type": "stub"},
+            source=doc.get("source", {"type": "stub"})
+            if isinstance(doc, dict)
+            else {"type": "stub"},
             points=pts,
             errors=[],
         )
+
 
 def load_iv_provider(config_path: str = DEFAULT_CONFIG_PATH) -> IVProvider:
     p = os.path.expanduser(config_path)

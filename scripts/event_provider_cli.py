@@ -18,9 +18,16 @@ from market_health.providers.event_provider import (  # noqa: E402
     load_event_provider,
 )
 
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Category A events provider helper (offline stub + null)")
-    ap.add_argument("--config", default=DEFAULT_CONFIG_PATH, help="Path to local provider config JSON")
+    ap = argparse.ArgumentParser(
+        description="Category A events provider helper (offline stub + null)"
+    )
+    ap.add_argument(
+        "--config",
+        default=DEFAULT_CONFIG_PATH,
+        help="Path to local provider config JSON",
+    )
     ap.add_argument("--symbols", default="SPY,AAPL", help="Comma-separated symbols")
     ap.add_argument("--status", action="store_true", help="Print provider status only")
     ap.add_argument("--use-stub", default="", help="Force stub path (bypasses config)")
@@ -64,6 +71,7 @@ def main() -> int:
     }
     print(json.dumps(out, indent=2, sort_keys=True))
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

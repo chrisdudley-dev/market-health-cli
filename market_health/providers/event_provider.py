@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 DEFAULT_CONFIG_PATH = os.path.expanduser("~/.config/jerboa/event_provider.json")
 
@@ -22,7 +22,7 @@ class EventPoint:
 @dataclass(frozen=True)
 class EventBundle:
     schema: str
-    status: str                 # "ok" | "no_provider" | "error"
+    status: str  # "ok" | "no_provider" | "error"
     generated_at: str
     source: Dict[str, Any]
     points: List[EventPoint]
@@ -90,7 +90,11 @@ class StubEventProvider(EventProvider):
             )
 
         generated_at = str(doc.get("generated_at", ""))
-        source = doc.get("source") if isinstance(doc.get("source"), dict) else {"type": "stub"}
+        source = (
+            doc.get("source")
+            if isinstance(doc.get("source"), dict)
+            else {"type": "stub"}
+        )
         if str(doc.get("schema", "")) != "events.stub.v1":
             errors.append('schema must be "events.stub.v1" for stub input')
 
@@ -119,7 +123,9 @@ class StubEventProvider(EventProvider):
             typ = str(e.get("type", "")).strip()
             headline = str(e.get("headline", "")).strip()
             if not ts or not sym or not typ or not headline:
-                errors.append(f"events[{i}] missing required fields (ts/symbol/type/headline)")
+                errors.append(
+                    f"events[{i}] missing required fields (ts/symbol/type/headline)"
+                )
                 continue
 
             points.append(
@@ -130,11 +136,27 @@ class StubEventProvider(EventProvider):
                     headline=headline,
                     impact=_as_float(e.get("impact", 0.0)),
                     confidence=_as_float(e.get("confidence", 0.0)),
-                    extra={k: v for k, v in e.items() if k not in ("ts", "symbol", "type", "headline", "impact", "confidence")},
+                    extra={
+                        k: v
+                        for k, v in e.items()
+                        if k
+                        not in (
+                            "ts",
+                            "symbol",
+                            "type",
+                            "headline",
+                            "impact",
+                            "confidence",
+                        )
+                    },
                 )
             )
 
-        status = "ok" if points and not errors else ("ok" if points else ("error" if errors else "ok"))
+        status = (
+            "ok"
+            if points and not errors
+            else ("ok" if points else ("error" if errors else "ok"))
+        )
         return EventBundle(
             schema="events.v1",
             status=status if status != "error" else "error",

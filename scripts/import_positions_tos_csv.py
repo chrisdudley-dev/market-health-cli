@@ -6,10 +6,9 @@ import csv
 import json
 import os
 import re
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 SCHEMA = "positions.v1"
 
@@ -21,11 +20,14 @@ SEARCH_DIRS_DEFAULT = [
 
 # --- parsing helpers ---
 
+
 def _iso_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+
 def _expand(p: str) -> Path:
     return Path(os.path.expanduser(p)).resolve()
+
 
 def _try_float(x: Any) -> Optional[float]:
     if x is None:
@@ -42,6 +44,7 @@ def _try_float(x: Any) -> Optional[float]:
     except Exception:
         return None
 
+
 def _try_int(x: Any) -> Optional[int]:
     f = _try_float(x)
     if f is None:
@@ -50,6 +53,7 @@ def _try_int(x: Any) -> Optional[int]:
         return int(round(f))
     except Exception:
         return None
+
 
 def _sniff_dialect(path: Path) -> csv.Dialect:
     sample = path.read_text("utf-8", errors="replace")[:8192]
@@ -66,10 +70,13 @@ def _sniff_dialect(path: Path) -> csv.Dialect:
             skipinitialspace = True
             lineterminator = "\n"
             quoting = csv.QUOTE_MINIMAL
+
         return D
+
 
 def _normalize_header(h: str) -> str:
     return re.sub(r"\s+", " ", (h or "").strip().lower())
+
 
 def _pick_latest_csv(search_dirs: List[str]) -> Optional[Path]:
     candidates: List[Path] = []
@@ -91,6 +98,7 @@ def _pick_latest_csv(search_dirs: List[str]) -> Optional[Path]:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
+
 # --- option descriptor parsing (best-effort) ---
 
 # Common ToS-style: "SPY 02/14/2026 500 C"
@@ -102,6 +110,7 @@ _RX_TOS = re.compile(
 _RX_OCC = re.compile(
     r"^(?P<under>[A-Z0-9.\-]{1,6})(?P<yy>\d{2})(?P<mm>\d{2})(?P<dd>\d{2})(?P<right>[CP])(?P<strike>\d{8})$"
 )
+
 
 def _parse_option(desc: str) -> Optional[Dict[str, Any]]:
     s = (desc or "").strip()
@@ -141,6 +150,7 @@ def _parse_option(desc: str) -> Optional[Dict[str, Any]]:
 
     return None
 
+
 def _guess_symbol(row: Dict[str, str]) -> str:
     # Try several common headers
     for key in ("symbol", "ticker", "underlying"):
@@ -152,12 +162,14 @@ def _guess_symbol(row: Dict[str, str]) -> str:
     tok = (desc.strip().split() or ["?"])[0]
     return tok.upper()
 
+
 def _find_col(row: Dict[str, str], *names: str) -> Optional[str]:
     wanted = {n.lower() for n in names}
     for h in row.keys():
         if _normalize_header(h) in wanted:
             return h
     return None
+
 
 def _parse_positions(csv_path: Path) -> List[Dict[str, Any]]:
     dialect = _sniff_dialect(csv_path)
@@ -172,7 +184,9 @@ def _parse_positions(csv_path: Path) -> List[Dict[str, Any]]:
             continue
 
         # Try to detect qty
-        qty_col = _find_col(r, "qty", "quantity", "net qty", "net quantity", "position", "pos")
+        qty_col = _find_col(
+            r, "qty", "quantity", "net qty", "net quantity", "position", "pos"
+        )
         qty = _try_int(r.get(qty_col, "")) if qty_col else None
         if qty is None:
             # some exports use "Long Quantity"/"Short Quantity"
@@ -187,7 +201,9 @@ def _parse_positions(csv_path: Path) -> List[Dict[str, Any]]:
         if qty is None or qty == 0:
             continue
 
-        desc_col = _find_col(r, "description", "instrument", "symbol description", "security description")
+        desc_col = _find_col(
+            r, "description", "instrument", "symbol description", "security description"
+        )
         desc = (r.get(desc_col, "") if desc_col else "").strip()
 
         opt = _parse_option(desc)
@@ -201,9 +217,18 @@ def _parse_positions(csv_path: Path) -> List[Dict[str, Any]]:
                 "symbol": underlying,
                 "qty": qty,
                 "option": opt,
-                "avg_price": _try_float(r.get(_find_col(r, "average price", "avg price", "trade price") or "", "")),
-                "mark": _try_float(r.get(_find_col(r, "mark", "last", "price") or "", "")),
-                "market_value": _try_float(r.get(_find_col(r, "market value", "value") or "", "")),
+                "avg_price": _try_float(
+                    r.get(
+                        _find_col(r, "average price", "avg price", "trade price") or "",
+                        "",
+                    )
+                ),
+                "mark": _try_float(
+                    r.get(_find_col(r, "mark", "last", "price") or "", "")
+                ),
+                "market_value": _try_float(
+                    r.get(_find_col(r, "market value", "value") or "", "")
+                ),
                 "source": {"file": str(csv_path), "row": idx, "description": desc},
             }
             out.append(rec)
@@ -217,20 +242,38 @@ def _parse_positions(csv_path: Path) -> List[Dict[str, Any]]:
             "asset_type": "equity",
             "symbol": symbol,
             "qty": qty,
-            "avg_price": _try_float(r.get(_find_col(r, "average price", "avg price", "trade price") or "", "")),
+            "avg_price": _try_float(
+                r.get(
+                    _find_col(r, "average price", "avg price", "trade price") or "", ""
+                )
+            ),
             "mark": _try_float(r.get(_find_col(r, "mark", "last", "price") or "", "")),
-            "market_value": _try_float(r.get(_find_col(r, "market value", "value") or "", "")),
+            "market_value": _try_float(
+                r.get(_find_col(r, "market value", "value") or "", "")
+            ),
             "source": {"file": str(csv_path), "row": idx, "description": desc},
         }
         out.append(rec)
 
     return out
 
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Import Thinkorswim positions CSV into ~/.cache/jerboa/positions.v1.json")
-    ap.add_argument("--csv", default="", help="Path to a Thinkorswim positions CSV export")
-    ap.add_argument("--search-dir", action="append", default=[], help="Additional directory to search for a positions CSV")
-    ap.add_argument("--out", default=str(Path.home() / ".cache/jerboa/positions.v1.json"))
+    ap = argparse.ArgumentParser(
+        description="Import Thinkorswim positions CSV into ~/.cache/jerboa/positions.v1.json"
+    )
+    ap.add_argument(
+        "--csv", default="", help="Path to a Thinkorswim positions CSV export"
+    )
+    ap.add_argument(
+        "--search-dir",
+        action="append",
+        default=[],
+        help="Additional directory to search for a positions CSV",
+    )
+    ap.add_argument(
+        "--out", default=str(Path.home() / ".cache/jerboa/positions.v1.json")
+    )
     args = ap.parse_args()
 
     out_path = _expand(args.out)
@@ -247,12 +290,16 @@ def main() -> int:
 
     if csv_path is None:
         print("NO CSV FOUND.")
-        print("Put a Thinkorswim positions export CSV in one of these folders, then rerun:")
+        print(
+            "Put a Thinkorswim positions export CSV in one of these folders, then rerun:"
+        )
         for d in SEARCH_DIRS_DEFAULT:
             print(f" - {os.path.expanduser(d)}")
         print("")
         print("Or run with an explicit file:")
-        print("  jerboa-market-health-positions-refresh --csv /path/to/your_positions.csv")
+        print(
+            "  jerboa-market-health-positions-refresh --csv /path/to/your_positions.csv"
+        )
         return 0
 
     positions = _parse_positions(csv_path)
@@ -274,6 +321,7 @@ def main() -> int:
     print(f"OK: wrote {out_path}")
     print(f"OK: imported {len(positions)} positions from {csv_path}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

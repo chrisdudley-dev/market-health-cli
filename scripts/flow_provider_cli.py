@@ -17,11 +17,24 @@ from market_health.providers.flow_provider import (  # noqa: E402
     load_flow_provider,
 )
 
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="FlowProvider helper (Category C provider boundary)")
-    ap.add_argument("--config", default=DEFAULT_FLOW_CONFIG, help="~/.config/jerboa/flow_provider.json")
-    ap.add_argument("--status", action="store_true", help="Show provider status (no network)")
-    ap.add_argument("--stub-path", default="", help="Normalize a stub fixture JSON (no config needed)")
+    ap = argparse.ArgumentParser(
+        description="FlowProvider helper (Category C provider boundary)"
+    )
+    ap.add_argument(
+        "--config",
+        default=DEFAULT_FLOW_CONFIG,
+        help="~/.config/jerboa/flow_provider.json",
+    )
+    ap.add_argument(
+        "--status", action="store_true", help="Show provider status (no network)"
+    )
+    ap.add_argument(
+        "--stub-path",
+        default="",
+        help="Normalize a stub fixture JSON (no config needed)",
+    )
     ap.add_argument("--symbols", default="", help="Comma-separated symbols (optional)")
     args = ap.parse_args()
 
@@ -42,6 +55,7 @@ def main() -> int:
 
     ap.print_help()
     return 2
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

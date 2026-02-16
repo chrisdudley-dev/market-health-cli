@@ -4,7 +4,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Protocol
 
 DEFAULT_FLOW_CONFIG = os.path.expanduser("~/.config/jerboa/flow_provider.json")
 
@@ -12,10 +12,12 @@ DEFAULT_FLOW_CONFIG = os.path.expanduser("~/.config/jerboa/flow_provider.json")
 # Internal normalized model
 # -------------------------
 
+
 @dataclass(frozen=True)
 class FlowPoint:
     symbol: str
     metrics: Dict[str, float]
+
 
 @dataclass(frozen=True)
 class FlowBatch:
@@ -34,17 +36,21 @@ class FlowBatch:
             "points": [{"symbol": p.symbol, "metrics": p.metrics} for p in self.points],
         }
 
+
 # -------------------------
 # Provider interface
 # -------------------------
+
 
 class FlowProvider(Protocol):
     def describe(self) -> str: ...
     def get_flow(self, symbols: List[str]) -> FlowBatch: ...
 
+
 # -------------------------
 # Null provider (graceful)
 # -------------------------
+
 
 class NullFlowProvider:
     def describe(self) -> str:
@@ -60,9 +66,11 @@ class NullFlowProvider:
             status="no_provider",
         )
 
+
 # -------------------------
 # Stub provider (fixture)
 # -------------------------
+
 
 class StubFlowProvider:
     """
@@ -76,6 +84,7 @@ class StubFlowProvider:
       "symbols": { "SPY": { "call_put_ratio": 1.2, ... }, ... }
     }
     """
+
     def __init__(self, path: str) -> None:
         self.path = os.path.expanduser(path)
 
@@ -120,15 +129,20 @@ class StubFlowProvider:
 
         return FlowBatch(
             schema="flow.v1",
-            generated_at=str(raw.get("generated_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())),
+            generated_at=str(
+                raw.get("generated_at")
+                or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            ),
             source=dict(raw.get("source") or {"type": "stub", "path": self.path}),
             points=points,
             status="ok",
         )
 
+
 # -------------------------
 # Loader
 # -------------------------
+
 
 def load_flow_provider(config_path: str = DEFAULT_FLOW_CONFIG) -> FlowProvider:
     p = os.path.expanduser(config_path)
