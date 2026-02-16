@@ -1,11 +1,21 @@
 #!/usr/bin/env python
 from __future__ import annotations
+from market_health.ui_contract_meta import dimension_heading
 
 import argparse
 import json
 import random
 import time
 import datetime as dt
+
+try:
+    from requests.exceptions import RequestException
+except ImportError:
+    # fallback if requests isn't installed (e.g., in demo-only envs)
+    class RequestException(Exception):  # type: ignore
+        pass
+
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -18,10 +28,9 @@ from rich import box
 # Pull scores + default sectors from the engine (do not re-define here)
 from market_health.engine import compute_scores, SECTORS_DEFAULT
 
-CATEGORY_NAMES: Dict[str, str] = {
-    "A": "Catalyst Health", "B": "Trend & Structure", "C": "Position & Flow",
-    "D": "Risk & Volatility", "E": "Environment & Regime", "F": "Execution & Frictions",
-}
+LAST_BANDS = {}  # symbol -> last committed band index (0..4) for hysteresis
+
+
 CHECK_LABELS: Dict[str, List[str]] = {
     "A": ["News", "Analysts", "Event", "Insiders", "Peers/Macro", "Guidance"],
     "B": ["Stacked MAs", "RS vs SPY", "BB Mid", "20D Break", "Vol x", "Hold 20EMA"],
@@ -60,14 +69,63 @@ class SectorRow:
     def total(self) -> int:
         return sum(cat.total for cat in self.categories.values())
 
+    @property
+    def pct(self) -> int:
+        return int(round((self.total / MAX_TOTAL) * 100))
+
 
 # ---------- tiny render helpers ----------
+
+
+def _row_symbol_and_score(row):
+    sym = getattr(row, "symbol", getattr(row, "ticker", "?"))
+    for attr in ("pct", "score", "percent", "value"):
+        val = getattr(row, attr, None)
+        if val is not None:
+            try:
+                return sym, int(round(float(val)))
+            except (TypeError, ValueError):
+                pass
+    total = getattr(row, "total", None)
+    if isinstance(total, (int, float)) and MAX_TOTAL:
+        pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+        return sym, max(0, min(100, pct))
+    return sym, 0
+
+
+def _export_rows(rows, fmt: str) -> str:
+    """Build a JSON or CSV string from rows."""
+    import json
+    import io
+    import csv
+
+    recs = []
+    for r in rows:
+        sym, score = _row_symbol_and_score(r)
+        recs.append({"symbol": sym, "score": score})
+
+    if fmt == "json":
+        return json.dumps(recs, separators=(",", ":")) + "\n"
+
+    if fmt == "csv":
+        buf = io.StringIO()
+        w = csv.DictWriter(buf, fieldnames=["symbol", "score"])
+        w.writeheader()
+        w.writerows(recs)
+        return buf.getvalue()
+
+    raise ValueError("fmt must be 'json' or 'csv'")
+
+
 def pct_style(p: float, mono: bool = False) -> str:
-    if mono: return ""
-    if p >= 0.80: return "black on green3"
-    if p >= 0.60: return "black on chartreuse3"
-    if p >= 0.40: return "black on khaki1"
-    if p >= 0.20: return "black on dark_orange3"
+    if mono:
+        return ""
+    if p >= 0.80:
+        return "black on green3"
+    if p >= 0.60:
+        return "black on chartreuse3"
+    if p >= 0.40:
+        return "black on khaki1"
     return "white on red3"
 
 
@@ -120,9 +178,15 @@ def build_sector_from_json(item: dict) -> SectorRow:
     return SectorRow(symbol=item.get("symbol", "?"), categories=cats)
 
 
-def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[SectorRow]:
+def load_json_dataset(
+    path: str, sectors_filter: Optional[List[str]]
+) -> List[SectorRow]:
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
+    # ENV_V1_JSON_SUPPORT_V1: allow environment.v1.json (object) as input; use its sector list
+    if isinstance(data, dict) and "sectors" in data:
+        data = data["sectors"]
+
     rows: List[SectorRow] = []
     for item in data:
         s = build_sector_from_json(item)
@@ -131,8 +195,12 @@ def load_json_dataset(path: str, sectors_filter: Optional[List[str]]) -> List[Se
     return rows
 
 
-def load_live_dataset(sectors: List[str], period: str, interval: str, ttl: int) -> List[SectorRow]:
-    payload = compute_scores(sectors=sectors, period=period, interval=interval, ttl_sec=ttl)
+def load_live_dataset(
+    sectors: List[str], period: str, interval: str, ttl: int
+) -> List[SectorRow]:
+    payload = compute_scores(
+        sectors=sectors, period=period, interval=interval, ttl_sec=ttl
+    )
     return [build_sector_from_json(obj) for obj in payload]
 
 
@@ -142,13 +210,15 @@ def render_header(console: Console, mono: bool = False) -> None:
     title = f"[bold]Market Health – Sector Union[/bold]  •  {ts}"
     if mono:
         console.print(title)
-        console.print("Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%")
+        console.print(
+            "Legend: + good  ~ mixed  - weak   0–19% 20–39% 40–59% 60–79% 80–100%"
+        )
         console.print()
         return
     legend = (
         "[green3]●[/green3]=good  [gold1]●[/gold1]=mixed  [red3]●[/red3]=weak   "
-        "[white on red3] 0–19% [/white on red3] "
-        "[black on dark_orange3] 20–39% [/black on dark_orange3] "
+        "[white on red3] 0–39% [/white on red3] "
+        ""
         "[black on khaki1] 40–59% [/black on khaki1] "
         "[black on chartreuse3] 60–79% [/black on chartreuse3] "
         "[black on green3] 80–100% [/black on green3]"
@@ -156,8 +226,12 @@ def render_header(console: Console, mono: bool = False) -> None:
     console.print(Panel.fit(legend, title=title, border_style="cyan"))
 
 
-def render_overview(console: Console, rows: List[SectorRow], mono: bool = False) -> None:
-    tbl = Table(title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False)
+def render_overview(
+    console: Console, rows: List[SectorRow], mono: bool = False
+) -> None:
+    tbl = Table(
+        title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
+    )
     tbl.add_column("Sector", justify="left", style="bold cyan")
     for key in "ABCDEF":
         tbl.add_column(key, justify="center")
@@ -165,16 +239,22 @@ def render_overview(console: Console, rows: List[SectorRow], mono: bool = False)
     for row_data in rows:
         cells: List[Text] = [Text(row_data.symbol)]
         for key in "ABCDEF":
-            cells.append(score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono))
+            cells.append(
+                score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono)
+            )
         cells.append(score_cell(row_data.total, MAX_TOTAL, mono))
         tbl.add_row(*cells)
     console.print(tbl)
 
 
-def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bool = False) -> None:
+def render_details(
+    console: Console, rows: List[SectorRow], top_k: int, mono: bool = False
+) -> None:
     if not rows:
         return
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[:max(1, min(top_k, len(rows)))]
+    ranked = sorted(rows, key=lambda r: r.total, reverse=True)[
+        : max(1, min(top_k, len(rows)))
+    ]
     for row_data in ranked:
         console.rule(f"[bold magenta]Details[/bold magenta] – {row_data.symbol}")
         t = Table(box=box.MINIMAL_HEAVY_HEAD, show_lines=True)
@@ -184,7 +264,7 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
         t.add_column("Cat Total", justify="center")
         for key in "ABCDEF":
             cat = row_data.categories[key]
-            row_cells: List[Text] = [Text(f"{key}  {CATEGORY_NAMES[key]}")]
+            row_cells: List[Text] = [Text(dimension_heading(key))]
             row_cells.extend([chip(ch.score, mono) for ch in cat.checks])
             row_cells.append(score_cell(cat.total, MAX_PER_CATEGORY, mono))
             t.add_row(*row_cells)
@@ -192,79 +272,351 @@ def render_details(console: Console, rows: List[SectorRow], top_k: int, mono: bo
 
 
 # ---------- Pi Grid (compact, no legend) ----------
-MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 
-def render_pi_grid(console: Console, rows: List[SectorRow], cols: int = 0, mono: bool = False) -> None:
-    """Compact single-grid view for Raspberry Pi / small terminals (no legend)."""
-    if not rows:
-        console.print("[yellow]No data to display.[/yellow]")
+
+# POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
+
+
+def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> None:
+    """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
+    try:
+        import os
+        import json
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich import box
+
+        path = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+        if not os.path.isfile(path):
+            return
+
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        positions = data.get("positions") or []
+        source = data.get("source") or {}
+        src_type = source.get("type") or "unknown"
+
+        if not positions:
+            msg = (
+                "No positions imported yet.\n"
+                "Export a Thinkorswim Position Statement CSV to:\n"
+                "  ~/imports/thinkorswim\n"
+                "Then run:\n"
+                "  jerboa-market-health-positions-refresh"
+            )
+            if mono:
+                console.print(
+                    "Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)"
+                )
+            else:
+                console.print(
+                    Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan")
+                )
+            return
+
+        t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
+        t.add_column("Sym", style="bold cyan")
+        t.add_column("Type")
+        t.add_column("Qty", justify="right")
+        t.add_column("Details")
+
+        for p in positions[:max_rows]:
+            sym = str(p.get("symbol", "?"))
+            typ = str(p.get("asset_type", "?"))
+            qty = str(p.get("qty", ""))
+
+            details = ""
+            if typ == "option":
+                opt = p.get("option") or {}
+                details = f"{opt.get('expiry', '?')}  {opt.get('strike', '?')}  {opt.get('right', '?')}"
+
+            t.add_row(sym, typ, qty, details)
+
+        title = f"Positions ({len(positions)})  •  source={src_type}"
+        if mono:
+            console.print(title)
+            for p in positions[:max_rows]:
+                sym = str(p.get("symbol", "?"))
+                typ = str(p.get("asset_type", "?"))
+                qty = str(p.get("qty", ""))
+                det = ""
+                if typ == "option":
+                    opt = p.get("option") or {}
+                    det = f"{opt.get('expiry', '?')} {opt.get('strike', '?')} {opt.get('right', '?')}"
+                console.print(f"- {sym}  {typ}  qty={qty}  {det}".rstrip())
+        else:
+            console.print(Panel(t, title=title, border_style="cyan"))
+
+    except Exception:
+        # Never break the widget for positions issues
         return
 
-    ranked = sorted(rows, key=lambda r: r.total, reverse=True)
 
-    # Minimal title line; comment out if you want zero header.
-    console.rule("[bold cyan]Market Health – Pi Grid[/bold cyan]")
+def render_pi_grid(
+    console,
+    rows,
+    grid_cols: int = 0,
+    mono: bool = False,
+    rating_scheme: str = "hybrid",
+    quantiles=(10, 30, 70, 90),
+    hysteresis: int = 0,
+) -> None:
+    from rich.table import Table
+    from rich.text import Text
+    from rich.panel import Panel
+    from rich import box
 
-    # --- Auto-fit column count if cols <= 0 ---
-    TILE_W = 10  # uniform tile width; tweak if you want denser tiles
-    GAP = 2
-    if cols is None or cols <= 0:
-        term_w = max(1, console.size.width)
-        cols = max(1, min(len(ranked), term_w // (TILE_W + GAP)))
+    labels = [
+        ("Stress", "S"),
+        ("Stress", "S"),
+        ("Balanced", "B"),
+        ("Healthy", "H"),
+        ("Healthy", "H"),
+    ]
 
-    # --- Build cells with uniform width and full-tile background color ---
-    cells: List[Panel] = []
-    for i, r in enumerate(ranked, 1):
-        pct = (r.total / MAX_TOTAL) if MAX_TOTAL else 0.0
-        pct_int = int(round(pct * 100))
-        style = pct_style(pct, mono)  # uses your existing color thresholds
+    def _fixed_bounds():
+        return [20, 40, 60, 80]
 
-        label = Text(f"{r.symbol}\n{pct_int}%", justify="center")
-        if style:
-            label.stylize(style)
+    def _quantile_bounds(vals, qs=(10, 30, 70, 90)):
+        xs = sorted(int(v) for v in vals if v is not None)
+        if not xs:
+            return _fixed_bounds()
 
-        cells.append(
+        def pct_fn(p):
+            k = max(0, min(len(xs) - 1, round((p / 100) * (len(xs) - 1))))
+            return xs[k]
+
+        return [pct_fn(q) for q in qs]
+
+    def _choose_bounds(vals, scheme="hybrid", qs=(10, 30, 70, 90), guard=5):
+        f = _fixed_bounds()
+        if scheme == "fixed":
+            return f
+        qb = _quantile_bounds(vals, qs)
+        if scheme == "quantile":
+            return qb
+        return [max(fi - guard, min(fi + guard, qi)) for fi, qi in zip(f, qb)]
+
+    def _band_index(score_val: int, cuts) -> int:
+        c1, c2, c3, c4 = cuts
+        if score_val < c1:
+            return 0
+        if score_val < c2:
+            return 1
+        if score_val < c3:
+            return 2
+        if score_val < c4:
+            return 3
+        return 4
+
+    def _label_for_band(bi: int):
+        return labels[bi]  # (long, short)
+
+    def _panel_style(band_or_pct: int) -> str:
+        if mono:
+            return ""
+        # Primary mode: band index (0..4) from the SAME logic that chooses S/B/H
+        # Fallback: if caller accidentally passes 0..100 percent, map to the same 5 bands.
+        try:
+            v = int(band_or_pct)
+        except Exception:
+            v = 0
+
+        # If it looks like a percent, band it
+        if v > 4:
+            if v >= 80:
+                return "on green3"
+            if v >= 60:
+                return "on chartreuse3"
+            if v >= 40:
+                return "on yellow3"
+            return "on red3"
+
+        # Band index mapping (0=worst .. 4=best)
+        bi = max(0, min(4, v))
+        if bi >= 4:
+            return "on green3"
+        if bi >= 3:
+            return "on chartreuse3"
+        if bi >= 2:
+            return "on yellow3"
+        return "on red3"
+
+    def _get_pct(row) -> int:
+        # 1) try explicit numeric fields (supports alt data sources)
+        for attr in ("pct", "score", "percent", "value"):
+            val = getattr(row, attr, None)
+            if val is not None:
+                try:
+                    return int(round(float(val)))
+                except (ValueError, TypeError):
+                    pass
+        # 2) fallback for SectorRow: compute from total
+        total = getattr(row, "total", None)
+        if isinstance(total, (int, float)) and MAX_TOTAL:
+            pct = int(round((float(total) / float(MAX_TOTAL)) * 100))
+            return max(0, min(100, pct))
+        return 0
+
+    # compute bounds once per render
+    cross_section = [_get_pct(r) for r in rows]
+    cut_points = _choose_bounds(
+        cross_section, scheme=rating_scheme, qs=quantiles, guard=5
+    )
+
+    # hysteresis helpers
+    def _lower_of_band(i: int) -> int:
+        return 0 if i == 0 else cut_points[i - 1]
+
+    tiles = []
+    for r, pct_val in zip(rows, cross_section):
+        sym = getattr(r, "symbol", getattr(r, "ticker", "?"))
+        raw_band = _band_index(pct_val, cut_points)
+
+        # apply hysteresis (if enabled)
+        if hysteresis and sym in LAST_BANDS:
+            last = LAST_BANDS[sym]
+            commit = last
+            if raw_band > last:
+                # moving up: must clear lower bound of new band by >= hysteresis
+                lower_needed = _lower_of_band(raw_band) + hysteresis
+                if pct_val >= lower_needed:
+                    commit = raw_band
+            elif raw_band < last:
+                # moving down: must drop under lower bound of current band by >= hysteresis
+                boundary = _lower_of_band(last)
+                if pct_val < boundary - hysteresis:
+                    commit = raw_band
+            band_idx = commit
+        else:
+            band_idx = raw_band
+
+        LAST_BANDS[sym] = band_idx
+        band_used = band_idx
+        _, short_lbl = _label_for_band(band_idx)
+        text = Text(justify="center", no_wrap=True)
+        text.append(f"{sym}\n", style="bold")
+        text.append(f"{pct_val:>3d}%\n", style="bold")
+        text.append(short_lbl, style="bold")
+
+        tiles.append(
             Panel(
-                label,
-                box=box.SQUARE,
+                text,
+                box=box.ROUNDED,
                 padding=(0, 1),
-                border_style="cyan",
-                style=style if not mono else "",
-                width=TILE_W,
-                title=f"#{i}",
-                title_align="left",
+                style=_panel_style(band_used),
+                border_style="black" if not mono else "white",
             )
         )
 
-    # --- Print the grid row-by-row ---
-    from math import ceil
-    row_count = ceil(len(cells) / cols)
-    for r in range(row_count):
-        chunk = cells[r * cols : (r + 1) * cols]
-        if not chunk:
-            continue
-        row_tbl = Table.grid(padding=(0, 1))
-        for _ in chunk:
-            row_tbl.add_column(justify="center")
-        row_tbl.add_row(*chunk)
-        console.print(row_tbl)
+    # layout
+    def _chunk(seq, n):
+        for i in range(0, len(seq), n):
+            yield seq[i : i + n]
 
-# ---------- CLI ----------
+    cols = (
+        grid_cols
+        if grid_cols and grid_cols > 0
+        else max(1, min(10, (console.size.width - 2) // 12))
+    )
+    grid = Table.grid(padding=(0, 1))
+    for _ in range(cols):
+        grid.add_column(no_wrap=True)
+
+    for row_tiles in _chunk(tiles, cols):
+        if len(row_tiles) < cols:
+            row_tiles = row_tiles + [""] * (cols - len(row_tiles))
+        grid.add_row(*row_tiles)
+    # PI_GRID_TITLE_PANEL_V1: wrap sector grid in a titled panel (like Positions)
+    console.print(
+        Panel.fit(
+            grid,
+            title="Market Health – Pi Grid",
+            border_style="cyan" if not mono else "white",
+            box=box.ROUNDED,
+        )
+    )
+    # ---------- CLI ----------
+
+    # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
+    _render_positions_panel(console, mono=mono)
+
+
 def parse_args():
-    p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
-    p.add_argument("--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include")
-    p.add_argument("--topk", type=int, default=3, help="How many top sectors to expand in details")
-    p.add_argument("--mono", action="store_true", help="Monochrome (no colors)")
-    p.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds")
-    # data sources
-    p.add_argument("--json", dest="json_path", type=str, help="If set, load from JSON instead of live")
-    p.add_argument("--demo", action="store_true", help="Use random demo data (ignores --json and live)")
-    # live compute options (used when no --json and not --demo)
-    p.add_argument("--period", type=str, default="1y")
-    p.add_argument("--interval", type=str, default="1d")
-    p.add_argument("--ttl", type=int, default=300, help="In-process cache TTL for data fetches")
-    p.add_argument("--pi-grid", action="store_true", help="Compact Raspberry Pi grid view (one small grid)")
-    p.add_argument("--grid-cols", type=int, default=4, help="Number of columns in the Pi grid")
+    p = argparse.ArgumentParser(
+        description="Market Health – terminal dashboard (with Pi Grid mode)"
+    )
+
+    # existing flags
+    p.add_argument("--demo", action="store_true", help="Use generated demo data")
+    p.add_argument(
+        "--json-path", type=str, default=None, help="Path to JSON dataset to render"
+    )
+    p.add_argument(
+        "--sectors",
+        nargs="*",
+        default=None,
+        help="Override sector tickers, e.g. --sectors XLK XLF XLY",
+    )
+    p.add_argument(
+        "--period",
+        type=str,
+        default="1y",
+        help="Lookback period for live fetch (yfinance), e.g. 6mo, 1y",
+    )
+    p.add_argument(
+        "--interval", type=str, default="1d", help="Sampling interval, e.g. 1d, 1h"
+    )
+    p.add_argument(
+        "--ttl", type=int, default=300, help="Cache TTL (seconds) for live computations"
+    )
+    p.add_argument(
+        "--watch", type=int, default=0, help="Auto-refresh every N seconds (0=once)"
+    )
+    p.add_argument(
+        "--topk",
+        type=int,
+        default=3,
+        help="Top-K sectors to show in details (non-grid view)",
+    )
+    p.add_argument(
+        "--mono", action="store_true", help="Monochrome output (disable color)"
+    )
+    p.add_argument(
+        "--pi-grid",
+        action="store_true",
+        help="Render compact single-grid (Pi display) view",
+    )
+    p.add_argument(
+        "--grid-cols", type=int, default=4, help="Columns in Pi grid (0 = auto-fit)"
+    )
+    p.add_argument(
+        "--hysteresis",
+        type=int,
+        default=0,
+        help="Points required to cross a rating band (reduces flip-flop in --watch)",
+    )
+    p.add_argument(
+        "--export", choices=["json", "csv"], help="Print rows as JSON/CSV and exit"
+    )
+    p.add_argument("--version", action="version", version="market-health-cli 0.2.0")
+
+    # NEW: rating controls
+    p.add_argument(
+        "--rating-scheme",
+        choices=["fixed", "quantile", "hybrid"],
+        default="hybrid",
+        help="Map 0–100 score to SB/B/H/S/SS (default: hybrid quantile/fixed)",
+    )
+    p.add_argument(
+        "--quantiles",
+        type=str,
+        default="10,30,70,90",
+        help="Cutpoints for quantile scheme (comma-separated), e.g. 10,30,70,90",
+    )
+    # (optional hysteresis — wire it later if you want)
+    # p.add_argument("--hysteresis", type=int, default=0, help="Pts needed to cross a band before label changes")
 
     return p.parse_args()
 
@@ -278,43 +630,73 @@ def main():
     )
 
     def load_rows() -> List[SectorRow]:
+        # fall back to engine defaults if user didn't pass --sectors
+        sector_list = args.sectors or SECTORS_DEFAULT
+
         if args.demo:
-            return build_demo_dataset(args.sectors, seed=42)
+            return build_demo_dataset(sector_list, seed=42)
+
         if args.json_path:
             try:
                 return load_json_dataset(args.json_path, args.sectors)
-            except (OSError, json.JSONDecodeError) as e:
-                console.print(f"[red]Failed to read JSON: {e}[/red]")
+            except (OSError, json.JSONDecodeError) as err:
+                console.print(f"[red]Failed to read JSON: {err}[/red]")
                 return []
-        # live from engine
+
+        # live from engine (catch common failure modes, not a broad Exception)
         try:
-            return load_live_dataset(args.sectors, args.period, args.interval, args.ttl)
-        except Exception as e:
-            console.print(f"[red]Failed to compute live scores: {e}[/red]")
+            return load_live_dataset(sector_list, args.period, args.interval, args.ttl)
+        except (OSError, ValueError, RuntimeError, KeyError, RequestException) as err:
+            console.print(f"[red]Failed to compute live scores: {err}[/red]")
             return []
+
+    # ----- export mode (machine-friendly) -----
+    if getattr(args, "export", None):
+        rows_export = load_rows()
+        text = _export_rows(
+            rows_export, args.export
+        )  # choices guard guarantees valid fmt
+        print(text, end="")  # stdout (not Rich), no extra newline
+        return
 
     def render_once():
         console.print()
+        if args.pi_grid:
+            rows_local = load_rows()
+            if rows_local:
+                render_pi_grid(
+                    console,
+                    rows_local,
+                    grid_cols=args.grid_cols,
+                    mono=args.mono,
+                    rating_scheme=args.rating_scheme,
+                    quantiles=tuple(int(x) for x in args.quantiles.split(",")),
+                    hysteresis=args.hysteresis,
+                )
+            else:
+                if args.json_path:
+                    console.print(
+                        f"[yellow]No matching sectors in {args.json_path}[/yellow]"
+                    )
+                else:
+                    console.print("[yellow]No data to display.[/yellow]")
+            return
 
-    rows = load_rows()
-    if rows:
-        use_pi_grid = getattr(args, "pi_grid", False)
-        grid_cols = getattr(args, "grid_cols", 4)
-
-        if use_pi_grid and "render_pi_grid" in globals():
-            # Pi Grid prints its own legend; don't print header twice.
-            render_pi_grid(console, rows, cols=grid_cols, mono=args.mono)
+        # non-Pi view
+        render_header(console, mono=args.mono)
+        rows_local = load_rows()
+        if rows_local:
+            render_overview(console, rows_local, mono=args.mono)
+            render_details(console, rows_local, top_k=args.topk, mono=args.mono)
         else:
-            render_header(console, mono=args.mono)
-            render_overview(console, rows, mono=args.mono)
-            render_details(console, rows, top_k=args.topk, mono=args.mono)
-    else:
-        if args.json_path:
-            console.print(f"[yellow]No matching sectors in {args.json_path}[/yellow]")
-        else:
-            console.print("[yellow]No data to display.[/yellow]")
+            if args.json_path:
+                console.print(
+                    f"[yellow]No matching sectors in {args.json_path}[/yellow]"
+                )
+            else:
+                console.print("[yellow]No data to display.[/yellow]")
 
-    if getattr(args, "watch", 0) and args.watch > 0:
+    if args.watch and args.watch > 0:
         try:
             while True:
                 console.clear()

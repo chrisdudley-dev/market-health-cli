@@ -1,0 +1,8 @@
+{
+  "client_id": "REPLACE_ME",
+  "client_secret": "REPLACE_ME",
+  "redirect_uri": "http://127.0.0.1:8080/callback",
+  "auth_url": "REPLACE_WITH_PROVIDER_AUTH_URL",
+  "token_url": "REPLACE_WITH_PROVIDER_TOKEN_URL",
+  "scope": ""
+}

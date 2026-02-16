@@ -16,34 +16,67 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Compute Market-Health scores and write JSON/CSV."
     )
-    p.add_argument("--sectors", nargs="+", default=SECTORS_DEFAULT,
-                   help="Tickers to score (default: sector SPDRs).")
-    p.add_argument("--period", type=str, default="1y",
-                   help="Lookback window for data fetch (e.g. 6mo, 1y).")
-    p.add_argument("--interval", type=str, default="1d",
-                   help="Data interval (e.g. 1d, 1h).")
-    p.add_argument("--ttl", type=int, default=300,
-                   help="In-process cache TTL (seconds) for data fetches.")
-    p.add_argument("--out", type=str, default="scores.json",
-                   help="Path to write JSON output (default: scores.json).")
-    p.add_argument("--out-csv", type=str,
-                   help="Optional CSV path to write category totals.")
-    p.add_argument("--stdout", action="store_true",
-                   help="Print JSON to stdout (still writes files if --out/--out-csv set).")
-    p.add_argument("--pretty", action="store_true",
-                   help="Pretty-print JSON with indentation.")
-    p.add_argument("--watch", type=int,
-                   help="Recompute and write every N seconds until Ctrl+C.")
+    p.add_argument(
+        "--sectors",
+        nargs="+",
+        default=SECTORS_DEFAULT,
+        help="Tickers to score (default: sector SPDRs).",
+    )
+    p.add_argument(
+        "--period",
+        type=str,
+        default="1y",
+        help="Lookback window for data fetch (e.g. 6mo, 1y).",
+    )
+    p.add_argument(
+        "--interval", type=str, default="1d", help="Data interval (e.g. 1d, 1h)."
+    )
+    p.add_argument(
+        "--ttl",
+        type=int,
+        default=300,
+        help="In-process cache TTL (seconds) for data fetches.",
+    )
+    p.add_argument(
+        "--out",
+        type=str,
+        default="scores.json",
+        help="Path to write JSON output (default: scores.json).",
+    )
+    p.add_argument(
+        "--out-csv", type=str, help="Optional CSV path to write category totals."
+    )
+    p.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print JSON to stdout (still writes files if --out/--out-csv set).",
+    )
+    p.add_argument(
+        "--pretty", action="store_true", help="Pretty-print JSON with indentation."
+    )
+    p.add_argument(
+        "--watch", type=int, help="Recompute and write every N seconds until Ctrl+C."
+    )
     return p.parse_args()
 
 
 def _category_total(cat_node: dict) -> int:
-    """Safely sum scores in a category node: {'checks': [{'label','score'}, ...]}."""
-    checks = cat_node.get("checks", [])
-    try:
-        return sum(int(c.get("score", 0)) for c in checks)
-    except Exception:
+    """
+    Sum scores in a category node like:
+      {"checks": [{"label": "...", "score": 3}, ...]}
+    Ignores missing/invalid entries without a broad Exception.
+    """
+    checks = cat_node.get("checks")
+    if not isinstance(checks, list) or not checks:
         return 0
+
+    def _to_int(x) -> int:
+        try:
+            return int(x)
+        except (TypeError, ValueError):
+            return 0
+
+    return sum(_to_int(c.get("score")) for c in checks if isinstance(c, dict))
 
 
 def _as_csv_rows(payload: List[Dict]) -> List[List[str]]:

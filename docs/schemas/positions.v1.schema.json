@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/market-health-cli/schemas/positions.v1.schema.json",
+  "title": "positions.v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "positions"],
+  "properties": {
+    "schema": { "const": "positions.v1" },
+    "generated_at": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string" },
+        "path": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "equities": { "type": "integer", "minimum": 0 },
+        "options": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["asset_type", "symbol"],
+        "properties": {
+          "asset_type": { "type": "string", "enum": ["equity", "option", "other"] },
+          "symbol": { "type": "string", "minLength": 1 },
+
+          "qty": { "type": "number" },
+          "avg_price": { "type": "number" },
+          "mark_price": { "type": "number" },
+          "market_value": { "type": "number" },
+          "cost_basis": { "type": "number" },
+          "unrealized_pl": { "type": "number" },
+          "currency": { "type": "string" },
+
+          "underlying": { "type": "string" },
+          "expiry": { "type": "string" },
+          "strike": { "type": "number" },
+          "right": { "type": "string", "enum": ["C", "P"] }
+        }
+      }
+    }
+  }
+}

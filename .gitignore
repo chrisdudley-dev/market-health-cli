@@ -3,3 +3,41 @@ __pycache__/
 .idea/
 *.pyc
 scores.json
+
+# editor / os
+*.iml
+.DS_Store
+
+# python tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.venv/
+
+# local backups
+*.bak.*
+*.bak.fix.*
+*.bak.nohang.*
+*.bak.mhgrid*
+*.bak.mhgriddefault*
+
+# generated outputs
+sectors.json
+scores.csv
+secrets/
+.secrets/
+*.token.json
+*token*.json
+*.oauth.json
+*schwab*.json
+.env
+.env.*
+
+# === ALLOW SAFE DOC EXAMPLES (keep secrets ignored elsewhere) ===
+!docs/examples/
+!docs/examples/*.json.example
+!docs/examples/*.sample.json

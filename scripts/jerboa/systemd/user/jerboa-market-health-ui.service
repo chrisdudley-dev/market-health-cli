@@ -1,0 +1,20 @@
+[Unit]
+Description=Jerboa Market Health - localhost UI JSON server
+After=network-online.target
+
+[Service]
+Type=simple
+# Serve ~/.cache/jerboa on localhost only
+ExecStart=/usr/bin/python3 -m http.server 8765 --bind 127.0.0.1 --directory %h/.cache/jerboa
+Restart=on-failure
+RestartSec=2
+# Gentle to the Pi
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+# Light hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target

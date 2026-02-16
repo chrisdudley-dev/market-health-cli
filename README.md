@@ -1,276 +1,245 @@
 # Market Health CLI
 
-Color-coded, terminal-first dashboard for quick “sector union” reads across the US equity market. It scores each sector across six factor buckets (A–F) using lightweight market-data proxies (from Yahoo Finance via `yfinance`) and renders an overview + drill-down table in the terminal with [Rich](https://github.com/Textualize/rich).
+A terminal-first, color‑coded dashboard that summarizes sector “market health” at a glance.  
+Built with [Rich](https://github.com/Textualize/rich) and designed to look great on a Raspberry Pi.
 
-> ⚠️ Educational tool only. This is not investment advice.
-
----
-
-## Contents
-
-- [What it does](#what-it-does)
-- [Scores at a glance](#scores-at-a-glance)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [Generating live data (engine → JSON)](#generating-live-data-engine--json)
-- [Running the UI](#running-the-ui)
-- [JSON schema](#json-schema)
-- [How it works](#how-it-works)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [License](#license)
+> Educational tool only — not investment advice.
 
 ---
 
-## What it does
+## Highlights
 
-- Pulls sector & benchmark data from Yahoo Finance with a polite, TTL-cached fetcher.
-- Scores each sector across **A–F** categories (6 checks each; 0/1/2 points).
-- Renders a terminal dashboard:
-  - **Overview**: A–F totals per sector + grand total.
-  - **Details**: chips for each check within every category.
-- Works on Windows, macOS, Linux (PowerShell and Bash examples below).
+- **Pi Grid**: ultra-compact, single‑grid view for small displays (e.g., Raspberry Pi).
+- **Color coding**: intuitive heat-style backgrounds from **weak → strong**.
+- **Live or offline**: fetches data via `yfinance`, or render from a local JSON file.
+- **Zero-friction demo**: generate realistic demo data with `--demo`.
 
 ---
 
-## Scores at a glance
-
-Each category contains six checks scored **0 / 1 / 2**. Higher is better.  
-Color blocks show the % of the category’s maximum (0–12) and of the overall (0–72).
-
-**Implemented today**
-
-- **B – Trend & Structure**  
-  Stacked MAs, relative strength vs SPY, BB mid reclaim, 20-day breakout, volume expansion, holding 20-EMA.
-
-- **C – Position & Flow** *(proxy implementation)*  
-  EM Fit (distance vs EMA20), OI/Flow (volume vs 20-day avg), Blocks/DP (dollar volume vs avg),  
-  Leaders%>20D (sector leader breadth), Money Flow (Chaikin MF), SI/Days *(placeholder)*.
-
-- **D – Risk & Volatility**  
-  ATR% (14), IV% proxy (Bollinger width%), 20-day corr to SPY, Event Risk *(placeholder)*, Gap Plan *(placeholder)*, Sizing/RR.
-
-- **E – Environment & Regime**  
-  SPY trend, sector rank (5-bar return), own trend breadth, VIX regime, 3-day RS, Drivers *(placeholder)*.
-
-- **A – Catalyst Health** *(simple proxies for now)*  
-  News (1-day move / vol burst) + neutral placeholders for the rest.
-
-- **F – Execution & Frictions**  
-  Neutral placeholders (scored 1) pending rules.
-
----
-
-## Install
+## Quickstart (run locally)
 
 ```bash
-# from project root
+# Create and activate a virtual environment (Windows PowerShell shown)
 python -m venv .venv
-# Windows PowerShell
-. .\.venv\Scripts\Activate.ps1
-# macOS/Linux
-# source .venv/bin/activate
+.venv\Scripts\Activate.ps1
 
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the compact Pi grid with demo data (auto-fit columns)
+python market_ui.py --demo --pi-grid --grid-cols 0
 ```
 
-`requirements.txt`:
-
+### Live data (no demo)
+```bash
+python market_ui.py --pi-grid --grid-cols 0
 ```
-pandas
-numpy
-yfinance
-rich
-```
-
-> Tested with Python 3.10–3.12.
+> Requires internet access; data is pulled via `yfinance`.
 
 ---
 
-## Quick start
+## Raspberry Pi notes
 
-You can run the UI in **demo mode** (random scores) without fetching any data:
-
-```bash
-python market_ui.py --topk 3
-```
-
-Monochrome (no colors), useful for limited terminals:
+On Raspberry Pi, using the community **piwheels** index speeds up installation for heavy packages like NumPy/Pandas:
 
 ```bash
-python market_ui.py --mono
+# Optional: use piwheels for much faster installs on Raspberry Pi
+export PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip wheel
+pip install -r requirements.txt
+
+# Compact grid tuned for small screens
+python market_ui.py --pi-grid --grid-cols 0 --watch 30
 ```
 
-To use **real scores**, generate a JSON file with the engine and point the UI at it (next sections).
+You can fine‑tune the grid density by changing `--grid-cols` (e.g., `--grid-cols 4`).  
+Use `--mono` for a monochrome look (no colors).
 
 ---
 
-## Generating live data (engine → JSON)
+## CLI usage
 
-The engine returns a list of sector objects (`compute_scores`).  
-Use a one-liner to dump JSON.
+`market_ui.py` controls what you see in the terminal. The most useful flags:
 
-### Windows PowerShell
+| Flag | Type / Default | What it does |
+| --- | --- | --- |
+| `--pi-grid` | `bool` | Show the compact single‑grid (best for Pi screens). |
+| `--grid-cols` | `int` (default **4**; use **0** to auto‑fit) | Number of columns in the grid. |
+| `--demo` | `bool` | Use generated demo data. |
+| `--json` | `str` | Load data from a JSON file instead of live fetch. |
+| `--sectors` | `list[str]` | Override default sector tickers (e.g., `--sectors XLK XLF XLV`). |
+| `--topk` | `int` (default **3**) | In the standard (non‑grid) view, show details for the top‑K sectors. |
+| `--mono` | `bool` | Monochrome output (no color). |
+| `--watch` | `int` | Auto‑refresh every _N_ seconds. |
+| `--period` | `str` (default **1y**) | `yfinance` lookback period (e.g., `6mo`, `1y`). |
+| `--interval` | `str` (default **1d**) | `yfinance` interval (e.g., `1d`, `1h`). |
+| `--ttl` | `int` (default **300**) | In‑process cache TTL (seconds) for live fetch. |
 
-```powershell
-python -c "import json; from engine import compute_scores; print(json.dumps(compute_scores(), indent=2))" `
-| Out-File -Encoding utf8 sectors.json
-```
-
-### macOS / Linux (bash/zsh)
-
-```bash
-python - <<'PY' > sectors.json
-import json
-from engine import compute_scores
-print(json.dumps(compute_scores(), indent=2))
-PY
-```
-
-Options you can pass to `compute_scores`:
-
-```python
-compute_scores(
-    sectors=["XLK","XLF","XLY"],  # default is all 10 SPDR sectors
-    period="1y",
-    interval="1d",
-    ttl_sec=300                   # yfinance cache TTL
-)
-```
-
----
-
-## Running the UI
-
-Point the UI to the JSON you just generated:
+Examples:
 
 ```bash
-python market_ui.py --json sectors.json --topk 5
-```
+# Minimal Pi grid with auto-fit columns
+python market_ui.py --pi-grid --grid-cols 0
 
-Auto-refresh the UI periodically (it re-reads the JSON each time):
+# Demo grid with a fixed 4‑column layout
+python market_ui.py --demo --pi-grid --grid-cols 4
 
-```bash
-# refresh every 60s
-python market_ui.py --json sectors.json --watch 60
-```
-
-> Pair this with a scheduled job (or manual re-run) to regenerate `sectors.json` on the same cadence.
-
-Filter to specific sectors:
-
-```bash
-python market_ui.py --json sectors.json --sectors XLK XLF XLY
-```
-
-Monochrome:
-
-```bash
-python market_ui.py --json sectors.json --mono
+# Standard view with details (no grid)
+python market_ui.py --sectors XLK XLF XLY XLV
 ```
 
 ---
 
-## JSON schema
+## Dimensions (A–E)
 
-The UI consumes an array like:
+The UI uses five mnemonic **Dimensions (A–E)**. The letter codes are stable identifiers; the human-facing names come from the ui.v1 contract (`dimensions_meta`).
+
+| Code | Dimension | Meaning |
+|---|---|---|
+| A | Announcements | catalysts/events/news/earnings/macro |
+| B | Backdrop | context/regime (currently reflected across trend/structure + environment/regime) |
+| C | Crowding | flow/positioning/participation (“who’s in this”) |
+| D | Danger | risk/volatility/correlation stress |
+| E | Execution | frictions, liquidity, sizing constraints (migration in progress) |
+
+Migration note:
+- The scoring engine currently computes **A–F check groups** (6 × 6 = 36 checks).
+- During the transition, **Backdrop** is effectively represented by today’s **B** (Trend & Structure) and **E** (Environment & Regime).
+- **Execution** is currently **F** (Execution & Frictions) and is planned to migrate into **E**.
+
+## Scoring framework (current A–F check groups)
+
+
+Your framework is organized into **6 categories (A–F)**. Each category contains **6 checks/variables** for a total of **36 distinct factors**. These roll up into each sector’s score and color.
+
+### A — Announcements
+**Focus:** external events, sentiment, and “catalysts.”  
+**Variables:**
+- **News** — recent headlines, sentiment, or price/volume proxy spikes
+- **Analysts** — upgrades/downgrades, price targets, recommendations
+- **Event** — scheduled catalysts (earnings, product launches, regulatory)
+- **Insiders** — insider buying/selling activity
+- **Peers/Macro** — sector‑wide or macro catalysts impacting the symbol
+- **Guidance** — outlook revisions and earnings guidance
+
+### B — Backdrop (Trend & Structure)
+**Focus:** technical price/volume structure.  
+**Variables:**
+- **Stacked MAs** — alignment 9EMA > 20EMA > 50SMA
+- **RS vs SPY** — 5‑day relative strength versus SPY
+- **BB Mid** — reclaim of the 20‑day SMA (Bollinger mid)
+- **20D Break** — breakout above the 20‑day high
+- **Vol ×** — volume expansion vs. 20‑day average
+- **Hold 20EMA** — pullbacks respecting the 20EMA
+
+### C — Crowding (Position & Flow)
+**Focus:** positioning, flows, participation.  
+**Variables:**
+- **EM Fit** — fit to an exponential moving structure
+- **OI/Flow** — options open interest & flow activity
+- **Blocks/DP** — large prints / dark‑pool activity
+- **Leaders% > 20D** — % of leaders above 20‑day MA
+- **Money Flow** — net inflows/outflows
+- **SI/Days** — short interest vs. average daily volume
+
+### D — Danger (Risk & Volatility)
+**Focus:** volatility, correlation, risk control.  
+**Variables:**
+- **ATR%** — Average True Range as % of price
+- **IV%** — implied volatility proxy (e.g., BB width)
+- **Correlation** — 20‑day correlation vs. SPY
+- **Event Risk** — earnings/event risk placeholder
+- **Gap Plan** — gap‑risk strategy placeholder
+- **Sizing/RR** — position sizing & risk/reward vs ATR/EMA
+
+### E — Environment & Regime (Backdrop)
+**Focus:** broader market/sector regime.  
+**Variables:**
+- **SPY Trend** — SPY alignment with 20/50‑day averages
+- **Sector Rank** — relative rank of sector ETF (e.g., 5‑bar return)
+- **Breadth** — sector breadth / internal trend health
+- **VIX Regime** — VIX vs. its 20‑day SMA (calm vs stressed)
+- **3‑Day RS** — short‑term RS vs. SPY
+- **Drivers** — macro drivers alignment (placeholder)
+
+### F — Execution & Frictions (future: E Execution)
+**Focus:** trade management and execution discipline.  
+**Variables:**
+- **Trigger** — defined trade trigger present
+- **Invalidation** — clear stop/invalid level
+- **Targets** — realistic upside targets
+- **Time Stop** — time‑based exit rule
+- **Slippage** — liquidity / bid‑ask cost
+- **Alerts** — monitoring/alerting in place
+
+> **Summary:** 36 checks total (6 × 6). A = Announcements; B/E form Backdrop context; C = Crowding; D = Danger; F = Execution (planned to move into E).
+
+---
+
+## Rendering from JSON
+
+You can render without fetching live data by pointing to a JSON file:
+
+```bash
+python market_ui.py --json scores.json --pi-grid --grid-cols 0
+```
+
+**JSON format** (per sector), roughly:
 
 ```json
 [
   {
     "symbol": "XLK",
-    "categories": {
-      "A": { "checks": [ {"label": "News", "score": 1}, ... ] },
-      "B": { "checks": [ {"label": "Stacked MAs", "score": 2}, ... ] },
-      "C": { "checks": [ {"label": "EM Fit", "score": 1}, ... ] },
-      "D": { "checks": [ {"label": "ATR%", "score": 2}, ... ] },
-      "E": { "checks": [ {"label": "SPY Trend", "score": 1}, ... ] },
-      "F": { "checks": [ {"label": "Trigger", "score": 1}, ... ] }
-    }
+    "A": [{"label": "News", "score": 2}, {"label": "Analysts", "score": 1}],
+    "B": [{"label": "...", "score": 0}],
+    "C": [{"label": "...", "score": 2}],
+    "D": [{"label": "...", "score": 1}],
+    "E": [{"label": "...", "score": 1}],
+    "F": [{"label": "...", "score": 0}]
   }
 ]
 ```
 
-- Each category has exactly 6 checks.  
-- Each check has a `label` (string) and `score` (0 / 1 / 2).
+To generate `scores.json` yourself using the compute engine:
+
+```bash
+# Module form
+python -m market_health.mh_cli --out scores.json
+
+# Or script form
+python market_health/mh_cli.py --out scores.json
+```
+
+Then render it:
+```bash
+python market_ui.py --json scores.json --pi-grid --grid-cols 0
+```
 
 ---
 
-## How it works
+## Project layout (key files)
 
-**Files**
-
-- `engine.py` – data fetching + scoring
-  - **TTL cache**: avoids spamming Yahoo (keyed by `(symbol, period, interval)`).
-  - **Robust columns**: handles yfinance’s MultiIndex and naming quirks.
-  - **Category logic**: B (trend), C (position/flow proxies), D (risk/vol), E (environment), A/F placeholders.
-- `market_ui.py` – terminal UI with Rich
-  - Overview totals (per category and overall)
-  - Details table with per-check chips
-  - `--watch` tick will **re-read JSON** and redraw
-
-**Benchmarks used**
-
-- `SPY` for relative strength & correlation
-- `^VIX` for regime
-- Curated **sector leaders** list for the breadth proxy (edit in `engine.py`).
-
----
-
-## Configuration
-
-- **Sector list**: change `SECTORS_DEFAULT` in either file or pass `--sectors` to the UI.
-- **Leaders for Category C**: edit `SECTOR_LEADERS` in `engine.py`.
-- **Fetch window**: `period` / `interval` kwargs on `compute_scores`.
-- **Cache TTL**: `ttl_sec` on `compute_scores`.
-- **Thresholds**: all scoring cutoffs are in `engine.py` (search for comments next to each check).
+```
+market_health/           # scoring engine and CLI
+  engine.py              # computes category checks from price data
+  mh_cli.py              # writes scores.json (yfinance)
+market_ui.py             # terminal UI (Rich) – includes Pi Grid mode
+requirements.txt
+```
 
 ---
 
 ## Troubleshooting
 
-### PowerShell errors like `The '<' operator is reserved`
-PowerShell doesn’t support bash “here-docs”. Use the **PowerShell** one-liner shown above (`python -c ... | Out-File ...`).
-
-### “Cannot find reference 'download' / 'Ticker'”
-Make sure you import **`yfinance as yf`** (not `import yf`). The code already does this.
-
-### Qodana/IDE warnings “Too broad exception” / “shadows name”
-These have been narrowed where it matters (network/parse surfaces). Remaining “shadow” notes inside small scopes are harmless but can be renamed if you prefer.
-
-### Empty frames or NaNs
-Yahoo occasionally returns sparse data (e.g., premarket). The engine falls back to neutral scores where input is missing to keep the UI usable.
-
-### Rate limits
-The engine staggers requests and caches results. If you pull many leaders at short intervals, keep `ttl_sec` ≥ 300.
-
----
-
-## Roadmap
-
-- **A**: Real catalyst feed (earnings, guidance, insider trades, news sentiment).
-- **C**: True options/flow inputs (OI changes, block prints, short interest).
-- **D**: Event calendar hookup + real IV instead of BB width proxy.
-- **E/F**: Driver mapping & Execution rules (Trigger/Invalidation/Targets/Time Stop).
-- **CLI**: Optional `engine_cli.py --out sectors.json --loop 300` to regenerate JSON automatically.
-- **Tests**: Deterministic fixtures for scoring and UI snapshots.
+- **No colors in terminal**: try a different terminal or omit `--mono`. Windows Terminal and PowerShell work well.
+- **Slow installs on Pi**: use `PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple`.
+- **Network hiccups**: use `--json` to render previously saved `scores.json` offline.
 
 ---
 
 ## License
 
-Add a `LICENSE` file of your choice (MIT is common for OSS tooling).  
-Until then, consider this **All Rights Reserved**.
-
----
-
-### Maintainer tips
-
-- Keep the leaders list short (8–12 per sector) for fast breadth checks.
-- If you add symbols, prefer ETFs or very liquid names to stabilize volume-based proxies.
-- For Windows terminals, `--mono` is handy if colors look off.
-
----
-
-Happy scanning 👀📈
+MIT © Christopher Dudley

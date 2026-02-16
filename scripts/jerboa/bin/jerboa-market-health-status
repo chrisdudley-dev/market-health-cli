@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+STATE="${HOME}/.cache/jerboa/state/market_health_refresh_all.state.json"
+
+python3 - <<'PY'
+import json, os
+from datetime import datetime, timezone
+
+p = os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json")
+if not os.path.exists(p):
+    print("market-health: STATE missing")
+    raise SystemExit(0)
+
+try:
+    d = json.load(open(p, "r", encoding="utf-8"))
+except Exception as e:
+    print(f"market-health: STATE unreadable ({e})")
+    raise SystemExit(0)
+
+ts = d.get("ts")
+status = d.get("status","?")
+reason = d.get("reason","?")
+forced = d.get("forced", False)
+chg = d.get("changed", {}) or {}
+rc  = d.get("rc", {}) or {}
+
+age_s = "?"
+if isinstance(ts, str):
+    try:
+        # ISO with offset, e.g. 2026-...+00:00
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        age = int((datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds())
+        age_s = f"{age}s"
+    except Exception:
+        pass
+
+print(
+  "market-health:"
+  f" status={status}"
+  f" reason={reason}"
+  f" age={age_s}"
+  f" changed(mkt,pos)={chg.get('market','?')},{chg.get('positions','?')}"
+  f" rc(mkt,pos)={rc.get('market','?')},{rc.get('positions','?')}"
+  f" forced={forced}"
+)
+PY
