@@ -118,6 +118,7 @@ def main() -> int:
                 "total": total,
                 "max_total": MAX_TOTAL,
                 "buckets": totals,
+                "bands": totals,
                 # Keep the underlying check structure for deeper views:
                 "categories": (item.get("categories") or {}),
             }
