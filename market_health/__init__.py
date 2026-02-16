@@ -6,6 +6,13 @@ Market Health public API.
 - CHECK_LABELS         -> exported if present in engine.py
 """
 
+
+# Version is derived from package metadata (single source of truth).
+try:
+    from importlib.metadata import version as _pkg_version  # py3.8+
+    __version__ = _pkg_version("market-health-cli")
+except Exception:  # pragma: no cover
+    __version__ = "0+unknown"
 from __future__ import annotations
 from typing import Any, Optional
 
