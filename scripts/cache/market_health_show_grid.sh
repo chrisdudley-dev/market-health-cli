@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
-cd "$(dirname "$0")/../.." || exit 1
+set -euo pipefail
 
-JSON="${1:-$HOME/.cache/jerboa/environment.v1.json}"
+REPO="$HOME/projects/market-health-cli"
+PY="$REPO/.venv/bin/python"
 
-if [ ! -x .venv/bin/python ]; then
-  echo "ERROR: .venv missing. Run: python3 -m venv .venv && ./.venv/bin/python -m pip install -r requirements.txt" >&2
-  exit 1
+# If venv python isn't there, fall back (but normally it should exist)
+if [[ ! -x "$PY" ]]; then
+  PY="$(command -v python3)"
 fi
 
-if [ ! -f "$JSON" ]; then
-  echo "ERROR: missing $JSON (run refresh first)" >&2
-  exit 1
-fi
+cd "$REPO"
 
-exec ./.venv/bin/python market_ui.py --json "$JSON" --pi-grid --grid-cols 0
+# Normal interactive welcome should be a TTY; still, forcing helps if your environment is conservative
+export MH_FORCE_COLOR="${MH_FORCE_COLOR:-1}"
+
+# Default to 6 columns (matches your Pi grid example); allow override via env
+GRID_COLS="${WELCOME_MARKET_HEALTH_GRID_COLS:-6}"
+
+exec "$PY" -m market_health.market_ui --pi-grid --grid-cols "$GRID_COLS"
