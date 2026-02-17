@@ -95,20 +95,50 @@ if [ "$code" != "200" ]; then
   exit 2
 fi
 
-AHASH="$(jq -r '..|.hashValue? // empty' "$RAW_ACCTNUM" | head -n 1)"
-if [ -z "$AHASH" ]; then
+# 2) Fetch positions for ALL accounts (one call per hash; preserves per-account context)
+hashes="$(jq -r '..|.hashValue? // empty' "$RAW_ACCTNUM")"
+if [ -z "$hashes" ]; then
   echo "ERR: no hashValue found in accountNumbers response"
   exit 2
 fi
 
-# 2) Fetch positions for one account
-code="$(curl -sS -o "$RAW_OUT" -w "%{http_code}" \
-  -H "Authorization: Bearer $TOKEN" \
-  "https://api.schwabapi.com/trader/v1/accounts/${AHASH}?fields=positions" || true)"
-if [ "$code" != "200" ]; then
-  echo "ERR: accounts/{hash}?fields=positions HTTP $code"
+tmpdir="$(mktemp -d)"
+i=0
+while IFS= read -r h; do
+  [ -n "$h" ] || continue
+  i=$((i+1))
+
+  # last4 derived from accountNumbers endpoint (avoid storing full account number)
+  last4="$(jq -r --arg hv "$h" '.[] | select(.hashValue==$hv) | (.accountNumber|tostring) | .[-4:]' "$RAW_ACCTNUM" 2>/dev/null | head -n 1 || true)"
+  [ "$last4" = "null" ] && last4=""
+
+  code_i="$(curl -sS -o "${tmpdir}/acct_${i}.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $TOKEN" \
+    "https://api.schwabapi.com/trader/v1/accounts/${h}?fields=positions" || true)"
+
+  if [ "$code_i" != "200" ]; then
+    echo "WARN: accounts/${h}?fields=positions HTTP $code_i (skipping)" >&2
+    rm -f "${tmpdir}/acct_${i}.json" || true
+    continue
+  fi
+
+  # Enrich payload with hash + last4 (so downstream can label/group accounts)
+  jq --arg hv "$h" --arg l4 "$last4" '
+    .securitiesAccount = (.securitiesAccount // {})
+    | .securitiesAccount.hashValue = $hv
+    | (if ($l4|length) > 0 then .securitiesAccount.accountNumberLast4 = $l4 else . end)
+  ' "${tmpdir}/acct_${i}.json" > "${tmpdir}/acct_${i}.enriched.json"
+  mv -f "${tmpdir}/acct_${i}.enriched.json" "${tmpdir}/acct_${i}.json"
+done <<< "$hashes"
+
+if ! ls "${tmpdir}"/acct_*.json >/dev/null 2>&1; then
+  echo "ERR: no account position payloads fetched successfully"
   exit 2
 fi
+
+jq -s '.' "${tmpdir}"/acct_*.json > "$RAW_OUT"
+rm -rf "$tmpdir" || true
+
 chmod 600 "$RAW_ACCTNUM" "$RAW_OUT" 2>/dev/null || true
 
 # 3) Normalize into positions.v1.json using your existing pipeline

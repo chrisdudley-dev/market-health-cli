@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 from __future__ import annotations
+import os
+
+
+FORCE_COLOR = bool(os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'))
 
 import argparse
 import json
@@ -9,15 +13,38 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from rich.console import Console
+from rich.console import Console as _RichConsole
+
+def Console(*args, **kwargs):
+    """Wrapper around Rich Console.
+    If MH_FORCE_COLOR/FORCE_COLOR/RICH_FORCE_TERMINAL is set, always emit ANSI colors even when piped.
+    """
+    force = bool(
+        os.environ.get("MH_FORCE_COLOR")
+        or os.environ.get("FORCE_COLOR")
+        or os.environ.get("RICH_FORCE_TERMINAL")
+    )
+    if force:
+        # Override global 'disable color' env vars when explicitly forcing color
+        os.environ.pop("NO_COLOR", None)
+        os.environ.pop("RICH_NO_COLOR", None)
+        # Ensure terminal capability hints are not 'dumb'/empty when forcing ANSI
+        term = os.environ.get("TERM", "")
+        if (not term) or term.lower() == "dumb":
+            os.environ["TERM"] = "xterm-256color"
+        os.environ.setdefault("COLORTERM", "truecolor")
+        kwargs["force_terminal"] = True
+        kwargs["no_color"] = False
+        kwargs["color_system"] = os.environ.get("MH_COLOR_SYSTEM", "standard")
+    return _RichConsole(*args, **kwargs)
+
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
 from rich import box
 
 # Pull scores + default sectors from the engine (do not re-define here)
-from market_health.engine import compute_scores, SECTORS_DEFAULT
-
+from market_health.engine import compute_scores, SECTORS_DEFAULT, SECTOR_LEADERS
 from market_health.ui_contract_meta import dimension_heading
 
 
@@ -62,6 +89,13 @@ class SectorRow:
 
 # ---------- tiny render helpers ----------
 def pct_style(p: float, mono: bool = False) -> str:
+    if FORCE_COLOR:
+        mono = False
+
+    # Force styles even when stdout isn't a TTY (useful for piping/login banners)
+    if os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'):
+        mono = False
+
     if mono:
         return ""
     if p >= 0.80:
@@ -224,10 +258,47 @@ MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 # POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
 
 
-def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> None:
+# ---------- positions -> sector mapping (best-effort) ----------
+_SECTOR_OVERRIDES = None
+
+def _load_sector_overrides() -> dict:
+    """Optional overrides: ~/.config/jerboa/positions_sector_map.json
+    Example: {"CSWC": "XLF"}  (maps ticker -> sector ETF)
+    """
+    global _SECTOR_OVERRIDES
+    if _SECTOR_OVERRIDES is not None:
+        return _SECTOR_OVERRIDES
+    try:
+        import os, json
+        path = os.path.expanduser("~/.config/jerboa/positions_sector_map.json")
+        with open(path, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        if isinstance(obj, dict):
+            _SECTOR_OVERRIDES = {str(k).upper(): str(v).upper() for k, v in obj.items()}
+        else:
+            _SECTOR_OVERRIDES = {}
+    except Exception:
+        _SECTOR_OVERRIDES = {}
+    return _SECTOR_OVERRIDES
+
+def _sector_for_symbol(sym: str):
+    sym = (sym or "").upper().strip()
+    if not sym:
+        return None
+    ov = _load_sector_overrides()
+    if sym in ov:
+        return ov[sym]
+    if sym in SECTORS_DEFAULT:
+        return sym  # sector ETF itself
+    for sec, leaders in SECTOR_LEADERS.items():
+        if sym in set(leaders):
+            return sec
+    return None
+
+
+def _render_positions_panel(console, mono: bool = False, max_rows: int = 8, sector_style: Optional[Dict[str, str]] = None) -> None:
     """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
     try:
-        import os
         import json
         from rich.panel import Panel
         from rich.table import Table
@@ -263,22 +334,28 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
             return
 
         t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
-        t.add_column("Sym", style="bold cyan")
+        t.add_column("Sym")
+        t.add_column("Acct")
         t.add_column("Type")
         t.add_column("Qty", justify="right")
         t.add_column("Details")
 
         for p in positions[:max_rows]:
             sym = str(p.get("symbol", "?"))
+            sym_cell = Text(sym)
+            sec = _sector_for_symbol(sym)
+            st = (sector_style or {}).get(sec or "", "")
+            if st and ((not mono) or FORCE_COLOR):
+                sym_cell.stylize(st)
+            acct = str(p.get("account_label") or "")
             typ = str(p.get("asset_type", "?"))
             qty = str(p.get("qty", ""))
 
             details = ""
             if typ == "option":
-                opt = p.get("option") or {}
-                details = f"{opt.get('expiry', '?')}  {opt.get('strike', '?')}  {opt.get('right', '?')}"
+                details = f"{p.get('expiry','?')}  {p.get('strike','?')}  {p.get('right','?')}"
 
-            t.add_row(sym, typ, qty, details)
+            t.add_row(sym_cell, acct, typ, qty, details)
 
         title = f"Positions ({len(positions)})  •  source={src_type}"
         if mono:
@@ -287,11 +364,11 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8) -> N
                 sym = str(p.get("symbol", "?"))
                 typ = str(p.get("asset_type", "?"))
                 qty = str(p.get("qty", ""))
+                acct = str(p.get("account_label") or "")
                 det = ""
                 if typ == "option":
-                    opt = p.get("option") or {}
-                    det = f"{opt.get('expiry', '?')} {opt.get('strike', '?')} {opt.get('right', '?')}"
-                console.print(f"- {sym}  {typ}  qty={qty}  {det}".rstrip())
+                    det = f"{p.get('expiry','?')} {p.get('strike','?')} {p.get('right','?')}"
+                console.print(f"- {sym}  acct={acct}  {typ}  qty={qty}  {det}".rstrip())
         else:
             console.print(Panel(t, title=title, border_style="cyan"))
 
@@ -361,7 +438,8 @@ def render_pi_grid(
     # ---------- CLI ----------
 
     # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
-    _render_positions_panel(console, mono=mono)
+    style_by_sector = {r.symbol: pct_style((r.total / MAX_TOTAL) if MAX_TOTAL else 0.0, mono) for r in rows}
+    _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
 
 
 def parse_args():
@@ -406,6 +484,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'):
+        args.mono = False
+
     console = Console(
         force_terminal=not args.mono,
         force_interactive=False,

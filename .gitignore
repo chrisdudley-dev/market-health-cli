@@ -41,3 +41,6 @@ secrets/
 !docs/examples/
 !docs/examples/*.json.example
 !docs/examples/*.sample.json
+
+# local backups
+*.bak.*

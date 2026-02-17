@@ -110,29 +110,68 @@ def _qty(pos: Dict[str, Any]) -> Optional[float]:
 
 
 def normalize_schwab_accounts_json(raw: Any, source_path: str = "") -> Dict[str, Any]:
-    lists = _find_positions_lists(raw)
-    positions_raw: List[Dict[str, Any]] = []
-    for lst in lists:
-        positions_raw.extend(lst)
+    # Prefer account-aware extraction when raw is a list of account payloads.
+    acct_positions: List[Tuple[str, str, Dict[str, Any]]] = []
+    if isinstance(raw, list) and raw and all(isinstance(x, dict) for x in raw):
+        for acct in raw:
+            sa = acct.get("securitiesAccount") or acct.get("SecuritiesAccount") or {}
+            if not isinstance(sa, dict):
+                continue
 
-    # de-dupe by (symbol, qty, avg, mv) to reduce multi-account repeats
-    dedup: Dict[Tuple[str, str, str, str], Dict[str, Any]] = {}
-    for p in positions_raw:
+            acct_id = _as_str(
+                sa.get("accountId")
+                or sa.get("hashValue")
+                or sa.get("accountNumberLast4")
+                or sa.get("accountNumber")
+                or ""
+            ).strip()
+
+            last4 = _as_str(sa.get("accountNumberLast4") or "").strip()
+            if not last4:
+                an = _as_str(sa.get("accountNumber") or "").strip()
+                if len(an) >= 4:
+                    last4 = an[-4:]
+
+            acct_label = _as_str(sa.get("accountType") or sa.get("nickname") or "").strip()
+            if not acct_label and last4:
+                acct_label = f"Schwab ****{last4}"
+            elif not acct_label and acct_id:
+                acct_label = f"Schwab {acct_id[:6]}…"
+
+            plist = sa.get("positions") or sa.get("Positions") or []
+            if isinstance(plist, list):
+                for p in plist:
+                    if isinstance(p, dict):
+                        acct_positions.append((acct_id, acct_label, p))
+
+    # Fallback: find positions lists anywhere in the payload (loses account context)
+    if not acct_positions:
+        lists = _find_positions_lists(raw)
+        for lst in lists:
+            for p in lst:
+                if isinstance(p, dict):
+                    acct_positions.append(("", "", p))
+
+    # De-dupe by (account, symbol, qty, avg, mv) to reduce repeats while preserving multi-account holdings.
+    dedup: Dict[Tuple[str, str, str, str, str], Tuple[str, str, Dict[str, Any]]] = {}
+    for acct_id, acct_label, p in acct_positions:
         inst = p.get("instrument") or {}
         sym = _as_str(inst.get("symbol") or p.get("symbol")).strip()
         key = (
+            acct_id,
             sym,
             _as_str(p.get("longQuantity") or p.get("quantity") or ""),
             _as_str(p.get("averagePrice") or ""),
             _as_str(p.get("marketValue") or ""),
         )
         if sym:
-            dedup[key] = p
-    positions_raw = list(dedup.values())
+            dedup[key] = (acct_id, acct_label, p)
+
+    acct_positions = list(dedup.values())
 
     out_positions: List[Dict[str, Any]] = []
 
-    for p in positions_raw:
+    for acct_id, acct_label, p in acct_positions:
         inst = p.get("instrument") or p.get("Instrument") or {}
         sym = _as_str(inst.get("symbol") or p.get("symbol")).strip()
         if not sym:
@@ -154,6 +193,10 @@ def normalize_schwab_accounts_json(raw: Any, source_path: str = "") -> Dict[str,
             "asset_type": asset_type,
             "symbol": sym,
         }
+        if acct_id:
+            item["account_id"] = acct_id
+        if acct_label:
+            item["account_label"] = acct_label
         if qty is not None:
             item["qty"] = qty
         if avg is not None:
