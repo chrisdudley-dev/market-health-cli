@@ -39,7 +39,7 @@ def Console(*args, **kwargs):
         os.environ.setdefault("COLORTERM", "truecolor")
         kwargs["force_terminal"] = True
         kwargs["no_color"] = False
-        kwargs["color_system"] = os.environ.get("MH_COLOR_SYSTEM", "standard")
+        kwargs["color_system"] = os.environ.get("MH_COLOR_SYSTEM", "auto")
 
     return _RichConsole(*args, **kwargs)
 
