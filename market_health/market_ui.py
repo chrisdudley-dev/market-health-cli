@@ -1,51 +1,47 @@
 #!/usr/bin/env python
 from __future__ import annotations
-import os
-
-
-FORCE_COLOR = bool(os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'))
 
 import argparse
+import datetime as dt
 import json
+import os
 import random
 import time
-import datetime as dt
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
+from rich import box
 from rich.console import Console as _RichConsole
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+
+from market_health.engine import SECTORS_DEFAULT, SECTOR_LEADERS, compute_scores
+from market_health.ui_contract_meta import dimension_heading
+
+FORCE_COLOR = bool(
+    os.environ.get("MH_FORCE_COLOR")
+    or os.environ.get("FORCE_COLOR")
+    or os.environ.get("RICH_FORCE_TERMINAL")
+)
+
 
 def Console(*args, **kwargs):
-    """Wrapper around Rich Console.
-    If MH_FORCE_COLOR/FORCE_COLOR/RICH_FORCE_TERMINAL is set, always emit ANSI colors even when piped.
-    """
-    force = bool(
-        os.environ.get("MH_FORCE_COLOR")
-        or os.environ.get("FORCE_COLOR")
-        or os.environ.get("RICH_FORCE_TERMINAL")
-    )
-    if force:
-        # Override global 'disable color' env vars when explicitly forcing color
+    """Wrapper around Rich Console."""
+    if FORCE_COLOR:
         os.environ.pop("NO_COLOR", None)
         os.environ.pop("RICH_NO_COLOR", None)
-        # Ensure terminal capability hints are not 'dumb'/empty when forcing ANSI
+
         term = os.environ.get("TERM", "")
         if (not term) or term.lower() == "dumb":
             os.environ["TERM"] = "xterm-256color"
+
         os.environ.setdefault("COLORTERM", "truecolor")
         kwargs["force_terminal"] = True
         kwargs["no_color"] = False
         kwargs["color_system"] = os.environ.get("MH_COLOR_SYSTEM", "standard")
+
     return _RichConsole(*args, **kwargs)
-
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
-from rich import box
-
-# Pull scores + default sectors from the engine (do not re-define here)
-from market_health.engine import compute_scores, SECTORS_DEFAULT, SECTOR_LEADERS
-from market_health.ui_contract_meta import dimension_heading
 
 
 CHECK_LABELS: Dict[str, List[str]] = {
@@ -93,7 +89,11 @@ def pct_style(p: float, mono: bool = False) -> str:
         mono = False
 
     # Force styles even when stdout isn't a TTY (useful for piping/login banners)
-    if os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'):
+    if (
+        os.environ.get("MH_FORCE_COLOR")
+        or os.environ.get("FORCE_COLOR")
+        or os.environ.get("RICH_FORCE_TERMINAL")
+    ):
         mono = False
 
     if mono:
@@ -261,6 +261,7 @@ MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
 # ---------- positions -> sector mapping (best-effort) ----------
 _SECTOR_OVERRIDES = None
 
+
 def _load_sector_overrides() -> dict:
     """Optional overrides: ~/.config/jerboa/positions_sector_map.json
     Example: {"CSWC": "XLF"}  (maps ticker -> sector ETF)
@@ -269,7 +270,6 @@ def _load_sector_overrides() -> dict:
     if _SECTOR_OVERRIDES is not None:
         return _SECTOR_OVERRIDES
     try:
-        import os, json
         path = os.path.expanduser("~/.config/jerboa/positions_sector_map.json")
         with open(path, "r", encoding="utf-8") as f:
             obj = json.load(f)
@@ -280,6 +280,7 @@ def _load_sector_overrides() -> dict:
     except Exception:
         _SECTOR_OVERRIDES = {}
     return _SECTOR_OVERRIDES
+
 
 def _sector_for_symbol(sym: str):
     sym = (sym or "").upper().strip()
@@ -296,7 +297,12 @@ def _sector_for_symbol(sym: str):
     return None
 
 
-def _render_positions_panel(console, mono: bool = False, max_rows: int = 8, sector_style: Optional[Dict[str, str]] = None) -> None:
+def _render_positions_panel(
+    console,
+    mono: bool = False,
+    max_rows: int = 8,
+    sector_style: Optional[Dict[str, str]] = None,
+) -> None:
     """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
     try:
         import json
@@ -353,7 +359,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8, sect
 
             details = ""
             if typ == "option":
-                details = f"{p.get('expiry','?')}  {p.get('strike','?')}  {p.get('right','?')}"
+                details = f"{p.get('expiry', '?')}  {p.get('strike', '?')}  {p.get('right', '?')}"
 
             t.add_row(sym_cell, acct, typ, qty, details)
 
@@ -367,7 +373,7 @@ def _render_positions_panel(console, mono: bool = False, max_rows: int = 8, sect
                 acct = str(p.get("account_label") or "")
                 det = ""
                 if typ == "option":
-                    det = f"{p.get('expiry','?')} {p.get('strike','?')} {p.get('right','?')}"
+                    det = f"{p.get('expiry', '?')} {p.get('strike', '?')} {p.get('right', '?')}"
                 console.print(f"- {sym}  acct={acct}  {typ}  qty={qty}  {det}".rstrip())
         else:
             console.print(Panel(t, title=title, border_style="cyan"))
@@ -438,7 +444,10 @@ def render_pi_grid(
     # ---------- CLI ----------
 
     # POSITIONS_V1_PANEL_V1: show read-only positions panel under the grid
-    style_by_sector = {r.symbol: pct_style((r.total / MAX_TOTAL) if MAX_TOTAL else 0.0, mono) for r in rows}
+    style_by_sector = {
+        r.symbol: pct_style((r.total / MAX_TOTAL) if MAX_TOTAL else 0.0, mono)
+        for r in rows
+    }
     _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
 
 
@@ -484,7 +493,11 @@ def parse_args():
 
 def main():
     args = parse_args()
-    if os.environ.get('MH_FORCE_COLOR') or os.environ.get('FORCE_COLOR') or os.environ.get('RICH_FORCE_TERMINAL'):
+    if (
+        os.environ.get("MH_FORCE_COLOR")
+        or os.environ.get("FORCE_COLOR")
+        or os.environ.get("RICH_FORCE_TERMINAL")
+    ):
         args.mono = False
 
     console = Console(
