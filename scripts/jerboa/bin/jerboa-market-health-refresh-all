@@ -13,6 +13,7 @@ done
 ENV_JSON="${HOME}/.cache/jerboa/environment.v1.json"
 SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
 POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
+REC_JSON="${HOME}/.cache/jerboa/recommendations.v1.json"
 
 LOCKDIR="${HOME}/.cache/jerboa/locks"
 STATEDIR="${HOME}/.cache/jerboa/state"
@@ -49,9 +50,11 @@ mtime() { stat -c %Y "$1" 2>/dev/null || echo 0; }
 b_env="$(mtime "$ENV_JSON")"
 b_sect="$(mtime "$SECT_JSON")"
 b_pos="$(mtime "$POS_JSON")"
+b_rec="$(mtime "$REC_JSON")"
 
 pos_rc=0
 mkt_rc=0
+rec_rc=0
 
 # Positions refresh
 if [ "${ARGS[0]:-}" = "--csv" ] && [ -n "${ARGS[1]:-}" ]; then
@@ -70,12 +73,15 @@ fi
 a_env="$(mtime "$ENV_JSON")"
 a_sect="$(mtime "$SECT_JSON")"
 a_pos="$(mtime "$POS_JSON")"
+a_rec="$(mtime "$REC_JSON")"
 
 changed_market=0
 changed_pos=0
+changed_rec=0
 [ "$a_env"  -gt "$b_env"  ] && changed_market=1
 [ "$a_sect" -gt "$b_sect" ] && changed_market=1
 [ "$a_pos"  -gt "$b_pos"  ] && changed_pos=1
+[ "$a_rec"  -gt "$b_rec"  ] && changed_rec=1
 
 # Decide status + reason
 status="ok"
@@ -83,7 +89,7 @@ reason="updated"
 if [ "$pos_rc" -ne 0 ] || [ "$mkt_rc" -ne 0 ]; then
   status="error"
   reason="subcommand-failed"
-elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ]; then
+elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ] && [ "$changed_rec" -eq 0 ]; then
   status="skipped"
   reason="no-changes"
 fi
@@ -100,11 +106,11 @@ state = {
   "status": "$status",
   "reason": "$reason",
   "forced": bool(int("$FORCE")),
-  "rc": {"positions": int("$pos_rc"), "market": int("$mkt_rc")},
-  "changed": {"market": int("$changed_market"), "positions": int("$changed_pos")},
+  "rc": {"positions": int("$pos_rc"), "market": int("$mkt_rc"), "recommendations": int("$rec_rc")},
+  "changed": {"market": int("$changed_market"), "positions": int("$changed_pos"), "recommendations": int("$changed_rec")},
   "mtimes": {
-    "before": {"env": int("$b_env"), "sectors": int("$b_sect"), "positions": int("$b_pos")},
-    "after":  {"env": int("$a_env"), "sectors": int("$a_sect"), "positions": int("$a_pos")},
+    "before": {"env": int("$b_env"), "sectors": int("$b_sect"), "positions": int("$b_pos"), "recommendations": int("$b_rec")},
+    "after":  {"env": int("$a_env"), "sectors": int("$a_sect"), "positions": int("$a_pos"), "recommendations": int("$a_rec")},
   },
 }
 with open(p, "w", encoding="utf-8") as f:
@@ -115,7 +121,15 @@ PY
 
 # JERBOA_UI_EXPORT_V1
 # Update UI contract (React/web reads this single file)
-"${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
+
+  # Recommendations refresh (fail-soft)
+  if [ -x "${HOME}/bin/jerboa-market-health-recommendations-refresh" ]; then
+    "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
+  else
+    rec_rc=127
+  fi
+
+  "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
 
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$status" = "error" ]; then
@@ -124,7 +138,7 @@ if [ -n "${INVOCATION_ID:-}" ]; then
     echo "OK: refresh-all updated (market=$changed_market positions=$changed_pos)"
   fi
 else
-  echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos"
+  echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec rec_rc=$rec_rc"
 fi
 
 # Exit non-zero only if a subcommand failed

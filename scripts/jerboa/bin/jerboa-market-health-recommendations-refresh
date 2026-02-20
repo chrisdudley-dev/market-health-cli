@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+QUIET=0
+if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+
+# Resolve repo root even when installed as a symlink in ~/bin
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
+
+OUT="${HOME}/.cache/jerboa/recommendations.v1.json"
+
+rc=0
+if [ "$QUIET" -eq 1 ]; then
+  python3 "$ROOT/scripts/export_recommendations_v1.py" --quiet || rc=$?
+else
+  python3 "$ROOT/scripts/export_recommendations_v1.py" || rc=$?
+fi
+
+# Validate if exporter succeeded and output exists
+if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
+  python3 "$ROOT/scripts/validate_recommendations_v1.py" --path "$OUT" >/dev/null || rc=$?
+fi
+
+if [ "$QUIET" -ne 1 ]; then
+  if [ "$rc" -eq 0 ]; then
+    echo "OK: recommendations refresh"
+  else
+    echo "ERR: recommendations refresh failed (rc=$rc)"
+  fi
+fi
+
+exit "$rc"

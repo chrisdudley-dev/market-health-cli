@@ -61,7 +61,43 @@ def main() -> int:
 
     positions = read_json(pos_p) if pos_p.exists() else {"positions": []}
 
-    # Compute scores (network call via yfinance). Exporter is allowed to do IO.
+    # Prefer cached sector rows if present (keeps exporter fast/offline-friendly on Jerboa).
+    sect_cache = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
+    score_rows: List[Dict[str, Any]]
+    used_source = "compute_scores"
+    if sect_cache.exists():
+        try:
+            obj = json.loads(sect_cache.read_text(encoding="utf-8"))
+            if isinstance(obj, list):
+                score_rows = obj
+                used_source = "market_health.sectors.json"
+            elif isinstance(obj, dict):
+                # allow a few common shapes
+                for key in ("rows", "sectors", "data"):
+                    v = obj.get(key)
+                    if isinstance(v, list):
+                        score_rows = v
+                        used_source = f"market_health.sectors.json:{key}"
+                        break
+                else:
+                    raise ValueError("no usable list in sectors cache")
+            else:
+                raise ValueError("unexpected sectors cache type")
+        except Exception:
+            # Fallback to compute_scores if cache unreadable
+            score_rows = compute_scores(sectors=args.sectors, period=args.period, interval=args.interval)
+    else:
+        score_rows = compute_scores(sectors=args.sectors, period=args.period, interval=args.interval)
+
+    # Stable asof: derived from input mtimes (so idempotency works).
+    def mtime(p: Path) -> int:
+        try:
+            return int(p.stat().st_mtime)
+        except Exception:
+            return 0
+    snap_epoch = max(mtime(pos_p), mtime(sect_cache))
+    snap_iso = datetime.fromtimestamp(snap_epoch, tz=timezone.utc).isoformat().replace("+00:00","Z") if snap_epoch > 0 else utc_now_iso()
+
     score_rows: List[Dict[str, Any]] = compute_scores(
         sectors=args.sectors,
         period=args.period,
@@ -79,10 +115,12 @@ def main() -> int:
 
     doc: Dict[str, Any] = {
         "schema": "recommendations.v1",
-        "asof": utc_now_iso(),
-        "generated_at": utc_now_iso(),
+        "asof": snap_iso,
+        "generated_at": snap_iso,
         "inputs": {
             "positions_path": str(pos_p),
+            "scores_source": used_source,
+            "snapshot_epoch": snap_epoch,
             "period": args.period,
             "interval": args.interval,
             "horizon_trading_days": args.horizon,
