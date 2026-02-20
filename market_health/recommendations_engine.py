@@ -2,22 +2,28 @@
 
 RECOMMENDATIONS / ROTATION ENGINE (M8.2)
 
-This module will produce deterministic recommendation outputs (SWAP vs NOOP)
-based on current positions + computed scores + constraints.
+Goal (v0):
+- Deterministically choose either:
+  - SWAP: weakest held -> best candidate, if improvement clears threshold
+  - NOOP: otherwise (with explicit reason)
+
+Inputs:
+- positions: positions.v1-like dict (or list of symbols)
+- scores: output of market_health.engine.compute_scores (list[dict])
+- constraints: simple dict of thresholds/caps (v0 uses min_improvement_threshold)
 
 Important: keep this module PURE and deterministic:
 - no file IO
 - no network calls
 - no reading ~/.cache
 - no side effects
-
-Writers/exporters/wiring will live elsewhere (scripts/jerboa/*).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Literal, Optional, Tuple
+from datetime import datetime, timezone
+from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
 
 Action = Literal["SWAP", "NOOP"]
@@ -27,14 +33,22 @@ Action = Literal["SWAP", "NOOP"]
 class Recommendation:
     action: Action
     reason: str
-    # For SWAP
+
+    # SWAP fields
     from_symbol: Optional[str] = None
     to_symbol: Optional[str] = None
-    # Scheduling fields (filled later; tracked in M9 too)
-    horizon_trading_days: Optional[int] = None
-    target_trade_date: Optional[str] = None  # YYYY-MM-DD
-    # Auditing / explainability
+
+    # Scheduling (filled later; M9 adds trading-day semantics)
+    horizon_trading_days: int = 0
+    target_trade_date: Optional[str] = None  # YYYY-MM-DD or None
+
+    # Explainability / auditing
     constraints_applied: Tuple[str, ...] = ()
+    diagnostics: Dict[str, Any] = None  # type: ignore[assignment]
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def stable_tiebreak_key(symbol: str) -> Tuple[str]:
@@ -42,15 +56,171 @@ def stable_tiebreak_key(symbol: str) -> Tuple[str]:
     return (symbol.upper(),)
 
 
+def extract_held_symbols(positions: Any) -> List[str]:
+    """Extract held symbols from positions.v1-like dict or list."""
+    if positions is None:
+        return []
+
+    # If user passes a list/tuple/set of strings
+    if isinstance(positions, (list, tuple, set)):
+        syms = [str(x).strip().upper() for x in positions if str(x).strip()]
+        return sorted(set(syms), key=stable_tiebreak_key)
+
+    if isinstance(positions, dict):
+        # positions.v1 commonly has {"positions": [{...}, ...]}
+        plist = positions.get("positions")
+        if isinstance(plist, list):
+            out: List[str] = []
+            for p in plist:
+                if not isinstance(p, dict):
+                    continue
+                sym = p.get("symbol") or p.get("ticker")
+                if isinstance(sym, str) and sym.strip():
+                    out.append(sym.strip().upper())
+            return sorted(set(out), key=stable_tiebreak_key)
+
+    return []
+
+
+def score_row_points(row: Dict[str, Any]) -> Tuple[int, int]:
+    """Return (points, max_points) for one compute_scores row."""
+    cats = row.get("categories", {})
+    if not isinstance(cats, dict):
+        return (0, 0)
+
+    points = 0
+    checks_n = 0
+    for _, cat in cats.items():
+        if not isinstance(cat, dict):
+            continue
+        checks = cat.get("checks", [])
+        if not isinstance(checks, list):
+            continue
+        for chk in checks:
+            if not isinstance(chk, dict):
+                continue
+            sc = chk.get("score")
+            if isinstance(sc, int):
+                points += sc
+                checks_n += 1
+    max_points = 2 * checks_n
+    return (points, max_points)
+
+
+def utility_from_scores(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Build symbol -> {utility, points, max_points}."""
+    out: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        sym = row.get("symbol")
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        sym_u = sym.strip().upper()
+        pts, mx = score_row_points(row)
+        util = (pts / mx) if mx > 0 else 0.0
+        out[sym_u] = {"utility": util, "points": pts, "max_points": mx}
+    return out
+
+
 def recommend(
     *,
-    positions: Dict[str, Any],
-    scores: Dict[str, Any],
+    positions: Any,
+    scores: List[Dict[str, Any]],
     constraints: Dict[str, Any],
 ) -> Recommendation:
-    """Return a deterministic SWAP or NOOP recommendation (placeholder).
+    """Return a deterministic SWAP or NOOP recommendation."""
+    held = extract_held_symbols(positions)
+    if not held:
+        return Recommendation(
+            action="NOOP",
+            reason="No holdings found; nothing to rotate.",
+            horizon_trading_days=int(constraints.get("horizon_trading_days", 0) or 0),
+            target_trade_date=None,
+            constraints_applied=(),
+            diagnostics={"generated_at": _utc_now_iso()},
+        )
 
-    This stub intentionally returns NOOP until M8.2 implements full logic.
-    """
-    _ = (positions, scores, constraints)
-    return Recommendation(action="NOOP", reason="recommendations_engine not implemented yet")
+    s_map = utility_from_scores(scores)
+    # Filter held to those we actually have scores for
+    held_scored = [h for h in held if h in s_map]
+    if not held_scored:
+        return Recommendation(
+            action="NOOP",
+            reason="Holdings found but no matching score rows; cannot compute rotation.",
+            horizon_trading_days=int(constraints.get("horizon_trading_days", 0) or 0),
+            target_trade_date=None,
+            constraints_applied=(),
+            diagnostics={"generated_at": _utc_now_iso(), "held": held},
+        )
+
+    # Candidates: all scored symbols not held
+    candidates = [sym for sym in s_map.keys() if sym not in set(held_scored)]
+    if not candidates:
+        return Recommendation(
+            action="NOOP",
+            reason="No candidates available beyond current holdings.",
+            horizon_trading_days=int(constraints.get("horizon_trading_days", 0) or 0),
+            target_trade_date=None,
+            constraints_applied=(),
+            diagnostics={"generated_at": _utc_now_iso(), "held_scored": held_scored},
+        )
+
+    # Weakest held: min utility, tie-break by symbol
+    weakest = min(
+        held_scored,
+        key=lambda sym: (s_map[sym]["utility"], stable_tiebreak_key(sym)),
+    )
+
+    # Best candidate: max utility, tie-break by symbol
+    best = max(
+        candidates,
+        key=lambda sym: (s_map[sym]["utility"], tuple(-ord(c) for c in sym), stable_tiebreak_key(sym)),
+    )
+    # Note: max() uses the key; tie-break is effectively deterministic via stable_tiebreak_key.
+
+    u_from = float(s_map[weakest]["utility"])
+    u_to = float(s_map[best]["utility"])
+    delta = u_to - u_from
+
+    thr = float(constraints.get("min_improvement_threshold", 0.10))
+    horizon = int(constraints.get("horizon_trading_days", 5) or 5)
+
+    applied = ["min_improvement_threshold"]
+
+    diagnostics = {
+        "generated_at": _utc_now_iso(),
+        "weakest_holding": weakest,
+        "best_candidate": best,
+        "utility_from": u_from,
+        "utility_to": u_to,
+        "delta_utility": delta,
+        "threshold": thr,
+        "points_from": s_map[weakest]["points"],
+        "max_points_from": s_map[weakest]["max_points"],
+        "points_to": s_map[best]["points"],
+        "max_points_to": s_map[best]["max_points"],
+        "held_scored": held_scored,
+        "candidates_n": len(candidates),
+    }
+
+    if delta >= thr and best != weakest:
+        return Recommendation(
+            action="SWAP",
+            reason=f"{weakest} is weakest; {best} ranks higher with sufficient margin (Δ={delta:.3f} ≥ {thr:.3f}).",
+            from_symbol=weakest,
+            to_symbol=best,
+            horizon_trading_days=horizon,
+            target_trade_date=None,
+            constraints_applied=tuple(applied),
+            diagnostics=diagnostics,
+        )
+
+    return Recommendation(
+        action="NOOP",
+        reason=f"No candidate clears min improvement threshold (best Δ={delta:.3f} < {thr:.3f}); hold.",
+        horizon_trading_days=horizon,
+        target_trade_date=None,
+        constraints_applied=tuple(applied),
+        diagnostics=diagnostics,
+    )
