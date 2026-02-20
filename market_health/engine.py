@@ -1,3 +1,17 @@
+"""market_health.engine
+
+SCORING ENGINE
+
+This module computes the Market Health scoring outputs (A–E/F checks, sector summaries, etc.).
+It is intentionally separate from the *recommendations/rotation engine* (see
+`market_health/recommendations_engine.py`).
+
+Naming note:
+- `engine.py` = scoring engine (legacy name kept to avoid import churn)
+- `scoring_engine.py` = clear alias (re-export) for new code
+- `recommendations_engine.py` = rotation/recommendations logic (SWAP/NOOP)
+"""
+
 # engine.py
 from __future__ import annotations
 import os
