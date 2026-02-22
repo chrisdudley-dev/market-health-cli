@@ -21,16 +21,34 @@ mkdir -p "$(dirname "$OUT_JSON")"
 QUIET=0
 [ -n "${INVOCATION_ID:-}" ] && QUIET=1
 
-python3 - <<'PY'
+PYTHON="${JERBOA_PYTHON:-python3}"
+command -v "$PYTHON" >/dev/null 2>&1 || PYTHON=python
+
+HOME_FOR_PY="$HOME"
+if [ -n "${JERBOA_HOME_WIN:-}" ]; then
+  HOME_FOR_PY="$JERBOA_HOME_WIN"
+fi
+if command -v cygpath >/dev/null 2>&1; then
+  case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*|CYGWIN*) HOME_FOR_PY="$(cygpath -w "$HOME")" ;;
+  esac
+fi
+
+HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
 import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
-state_p  = Path(os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json"))
-env_p    = Path(os.path.expanduser("~/.cache/jerboa/environment.v1.json"))
-sect_p   = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
-pos_p    = Path(os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
+# Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
+HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
+CACHE_DIR = HOME_ROOT / '.cache' / 'jerboa'
+
+
+out_json = (CACHE_DIR / "market_health.ui.v1.json")
+state_p  = (CACHE_DIR / "state/market_health_refresh_all.state.json")
+env_p    = (CACHE_DIR / "environment.v1.json")
+sect_p   = (CACHE_DIR / "market_health.sectors.json")
+pos_p    = (CACHE_DIR / "positions.v1.json")
 
 def read_json(p: Path):
     if not p.exists():
