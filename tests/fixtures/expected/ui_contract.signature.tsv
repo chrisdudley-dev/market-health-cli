@@ -69,6 +69,7 @@ data.positions.source.type	str
 data.positions.summary.count	int
 data.positions.summary.equities	int
 data.positions.summary.options	int
+data.recommendations	NoneType
 data.sectors	list[dict]
 data.sectors[].categories.A.checks	list[dict]
 data.sectors[].categories.A.checks[].label	str
@@ -130,6 +131,10 @@ meta.positions.bytes	int
 meta.positions.exists	bool
 meta.positions.mtime	int
 meta.positions.path	str
+meta.recommendations.bytes	int
+meta.recommendations.exists	bool
+meta.recommendations.mtime	int
+meta.recommendations.path	str
 meta.sectors.bytes	int
 meta.sectors.exists	bool
 meta.sectors.mtime	int
@@ -143,5 +148,6 @@ status_line	str
 summary.events_count	int
 summary.events_status	str
 summary.positions_count	int
+summary.recommendations_status	str
 summary.symbols_sample	list[str]
 summary.symbols_sample[]	str

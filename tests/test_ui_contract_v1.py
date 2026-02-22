@@ -66,7 +66,7 @@ def test_contract_empty_home_is_valid(tmp_path):
     _assert_envelope(contract)
 
     # meta blocks exist and are well-typed
-    for k in ["environment", "positions", "sectors", "state", "events_provider"]:
+    for k in ["environment", "positions", "sectors", "state", "recommendations", "events_provider"]:
         m = contract["meta"][k]
         assert isinstance(m["path"], str)
         assert isinstance(m["exists"], bool)
@@ -78,6 +78,8 @@ def test_contract_empty_home_is_valid(tmp_path):
     assert contract["data"]["positions"] is None
     assert contract["data"]["sectors"] is None
     assert contract["data"]["state"] is None
+    assert contract["data"]["recommendations"] is None
+    assert contract["summary"]["recommendations_status"] in {"ok", "missing", "unreadable"}
 
     # events must exist and have stable shape
     ev = contract["data"]["events"]
