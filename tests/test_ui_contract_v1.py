@@ -1,21 +1,26 @@
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from datetime import datetime
 
 VOLATILE_KEYS = {"asof", "generated_at", "updated_at", "timestamp", "ts"}
 
 
-def _run_export(tmp_home: Path) -> dict:
-    subprocess.run(
-        ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"],
-        check=True,
-        env={**os.environ, "HOME": str(tmp_home)},
-    )
-    p = tmp_home / ".cache" / "jerboa" / "market_health.ui.v1.json"
-    return json.loads(p.read_text())
+def _run_export(tmp_path: Path):
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
 
+    cmd = ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"]
+    if os.name == "nt":
+        cmd = [sys.executable, "scripts/ui_export_ui_contract_v1.py"]
+
+    subprocess.run(cmd, check=True, env=env)
+
+    out = tmp_path / ".cache" / "jerboa" / "market_health.ui.v1.json"
+    return json.loads(out.read_text(encoding="utf-8"))
 
 def _shape_signature(d):
     def walk(x, path=""):
