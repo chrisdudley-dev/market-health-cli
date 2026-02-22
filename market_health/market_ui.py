@@ -451,6 +451,31 @@ def render_pi_grid(
     _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
 
 
+
+def _is_ui_contract(obj: object) -> bool:
+    """Heuristic: does this JSON look like market_health.ui.v1 contract?"""
+    if not isinstance(obj, dict):
+        return False
+    d = obj.get("data")
+    m = obj.get("meta")
+    if not isinstance(d, dict) or not isinstance(m, dict):
+        return False
+    # schema may be present, but don't rely on it
+    return ("sectors" in d) and ("state" in d) and ("positions" in d)
+
+
+def _rows_from_ui_contract(contract: dict, sectors_filter: list[str] | None) -> list:
+    d = contract.get("data") or {}
+    sectors = d.get("sectors")
+    if not isinstance(sectors, list):
+        return []
+    rows = [build_sector_from_json(x) for x in sectors if isinstance(x, dict)]
+    if sectors_filter:
+        keep = set(sectors_filter)
+        rows = [r for r in rows if getattr(r, "symbol", None) in keep]
+    rows.sort(key=lambda r: getattr(r, "total", 0), reverse=True)
+    return rows
+
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
     p.add_argument(
@@ -511,6 +536,14 @@ def main():
             return build_demo_dataset(args.sectors, seed=42)
         if args.json_path:
             try:
+                # If json_path is a UI contract (market_health.ui.v1.json), load rows from contract.data.sectors
+                try:
+                    _raw = json.loads(Path(args.json_path).read_text(encoding='utf-8'))
+                except Exception:
+                    _raw = None
+                if _is_ui_contract(_raw):
+                    args._ui_contract = _raw
+                    return _rows_from_ui_contract(_raw, args.sectors)
                 return load_json_dataset(args.json_path, args.sectors)
             except (OSError, json.JSONDecodeError) as e:
                 console.print(f"[red]Failed to read JSON: {e}[/red]")
@@ -532,9 +565,19 @@ def main():
 
         if use_pi_grid and "render_pi_grid" in globals():
             # Pi Grid prints its own legend; don't print header twice.
+            contract = getattr(args, '_ui_contract', None)
+            if isinstance(contract, dict):
+                rec_lines = _recommendation_lines_from_contract(contract)
+                if rec_lines:
+                    console.print(Panel('\n'.join(rec_lines), title="Recommendations"))
             render_pi_grid(console, rows, cols=grid_cols, mono=args.mono)
         else:
             render_header(console, mono=args.mono)
+            contract = getattr(args, '_ui_contract', None)
+            if isinstance(contract, dict):
+                rec_lines = _recommendation_lines_from_contract(contract)
+                if rec_lines:
+                    console.print(Panel('\n'.join(rec_lines), title="Recommendations"))
             render_overview(console, rows, mono=args.mono)
             render_details(console, rows, top_k=args.topk, mono=args.mono)
     else:
@@ -557,3 +600,79 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def _recommendation_lines_from_contract(contract: dict) -> list[str]:
+    """
+    Render SWAP/NOOP recommendation summary from the UI contract.
+    This must be resilient to missing/unreadable caches.
+    """
+    summary = contract.get("summary") or {}
+    status = summary.get("recommendations_status", "missing")
+
+    data = contract.get("data") or {}
+    rec_blob = data.get("recommendations")
+
+    # Always show a stable section header
+    lines: list[str] = []
+    if status != "ok" or not isinstance(rec_blob, dict):
+        lines.append(f"Recommendation: (status={status})")
+        return lines
+
+    rec = rec_blob.get("recommendation")
+    if not isinstance(rec, dict):
+        lines.append(f"Recommendation: (status={status}, no recommendation)")
+        return lines
+
+    action = (rec.get("action") or "?").upper()
+
+    # Common useful fields (optional)
+    horizon = rec.get("horizon_trading_days")
+    if isinstance(horizon, int):
+        lines.append(f"Recommendation: {action} (horizon={horizon}d)")
+    else:
+        lines.append(f"Recommendation: {action}")
+
+    if action == "NOOP":
+        constraints = rec.get("constraints_applied") or []
+        if isinstance(constraints, list) and constraints:
+            lines.append("Reason: " + ", ".join(str(x) for x in constraints))
+        # optional diagnostics
+        diag = rec.get("diagnostics") or {}
+        if isinstance(diag, dict):
+            if "best_candidate" in diag:
+                lines.append(f"Best candidate: {diag.get('best_candidate')}")
+            if "delta_utility" in diag:
+                lines.append(f"Delta utility: {diag.get('delta_utility')}")
+        return lines
+
+    if action == "SWAP":
+        diag = rec.get("diagnostics") or {}
+        if not isinstance(diag, dict):
+            diag = {}
+
+        # Try multiple field names to avoid tight coupling
+        from_sym = (
+            rec.get("from") or rec.get("from_symbol") or rec.get("sell") or rec.get("sell_symbol")
+            or diag.get("held_to_replace") or diag.get("worst_held") or diag.get("sell_symbol")
+        )
+        to_sym = (
+            rec.get("to") or rec.get("to_symbol") or rec.get("buy") or rec.get("buy_symbol")
+            or diag.get("best_candidate") or diag.get("best_symbol") or diag.get("candidate_symbol")
+        )
+
+        if from_sym and to_sym:
+            lines.append(f"Swap: {from_sym} -> {to_sym}")
+        elif to_sym:
+            lines.append(f"Swap target: {to_sym}")
+        else:
+            lines.append("Swap: (details unavailable)")
+
+        if "delta_utility" in diag:
+            lines.append(f"Delta utility: {diag.get('delta_utility')}")
+        return lines
+
+    # Fallback for other actions
+    diag = rec.get("diagnostics") or {}
+    if isinstance(diag, dict) and "delta_utility" in diag:
+        lines.append(f"Delta utility: {diag.get('delta_utility')}")
+    return lines
