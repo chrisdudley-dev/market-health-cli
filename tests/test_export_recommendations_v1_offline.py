@@ -13,8 +13,14 @@ def test_exporter_offline(monkeypatch, tmp_path):
 
     # Fake compute_scores output (2 symbols: held + candidate)
     fake_rows = [
-        {"symbol": "XLK", "categories": {"A": {"checks": [{"label": "c", "score": 0}]}}},
-        {"symbol": "XLF", "categories": {"A": {"checks": [{"label": "c", "score": 2}]}}},
+        {
+            "symbol": "XLK",
+            "categories": {"A": {"checks": [{"label": "c", "score": 0}]}},
+        },
+        {
+            "symbol": "XLF",
+            "categories": {"A": {"checks": [{"label": "c", "score": 2}]}},
+        },
     ]
 
     # Monkeypatch by creating a small shim module the subprocess can import via PYTHONPATH
@@ -22,15 +28,13 @@ def test_exporter_offline(monkeypatch, tmp_path):
     shim.mkdir()
     (shim / "market_health").mkdir()
     (shim / "market_health" / "__init__.py").write_text(
-        "from pkgutil import extend_path\n"
-        "__path__ = extend_path(__path__, __name__)\n",
+        "from pkgutil import extend_path\n__path__ = extend_path(__path__, __name__)\n",
         encoding="utf-8",
     )
 
     # Redirect market_health.engine.compute_scores
     (shim / "market_health" / "engine.py").write_text(
-        "def compute_scores(*args, **kwargs):\n"
-        f"    return {fake_rows!r}\n",
+        f"def compute_scores(*args, **kwargs):\n    return {fake_rows!r}\n",
         encoding="utf-8",
     )
 
@@ -41,13 +45,20 @@ def test_exporter_offline(monkeypatch, tmp_path):
     env["PYTHONPATH"] = str(shim) + os.pathsep + str(Path.cwd())
 
     # Act
-    p = subprocess.run(
-        [sys.executable, "scripts/export_recommendations_v1.py",
-         "--positions", str(pos_p),
-         "--out", str(out_p),
-         "--horizon", "5",
-         "--min-improvement", "0.10",
-         "--quiet"],
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/export_recommendations_v1.py",
+            "--positions",
+            str(pos_p),
+            "--out",
+            str(out_p),
+            "--horizon",
+            "5",
+            "--min-improvement",
+            "0.10",
+            "--quiet",
+        ],
         check=True,
         capture_output=True,
         text=True,
@@ -57,7 +68,12 @@ def test_exporter_offline(monkeypatch, tmp_path):
     # Assert file exists and validates with our validator script
     assert out_p.exists()
     v = subprocess.run(
-        [sys.executable, "scripts/validate_recommendations_v1.py", "--path", str(out_p)],
+        [
+            sys.executable,
+            "scripts/validate_recommendations_v1.py",
+            "--path",
+            str(out_p),
+        ],
         check=True,
         capture_output=True,
         text=True,

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
 import argparse
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List
+from market_health.engine import compute_scores
+from market_health.recommendations_engine import recommend
+from market_health.trading_days import add_trading_days
+from market_health.ledger import append_event
+import json
 
 
 def _load_swaps_today() -> tuple[str, int, Path]:
@@ -39,16 +43,6 @@ def _bump_swaps_today(*, today: str, swaps_today: int, state_p: Path) -> None:
         )
     except Exception:
         pass
-
-
-from typing import Any, Dict, List
-
-from market_health.engine import compute_scores
-from market_health.recommendations_engine import recommend
-
-
-from market_health.trading_days import add_trading_days
-from market_health.ledger import append_event
 
 
 def utc_now_iso() -> str:

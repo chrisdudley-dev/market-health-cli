@@ -107,7 +107,9 @@ def utility_from_scores(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, A
     return out
 
 
-def recommend(*, positions: Any, scores: List[Dict[str, Any]], constraints: Dict[str, Any]) -> Recommendation:
+def recommend(
+    *, positions: Any, scores: List[Dict[str, Any]], constraints: Dict[str, Any]
+) -> Recommendation:
     """
     Constraints v0:
       - min_improvement_threshold: SWAP only if best candidate improves utility by >= threshold
@@ -124,8 +126,12 @@ def recommend(*, positions: Any, scores: List[Dict[str, Any]], constraints: Dict
     sector_cap_raw = constraints.get("sector_cap")
     sector_cap = int(sector_cap_raw) if sector_cap_raw not in (None, "") else None
 
-    turnover_cap_raw = constraints.get("turnover_cap") or constraints.get("max_turnover_fraction")
-    turnover_cap = float(turnover_cap_raw) if turnover_cap_raw not in (None, "") else None
+    turnover_cap_raw = constraints.get("turnover_cap") or constraints.get(
+        "max_turnover_fraction"
+    )
+    turnover_cap = (
+        float(turnover_cap_raw) if turnover_cap_raw not in (None, "") else None
+    )
 
     applied_list = ["min_improvement_threshold", "max_swaps_per_day"]
     if sector_cap is not None:
@@ -157,7 +163,11 @@ def recommend(*, positions: Any, scores: List[Dict[str, Any]], constraints: Dict
             target_trade_date=None,
             constraints_applied=applied,
             constraints_triggered=(),
-            diagnostics={"threshold": thr, "horizon_trading_days": horizon, "held": held},
+            diagnostics={
+                "threshold": thr,
+                "horizon_trading_days": horizon,
+                "held": held,
+            },
         )
 
     # weakest held by utility, stable tiebreak
@@ -175,14 +185,20 @@ def recommend(*, positions: Any, scores: List[Dict[str, Any]], constraints: Dict
             target_trade_date=None,
             constraints_applied=applied,
             constraints_triggered=(),
-            diagnostics={"threshold": thr, "horizon_trading_days": horizon, "held": held_present},
+            diagnostics={
+                "threshold": thr,
+                "horizon_trading_days": horizon,
+                "held": held_present,
+            },
         )
 
     # Choose best candidate by utility; break ties deterministically (alphabetical via stable_tiebreak_key)
-    best_u = max(float(util[s].get('utility', 0.0)) for s in candidates)
-    best_cands = [s for s in candidates if float(util[s].get('utility', 0.0)) == best_u]
+    best_u = max(float(util[s].get("utility", 0.0)) for s in candidates)
+    best_cands = [s for s in candidates if float(util[s].get("utility", 0.0)) == best_u]
     best = min(best_cands, key=stable_tiebreak_key)
-    delta = float(util[best].get("utility", 0.0)) - float(util[weakest].get("utility", 0.0))
+    delta = float(util[best].get("utility", 0.0)) - float(
+        util[weakest].get("utility", 0.0)
+    )
 
     diagnostics = {
         "threshold": thr,

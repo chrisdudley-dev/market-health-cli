@@ -1,13 +1,17 @@
-import json, os, sys
+import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
 out_json.parent.mkdir(parents=True, exist_ok=True)
-state_p  = Path(os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json"))
-env_p    = Path(os.path.expanduser("~/.cache/jerboa/environment.v1.json"))
-sect_p   = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
-pos_p    = Path(os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
+state_p = Path(
+    os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json")
+)
+env_p = Path(os.path.expanduser("~/.cache/jerboa/environment.v1.json"))
+sect_p = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
+pos_p = Path(os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
+
 
 def read_json(p: Path):
     if not p.exists():
@@ -17,25 +21,33 @@ def read_json(p: Path):
     except Exception:
         return {"_error": "unreadable", "_path": str(p)}
 
+
 def meta(p: Path):
     if not p.exists():
         return {"path": str(p), "exists": False, "mtime": 0, "bytes": 0}
     st = p.stat()
-    return {"path": str(p), "exists": True, "mtime": int(st.st_mtime), "bytes": int(st.st_size)}
+    return {
+        "path": str(p),
+        "exists": True,
+        "mtime": int(st.st_mtime),
+        "bytes": int(st.st_size),
+    }
+
 
 def status_line_fallback(state: dict | None) -> str:
     if not isinstance(state, dict):
         return "market-health: STATE missing"
-    chg = (state.get("changed") or {})
-    rc  = (state.get("rc") or {})
+    chg = state.get("changed") or {}
+    rc = state.get("rc") or {}
     return (
         "market-health:"
-        f" status={state.get('status','?')}"
-        f" reason={state.get('reason','?')}"
-        f" changed(mkt,pos)={chg.get('market','?')},{chg.get('positions','?')}"
-        f" rc(mkt,pos)={rc.get('market','?')},{rc.get('positions','?')}"
+        f" status={state.get('status', '?')}"
+        f" reason={state.get('reason', '?')}"
+        f" changed(mkt,pos)={chg.get('market', '?')},{chg.get('positions', '?')}"
+        f" rc(mkt,pos)={rc.get('market', '?')},{rc.get('positions', '?')}"
         f" forced={state.get('forced', False)}"
     )
+
 
 # Prefer the existing status command if present (so banner + UI match exactly)
 status_cmd = os.path.expanduser("~/bin/jerboa-market-health-status")
@@ -43,14 +55,15 @@ status_line = None
 if os.path.exists(status_cmd) and os.access(status_cmd, os.X_OK):
     try:
         import subprocess
+
         status_line = subprocess.check_output([status_cmd], text=True).strip()
     except Exception:
         status_line = None
 
 state = read_json(state_p)
-env   = read_json(env_p)
-sect  = read_json(sect_p)
-pos   = read_json(pos_p)
+env = read_json(env_p)
+sect = read_json(sect_p)
+pos = read_json(pos_p)
 
 if not status_line:
     status_line = status_line_fallback(state)
@@ -70,7 +83,7 @@ for item in pos_list:
         break
 
 
-  # --- Category A: events/catalysts provider boundary (graceful) ---
+# --- Category A: events/catalysts provider boundary (graceful) ---
 ev_cfg_p = Path(os.path.expanduser("~/.config/jerboa/event_provider.json"))
 
 events = {
@@ -83,6 +96,7 @@ events = {
 }
 try:
     from market_health.providers.event_provider import load_event_provider  # type: ignore
+
     evp = load_event_provider()
     seed = symbols[:50] if symbols else ["SPY"]
     evb = evp.get_events(seed)
@@ -105,7 +119,7 @@ try:
         ],
         "errors": evb.errors,
     }
-except Exception as e:
+except Exception:
     events = {
         "schema": "events.v1",
         "status": "error",
@@ -115,7 +129,11 @@ except Exception as e:
         "errors": [],
     }
 
-events_list = events.get("points") if isinstance(events, dict) and isinstance(events.get("points"), list) else []
+events_list = (
+    events.get("points")
+    if isinstance(events, dict) and isinstance(events.get("points"), list)
+    else []
+)
 
 DIMENSIONS_META = {
     "A": {
@@ -155,13 +173,15 @@ payload = {
         "environment": meta(env_p),
         "sectors": meta(sect_p),
         "positions": meta(pos_p),
-          "events_provider": meta(ev_cfg_p),
+        "events_provider": meta(ev_cfg_p),
     },
     "summary": {
         "symbols_sample": symbols,
         "positions_count": len(pos_list),
-          "events_count": len(events_list),
-          "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
+        "events_count": len(events_list),
+        "events_status": (
+            events.get("status", "?") if isinstance(events, dict) else "?"
+        ),
     },
     # Keep full data for now (still one file); React reads just what it needs.
     "data": {
@@ -169,7 +189,7 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
-          "events": events,
+        "events": events,
     },
 }
 
