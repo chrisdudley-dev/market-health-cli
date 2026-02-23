@@ -103,3 +103,14 @@ def compute_scores(
     cand = dict(sectors=sectors, period=period, interval=interval, ttl=ttl)
     kwargs = {k: v for k, v in cand.items() if k in sig.parameters}
     return fn(**kwargs)
+
+# Version: safe at runtime and in editable installs
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except Exception:  # pragma: no cover
+    from importlib_metadata import version, PackageNotFoundError  # type: ignore
+
+try:
+    __version__ = version("market-health-cli")
+except PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"

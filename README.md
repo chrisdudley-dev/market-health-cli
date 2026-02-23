@@ -243,3 +243,40 @@ requirements.txt
 ## License
 
 MIT © Christopher Dudley
+
+## Install
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
+```
+
+
+## Quick start
+
+Run the UI (Pi Grid):
+
+```bash
+python -m market_health.market_ui --pi-grid
+```
+
+Export the UI contract (writes to `~/.cache/jerboa/market_health.ui.v1.json`):
+
+```bash
+bash scripts/jerboa/bin/jerboa-market-health-ui-export
+```
+
+
+## Architecture
+
+- Refresh/export pipeline writes cache artifacts under `~/.cache/jerboa/...`
+- The UI reads one contract: `market_health.ui.v1.json`
+- Recommendations are embedded from `recommendations.v1.json`
+
+Key entry points:
+- `scripts/jerboa/bin/jerboa-market-health-ui-export`
+- `scripts/export_recommendations_v1.py`
+- `market_health/market_ui.py`
+
