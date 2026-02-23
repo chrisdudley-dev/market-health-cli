@@ -3,9 +3,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import re as _re
+import sys
+import re
+import sys
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
+
+
+def die(msg: str) -> None:
+    raise SystemExit(msg)
 
 
 def _err(errors: List[str], msg: str) -> None:
@@ -38,19 +46,29 @@ def validate(doc: Dict[str, Any]) -> List[str]:
         _err(errors, "recommendation.horizon_trading_days must be an integer >= 0")
 
     t = rec.get("target_trade_date")
+
+    if not isinstance(t, str) or not _re.match(r"^\d{4}-\d{2}-\d{2}$", t):
+        die("recommendation.target_trade_date must be ISO date string")
     if t is not None:
         if not isinstance(t, str):
-            _err(errors, "recommendation.target_trade_date must be YYYY-MM-DD string or null")
+            _err(
+                errors,
+                "recommendation.target_trade_date must be YYYY-MM-DD string or null",
+            )
         else:
             # Minimal YYYY-MM-DD shape check (full holiday semantics come later)
             import re
-            if not re.match(r"^\d{4}-\d{2}-\d{2}$", t):
+
+            if not _re.match(r"^\d{4}-\d{2}-\d{2}$", t):
                 _err(errors, "recommendation.target_trade_date must match YYYY-MM-DD")
 
     ct = rec.get("constraints_triggered")
     if ct is not None:
         if not isinstance(ct, list) or not all(isinstance(x, str) for x in ct):
-            _err(errors, "recommendation.constraints_triggered must be a list of strings when present")
+            _err(
+                errors,
+                "recommendation.constraints_triggered must be a list of strings when present",
+            )
     ca = rec.get("constraints_applied")
     if not isinstance(ca, list) or not all(isinstance(x, str) for x in ca):
         _err(errors, "recommendation.constraints_applied must be a list of strings")
@@ -71,7 +89,9 @@ def validate(doc: Dict[str, Any]) -> List[str]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate recommendations.v1.json against the minimal contract")
+    ap = argparse.ArgumentParser(
+        description="Validate recommendations.v1.json against the minimal contract"
+    )
     ap.add_argument("--path", required=True, help="Path to recommendations.v1.json")
     args = ap.parse_args()
 

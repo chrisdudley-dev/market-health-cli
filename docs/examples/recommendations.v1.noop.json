@@ -1,24 +1,24 @@
 {
-  "schema": "recommendations.v1",
   "asof": "2026-02-20T20:00:00Z",
   "generated_at": "2026-02-20T20:00:02Z",
   "inputs": {
-    "positions_schema": "positions.v1",
-    "ui_schema": "jerboa.market_health.ui.v1",
     "engine": "market_health.recommendations_engine",
-    "engine_version": "v0"
+    "engine_version": "v0",
+    "positions_schema": "positions.v1",
+    "ui_schema": "jerboa.market_health.ui.v1"
   },
   "recommendation": {
     "action": "NOOP",
-    "reason": "No candidate exceeds the minimum improvement threshold after constraints; hold positions.",
-    "horizon_trading_days": 5,
-    "target_trade_date": null,
     "constraints_applied": [
       "min_improvement_threshold"
     ],
     "diagnostics": {
       "best_delta_utility": 0.03,
-      "threshold": 0.10
-    }
-  }
+      "threshold": 0.1
+    },
+    "horizon_trading_days": 5,
+    "reason": "No candidate exceeds the minimum improvement threshold after constraints; hold positions.",
+    "target_trade_date": "2026-02-27"
+  },
+  "schema": "recommendations.v1"
 }
