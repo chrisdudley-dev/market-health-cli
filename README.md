@@ -280,3 +280,8 @@ Key entry points:
 - `scripts/export_recommendations_v1.py`
 - `market_health/market_ui.py`
 
+## Docs
+
+- `docs/SCORING.md` — scoring semantics + A/C/D feature flags
+- `docs/UI_CONTRACT.md` — UI contract fields + example
+- `docs/TESTING.md` — local gates + fixture regeneration

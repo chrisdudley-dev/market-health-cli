@@ -80,6 +80,95 @@ PRICE_FIELDS = {
     "Stock Splits",
 }
 
+
+def _flag(name: str) -> bool:
+    v = os.environ.get(name, "")
+    return v.lower() in {"1", "true", "yes", "on"}
+
+
+def _latest_int(df, col: str):
+    """Best-effort: get last-row numeric, coerce to int. Returns None if missing/invalid."""
+    try:
+        if not hasattr(df, "columns") or col not in df.columns:
+            return None
+        v = df[col].iloc[-1]
+        # handle pandas/numpy scalars
+        if v is None:
+            return None
+        # NaN check without importing math/numpy explicitly
+        try:
+            if v != v:  # NaN
+                return None
+        except Exception:
+            pass
+        return int(round(float(v)))
+    except Exception:
+        return None
+
+
+# Optional per-check overrides sourced from df_sym's last row.
+# These are only applied when feature flags are enabled AND the override columns exist.
+_A_COLS: dict[str, list[str]] = {
+    "News": ["a_news", "news_score", "news"],
+    "Analysts": ["a_analysts", "analysts_score", "analysts"],
+    "Event": ["a_event", "event_score", "event"],
+    "Insiders": ["a_insiders", "insiders_score", "insiders"],
+    "Peers/Macro": ["a_peers_macro", "peers_macro_score", "peers_macro"],
+    "Guidance": ["a_guidance", "guidance_score", "guidance"],
+}
+
+_C_COLS: dict[str, list[str]] = {
+    "EM Fit": ["c_em_fit", "em_fit_score", "em_fit"],
+    "OI/Flow": ["c_oi_flow", "oi_flow_score", "oi_flow"],
+    "Blocks/DP": ["c_blocks_dp", "blocks_dp_score", "blocks_dp"],
+    "Leaders%>20D": ["c_leaders_20d", "leaders_20d_score", "leaders_20d"],
+    "Money Flow": ["c_money_flow", "money_flow_score", "money_flow"],
+    "SI/Days": ["c_si_days", "si_days_score", "si_days"],
+}
+
+_D_COLS: dict[str, list[str]] = {
+    "ATR%": ["d_atr_pct", "atr_pct_score", "atr_pct"],
+    "IV%": ["d_iv_pct", "iv_pct_score", "iv_pct"],
+    "Correlation": ["d_correlation", "correlation_score", "correlation"],
+    "Event Risk": ["d_event_risk", "event_risk_score", "event_risk"],
+    "Gap Plan": ["d_gap_plan", "gap_plan_score", "gap_plan"],
+    "Sizing/RR": ["d_sizing_rr", "sizing_rr_score", "sizing_rr"],
+}
+
+
+def _apply_dimension_overrides(code: str, checks: list[dict], df_sym) -> list[dict]:
+    mapping = {"A": _A_COLS, "C": _C_COLS, "D": _D_COLS}.get(code)
+    if not mapping:
+        return checks
+
+    out: list[dict] = []
+    for chk in checks:
+        if not isinstance(chk, dict):
+            out.append(chk)
+            continue
+        label = chk.get("label")
+        if not isinstance(label, str) or label not in mapping:
+            out.append(chk)
+            continue
+
+        score = None
+        for col in mapping[label]:
+            score = _latest_int(df_sym, col)
+            if score is not None:
+                break
+
+        if score is None:
+            out.append(chk)
+            continue
+
+        # keep schema stable: only replace existing score field
+        c2 = dict(chk)
+        c2["score"] = max(0, int(score))
+        out.append(c2)
+
+    return out
+
+
 CHECK_LABELS: Dict[str, List[str]] = {
     "A": ["News", "Analysts", "Event", "Insiders", "Peers/Macro", "Guidance"],
     "B": ["Stacked MAs", "RS vs SPY", "BB Mid", "20D Break", "Vol x", "Hold 20EMA"],
@@ -730,6 +819,18 @@ def compute_scores(
         except Exception:
             a_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["A"]]
 
+        # Optional A/C/D upgraded inputs (behind flags, safe fallbacks)
+        try:
+            c_checks = compute_position_flow_checks(df_sym)
+        except Exception:
+            c_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["C"]]
+        if _flag("MH_FEATURE_A_V1"):
+            a_checks = _apply_dimension_overrides("A", a_checks, df_sym)
+        if _flag("MH_FEATURE_C_V1"):
+            c_checks = _apply_dimension_overrides("C", c_checks, df_sym)
+        if _flag("MH_FEATURE_D_V1"):
+            d_checks = _apply_dimension_overrides("D", d_checks, df_sym)
+
         def neutral() -> List[int]:
             return [1, 1, 1, 1, 1, 1]
 
@@ -741,7 +842,7 @@ def compute_scores(
                     for label, score in zip(CHECK_LABELS["B"], b_scores)
                 ]
             },
-            "C": {"checks": compute_position_flow_checks(df_sym)},
+            "C": {"checks": c_checks},
             "D": {"checks": d_checks},
             "E": {
                 "checks": [
