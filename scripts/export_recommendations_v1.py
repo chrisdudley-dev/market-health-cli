@@ -7,33 +7,47 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+
 def _load_swaps_today() -> tuple[str, int, Path]:
     """Return (today_iso, swaps_today, state_path). Resilient to missing/invalid state."""
-    home_root = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
-    state_p = home_root / '.cache' / 'jerboa' / 'state' / 'recommendations_swaps_today.v1.json'
+    home_root = Path(os.environ.get("JERBOA_HOME_WIN") or os.path.expanduser("~"))
+    state_p = (
+        home_root
+        / ".cache"
+        / "jerboa"
+        / "state"
+        / "recommendations_swaps_today.v1.json"
+    )
     state_p.parent.mkdir(parents=True, exist_ok=True)
     today = datetime.now(timezone.utc).date().isoformat()
     swaps_today = 0
     try:
         if state_p.exists():
-            st = json.loads(state_p.read_text(encoding='utf-8'))
-            if isinstance(st, dict) and st.get('date') == today:
-                swaps_today = int(st.get('count', 0) or 0)
+            st = json.loads(state_p.read_text(encoding="utf-8"))
+            if isinstance(st, dict) and st.get("date") == today:
+                swaps_today = int(st.get("count", 0) or 0)
     except Exception:
         swaps_today = 0
     return today, swaps_today, state_p
 
+
 def _bump_swaps_today(*, today: str, swaps_today: int, state_p: Path) -> None:
     try:
-        state = {'date': today, 'count': swaps_today + 1}
-        state_p.write_text(json.dumps(state, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+        state = {"date": today, "count": swaps_today + 1}
+        state_p.write_text(
+            json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     except Exception:
         pass
+
 
 from typing import Any, Dict, List
 
 from market_health.engine import compute_scores
 from market_health.recommendations_engine import recommend
+
+
+from market_health.trading_days import add_trading_days
 
 
 def utc_now_iso() -> str:
@@ -68,10 +82,21 @@ def to_contract(rec_doc: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Export recommendations.v1.json to ~/.cache/jerboa/")
-    ap.add_argument("--positions", default=os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
-    ap.add_argument("--out", default=os.path.expanduser("~/.cache/jerboa/recommendations.v1.json"))
-    ap.add_argument("--sectors", nargs="*", default=None, help="Optional sector list (defaults to scoring engine defaults)")
+    ap = argparse.ArgumentParser(
+        description="Export recommendations.v1.json to ~/.cache/jerboa/"
+    )
+    ap.add_argument(
+        "--positions", default=os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+    )
+    ap.add_argument(
+        "--out", default=os.path.expanduser("~/.cache/jerboa/recommendations.v1.json")
+    )
+    ap.add_argument(
+        "--sectors",
+        nargs="*",
+        default=None,
+        help="Optional sector list (defaults to scoring engine defaults)",
+    )
     ap.add_argument("--period", default="6mo")
     ap.add_argument("--interval", default="1d")
     ap.add_argument("--horizon", type=int, default=5)
@@ -112,9 +137,13 @@ def main() -> int:
                 raise ValueError("unexpected sectors cache type")
         except Exception:
             # Fallback to compute_scores if cache unreadable
-            score_rows = compute_scores(sectors=args.sectors, period=args.period, interval=args.interval)
+            score_rows = compute_scores(
+                sectors=args.sectors, period=args.period, interval=args.interval
+            )
     else:
-        score_rows = compute_scores(sectors=args.sectors, period=args.period, interval=args.interval)
+        score_rows = compute_scores(
+            sectors=args.sectors, period=args.period, interval=args.interval
+        )
 
     # Stable asof: derived from input mtimes (so idempotency works).
     def mtime(p: Path) -> int:
@@ -122,8 +151,15 @@ def main() -> int:
             return int(p.stat().st_mtime)
         except Exception:
             return 0
+
     snap_epoch = max(mtime(pos_p), mtime(sect_cache))
-    snap_iso = datetime.fromtimestamp(snap_epoch, tz=timezone.utc).isoformat().replace("+00:00","Z") if snap_epoch > 0 else utc_now_iso()
+    snap_iso = (
+        datetime.fromtimestamp(snap_epoch, tz=timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z")
+        if snap_epoch > 0
+        else utc_now_iso()
+    )
 
     score_rows: List[Dict[str, Any]] = compute_scores(
         sectors=args.sectors,
@@ -137,14 +173,25 @@ def main() -> int:
         positions=positions,
         scores=score_rows,
         constraints={
-"min_improvement_threshold": args.min_improvement,
-"horizon_trading_days": args.horizon,
+            "min_improvement_threshold": args.min_improvement,
+            "horizon_trading_days": args.horizon,
             "max_swaps_per_day": args.max_swaps_per_day,
             "swaps_today": swaps_today,
             "sector_cap": args.sector_cap,
             "turnover_cap": args.turnover_cap,
         },
     )
+
+    # Always compute a trading-day target date (M9.6)
+
+    horizon_days = int(getattr(args, "horizon", None) or 5)
+
+    if "snap_iso" not in locals():
+        snap_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    asof_date = datetime.fromisoformat(snap_iso.replace("Z", "+00:00")).date()
+
+    target_trade_date = add_trading_days(asof_date, horizon_days).isoformat()
 
     doc: Dict[str, Any] = {
         "schema": "recommendations.v1",
@@ -163,7 +210,7 @@ def main() -> int:
             "action": rec.action,
             "reason": rec.reason,
             "horizon_trading_days": rec.horizon_trading_days,
-            "target_trade_date": rec.target_trade_date,
+            "target_trade_date": target_trade_date,
             "constraints_applied": list(rec.constraints_applied),
             "diagnostics": rec.diagnostics or {},
         },
@@ -178,7 +225,9 @@ def main() -> int:
     changed = atomic_write_json(out_p, doc)
 
     if not args.quiet:
-        print(f"OK: wrote recommendations.v1 -> {out_p} (changed={changed}) action={rec.action}")
+        print(
+            f"OK: wrote recommendations.v1 -> {out_p} (changed={changed}) action={rec.action}"
+        )
 
     return 0
 

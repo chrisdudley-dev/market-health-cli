@@ -92,7 +92,7 @@ data.recommendations.recommendation.diagnostics.threshold	float
 data.recommendations.recommendation.diagnostics.weakest_held	str
 data.recommendations.recommendation.horizon_trading_days	int
 data.recommendations.recommendation.reason	str
-data.recommendations.recommendation.target_trade_date	NoneType
+data.recommendations.recommendation.target_trade_date	str
 data.recommendations.schema	str
 data.sectors	list[dict]
 data.sectors[].categories.A.checks	list[dict]
