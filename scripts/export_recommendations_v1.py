@@ -48,6 +48,7 @@ from market_health.recommendations_engine import recommend
 
 
 from market_health.trading_days import add_trading_days
+from market_health.ledger import append_event
 
 
 def utc_now_iso() -> str:
@@ -229,6 +230,24 @@ def main() -> int:
             f"OK: wrote recommendations.v1 -> {out_p} (changed={changed}) action={rec.action}"
         )
 
+    # M9 ledger: append a recommendation event (best-effort; must not break export)
+    try:
+        if "doc" in locals():
+            from pathlib import Path as _Path
+
+            ledger_db = (
+                _Path(getattr(args, "out", "recommendations.v1.json")).resolve().parent
+                / "ledger.v0.sqlite"
+            )
+            ts = doc.get("asof") or doc.get("generated_at")
+            append_event(
+                db_path=ledger_db,
+                event_type="recommendation.v1",
+                payload=doc,
+                ts_utc=ts if isinstance(ts, str) else None,
+            )
+    except Exception:
+        pass
     return 0
 
 
