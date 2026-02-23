@@ -47,6 +47,10 @@ def validate(doc: Dict[str, Any]) -> List[str]:
             if not re.match(r"^\d{4}-\d{2}-\d{2}$", t):
                 _err(errors, "recommendation.target_trade_date must match YYYY-MM-DD")
 
+    ct = rec.get("constraints_triggered")
+    if ct is not None:
+        if not isinstance(ct, list) or not all(isinstance(x, str) for x in ct):
+            _err(errors, "recommendation.constraints_triggered must be a list of strings when present")
     ca = rec.get("constraints_applied")
     if not isinstance(ca, list) or not all(isinstance(x, str) for x in ca):
         _err(errors, "recommendation.constraints_applied must be a list of strings")

@@ -38,6 +38,7 @@ class Recommendation:
 
     # Explainability / auditing
     constraints_applied: Tuple[str, ...] = ()
+    constraints_triggered: Tuple[str, ...] = ()
     diagnostics: Dict[str, Any] = None  # type: ignore[assignment]
 
 
@@ -107,84 +108,173 @@ def utility_from_scores(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, A
 
 
 def recommend(*, positions: Any, scores: List[Dict[str, Any]], constraints: Dict[str, Any]) -> Recommendation:
-    held = extract_held_symbols(positions)
+    """
+    Constraints v0:
+      - min_improvement_threshold: SWAP only if best candidate improves utility by >= threshold
+      - max_swaps_per_day + swaps_today: NOOP if swap quota reached
+      - turnover_cap: NOOP if 1/len(held) > cap
+      - sector_cap: NOOP if sector concentration would exceed cap (requires row["sector"] present)
+    """
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
     thr = float(constraints.get("min_improvement_threshold", 0.10))
 
-    applied = ("min_improvement_threshold",)
+    max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
+    swaps_today = int(constraints.get("swaps_today", 0) or 0)
 
+    sector_cap_raw = constraints.get("sector_cap")
+    sector_cap = int(sector_cap_raw) if sector_cap_raw not in (None, "") else None
+
+    turnover_cap_raw = constraints.get("turnover_cap") or constraints.get("max_turnover_fraction")
+    turnover_cap = float(turnover_cap_raw) if turnover_cap_raw not in (None, "") else None
+
+    applied_list = ["min_improvement_threshold", "max_swaps_per_day"]
+    if sector_cap is not None:
+        applied_list.append("sector_cap")
+    if turnover_cap is not None:
+        applied_list.append("turnover_cap")
+    applied = tuple(applied_list)
+
+    held = [s.upper() for s in extract_held_symbols(positions)]
     if not held:
         return Recommendation(
             action="NOOP",
-            reason="No holdings found; nothing to rotate.",
+            reason="No held symbols found; nothing to do.",
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
-            diagnostics={"held": []},
+            constraints_triggered=(),
+            diagnostics={"threshold": thr, "horizon_trading_days": horizon},
         )
 
-    s_map = utility_from_scores(scores)
-    held_scored = [h for h in held if h in s_map]
-    if not held_scored:
+    util = utility_from_scores(scores)
+
+    held_present = [h for h in held if h in util]
+    if not held_present:
         return Recommendation(
             action="NOOP",
-            reason="Holdings found but no matching score rows; cannot compute rotation.",
+            reason="Held symbols not found in scored universe; cannot compare.",
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
-            diagnostics={"held": held},
+            constraints_triggered=(),
+            diagnostics={"threshold": thr, "horizon_trading_days": horizon, "held": held},
         )
 
-    candidates = [sym for sym in s_map.keys() if sym not in set(held_scored)]
+    # weakest held by utility, stable tiebreak
+    weakest = min(
+        held_present,
+        key=lambda s: (float(util[s].get("utility", 0.0)), stable_tiebreak_key(s)),
+    )
+
+    candidates = [s for s in util.keys() if s not in set(held_present)]
     if not candidates:
         return Recommendation(
             action="NOOP",
-            reason="No candidates available beyond current holdings.",
+            reason="No candidates available outside held set.",
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
-            diagnostics={"held_scored": held_scored},
+            constraints_triggered=(),
+            diagnostics={"threshold": thr, "horizon_trading_days": horizon, "held": held_present},
         )
 
-    weakest = sorted(held_scored, key=lambda sym: (s_map[sym]["utility"], stable_tiebreak_key(sym)))[0]
-    best = sorted(candidates, key=lambda sym: (-s_map[sym]["utility"], stable_tiebreak_key(sym)))[0]
-
-    u_from = float(s_map[weakest]["utility"])
-    u_to = float(s_map[best]["utility"])
-    delta = u_to - u_from
+    # Choose best candidate by utility; break ties deterministically (alphabetical via stable_tiebreak_key)
+    best_u = max(float(util[s].get('utility', 0.0)) for s in candidates)
+    best_cands = [s for s in candidates if float(util[s].get('utility', 0.0)) == best_u]
+    best = min(best_cands, key=stable_tiebreak_key)
+    delta = float(util[best].get("utility", 0.0)) - float(util[weakest].get("utility", 0.0))
 
     diagnostics = {
-        "weakest_holding": weakest,
-        "best_candidate": best,
-        "utility_from": u_from,
-        "utility_to": u_to,
-        "delta_utility": delta,
         "threshold": thr,
-        "points_from": s_map[weakest]["points"],
-        "max_points_from": s_map[weakest]["max_points"],
-        "points_to": s_map[best]["points"],
-        "max_points_to": s_map[best]["max_points"],
-        "held_scored": held_scored,
-        "candidates_n": len(candidates),
+        "horizon_trading_days": horizon,
+        "weakest_held": weakest,
+        "best_candidate": best,
+        "delta_utility": delta,
+        "held_scored": held_present,
+        "held_utilities": {h: float(util[h].get("utility", 0.0)) for h in held_present},
+        "candidate_utility": float(util[best].get("utility", 0.0)),
     }
 
-    if delta >= thr and best != weakest:
+    # base threshold gate
+    if not (delta >= thr and best != weakest):
         return Recommendation(
-            action="SWAP",
-            reason=f"{weakest} is weakest; {best} ranks higher with sufficient margin (Δ={delta:.3f} ≥ {thr:.3f}).",
-            from_symbol=weakest,
-            to_symbol=best,
+            action="NOOP",
+            reason=f"No candidate clears min improvement threshold (best Δ={delta:.3f} < {thr:.3f}); hold.",
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
+            constraints_triggered=("min_improvement_threshold",),
             diagnostics=diagnostics,
         )
 
+    triggered: List[str] = []
+
+    # max swaps/day
+    if swaps_today >= max_swaps:
+        triggered.append("max_swaps_per_day")
+
+    # turnover cap
+    if turnover_cap is not None:
+        turnover = 1.0 / max(1, len(held_present))
+        if turnover > turnover_cap:
+            triggered.append("turnover_cap")
+        diagnostics["turnover"] = turnover
+        diagnostics["turnover_cap"] = turnover_cap
+
+    # sector cap (only if sector info exists)
+    if sector_cap is not None:
+        sym_sector: Dict[str, str] = {}
+        for row in scores:
+            if not isinstance(row, dict):
+                continue
+            sym = row.get("symbol")
+            sec = row.get("sector")
+            if isinstance(sym, str) and sym and isinstance(sec, str) and sec:
+                sym_sector[sym.strip().upper()] = sec.strip()
+
+        cand_sec = sym_sector.get(best)
+        if cand_sec:
+            held_counts: Dict[str, int] = {}
+            for h in held_present:
+                hs = sym_sector.get(h)
+                if hs:
+                    held_counts[hs] = held_counts.get(hs, 0) + 1
+
+            worst_sec = sym_sector.get(weakest)
+            post = held_counts.get(cand_sec, 0) + (0 if worst_sec == cand_sec else 1)
+            diagnostics["sector_cap"] = sector_cap
+            diagnostics["candidate_sector"] = cand_sec
+            diagnostics["post_sector_count"] = post
+            if post > sector_cap:
+                triggered.append("sector_cap")
+
+    if triggered:
+        diag2 = dict(diagnostics)
+        diag2.update(
+            {
+                "constraints_triggered": list(triggered),
+                "swaps_today": swaps_today,
+                "max_swaps_per_day": max_swaps,
+            }
+        )
+        return Recommendation(
+            action="NOOP",
+            reason="Swap blocked by constraints: " + ", ".join(triggered) + "; hold.",
+            horizon_trading_days=horizon,
+            target_trade_date=None,
+            constraints_applied=applied,
+            constraints_triggered=tuple(triggered),
+            diagnostics=diag2,
+        )
+
     return Recommendation(
-        action="NOOP",
-        reason=f"No candidate clears min improvement threshold (best Δ={delta:.3f} < {thr:.3f}); hold.",
+        action="SWAP",
+        reason=f"{weakest} is weakest; {best} ranks higher with sufficient margin (Δ={delta:.3f} ≥ {thr:.3f}).",
+        from_symbol=weakest,
+        to_symbol=best,
         horizon_trading_days=horizon,
         target_trade_date=None,
         constraints_applied=applied,
+        constraints_triggered=(),
         diagnostics=diagnostics,
     )

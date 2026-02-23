@@ -1,37 +1,38 @@
 {
-  "asof": "2026-02-22T23:21:39Z",
-  "generated_at": "2026-02-22T23:21:39Z",
+  "asof": "2026-02-23T00:02:56Z",
+  "generated_at": "2026-02-23T00:02:56Z",
   "inputs": {
     "horizon_trading_days": 5,
     "interval": "1d",
     "min_improvement_threshold": 0.1,
     "period": "6mo",
-    "positions_path": "/tmp/tmp4u8qqk6x/.cache/jerboa/positions.v1.json",
+    "positions_path": "/tmp/tmpejcdfv2d/.cache/jerboa/positions.v1.json",
     "scores_source": "market_health.sectors.json",
-    "snapshot_epoch": 1771802499
+    "snapshot_epoch": 1771804976
   },
   "recommendation": {
     "action": "NOOP",
     "constraints_applied": [
-      "min_improvement_threshold"
+      "min_improvement_threshold",
+      "max_swaps_per_day"
     ],
     "diagnostics": {
       "best_candidate": "XLI",
-      "candidates_n": 7,
+      "candidate_utility": 0.5833333333333334,
       "delta_utility": 0.06944444444444453,
       "held_scored": [
         "XLE",
         "XLRE",
         "XLU"
       ],
-      "max_points_from": 72,
-      "max_points_to": 72,
-      "points_from": 37,
-      "points_to": 42,
+      "held_utilities": {
+        "XLE": 0.5555555555555556,
+        "XLRE": 0.5416666666666666,
+        "XLU": 0.5138888888888888
+      },
+      "horizon_trading_days": 5,
       "threshold": 0.1,
-      "utility_from": 0.5138888888888888,
-      "utility_to": 0.5833333333333334,
-      "weakest_holding": "XLU"
+      "weakest_held": "XLU"
     },
     "horizon_trading_days": 5,
     "reason": "No candidate clears min improvement threshold (best Δ=0.069 < 0.100); hold.",

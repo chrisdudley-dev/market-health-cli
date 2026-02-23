@@ -6,6 +6,30 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+
+def _load_swaps_today() -> tuple[str, int, Path]:
+    """Return (today_iso, swaps_today, state_path). Resilient to missing/invalid state."""
+    home_root = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
+    state_p = home_root / '.cache' / 'jerboa' / 'state' / 'recommendations_swaps_today.v1.json'
+    state_p.parent.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(timezone.utc).date().isoformat()
+    swaps_today = 0
+    try:
+        if state_p.exists():
+            st = json.loads(state_p.read_text(encoding='utf-8'))
+            if isinstance(st, dict) and st.get('date') == today:
+                swaps_today = int(st.get('count', 0) or 0)
+    except Exception:
+        swaps_today = 0
+    return today, swaps_today, state_p
+
+def _bump_swaps_today(*, today: str, swaps_today: int, state_p: Path) -> None:
+    try:
+        state = {'date': today, 'count': swaps_today + 1}
+        state_p.write_text(json.dumps(state, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    except Exception:
+        pass
+
 from typing import Any, Dict, List
 
 from market_health.engine import compute_scores
@@ -52,6 +76,9 @@ def main() -> int:
     ap.add_argument("--interval", default="1d")
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--min-improvement", type=float, default=0.10)
+    ap.add_argument("--max-swaps-per-day", type=int, default=1)
+    ap.add_argument("--sector-cap", type=int, default=None)
+    ap.add_argument("--turnover-cap", type=float, default=None)
     ap.add_argument("--quiet", action="store_true")
 
     args = ap.parse_args()
@@ -104,12 +131,18 @@ def main() -> int:
         interval=args.interval,
     )
 
+    today, swaps_today, state_p = _load_swaps_today()
+
     rec = recommend(
         positions=positions,
         scores=score_rows,
         constraints={
-            "min_improvement_threshold": args.min_improvement,
-            "horizon_trading_days": args.horizon,
+"min_improvement_threshold": args.min_improvement,
+"horizon_trading_days": args.horizon,
+            "max_swaps_per_day": args.max_swaps_per_day,
+            "swaps_today": swaps_today,
+            "sector_cap": args.sector_cap,
+            "turnover_cap": args.turnover_cap,
         },
     )
 
