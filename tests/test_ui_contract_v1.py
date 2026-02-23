@@ -1,21 +1,26 @@
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from datetime import datetime
 
 VOLATILE_KEYS = {"asof", "generated_at", "updated_at", "timestamp", "ts"}
 
 
-def _run_export(tmp_home: Path) -> dict:
-    subprocess.run(
-        ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"],
-        check=True,
-        env={**os.environ, "HOME": str(tmp_home)},
-    )
-    p = tmp_home / ".cache" / "jerboa" / "market_health.ui.v1.json"
-    return json.loads(p.read_text())
+def _run_export(tmp_path: Path):
+    env = os.environ.copy()
+    env["HOME"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
 
+    cmd = ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"]
+    if os.name == "nt":
+        cmd = [sys.executable, "scripts/ui_export_ui_contract_v1.py"]
+
+    subprocess.run(cmd, check=True, env=env)
+
+    out = tmp_path / ".cache" / "jerboa" / "market_health.ui.v1.json"
+    return json.loads(out.read_text(encoding="utf-8"))
 
 def _shape_signature(d):
     def walk(x, path=""):
@@ -61,7 +66,7 @@ def test_contract_empty_home_is_valid(tmp_path):
     _assert_envelope(contract)
 
     # meta blocks exist and are well-typed
-    for k in ["environment", "positions", "sectors", "state", "events_provider"]:
+    for k in ["environment", "positions", "sectors", "state", "recommendations", "events_provider"]:
         m = contract["meta"][k]
         assert isinstance(m["path"], str)
         assert isinstance(m["exists"], bool)
@@ -73,6 +78,8 @@ def test_contract_empty_home_is_valid(tmp_path):
     assert contract["data"]["positions"] is None
     assert contract["data"]["sectors"] is None
     assert contract["data"]["state"] is None
+    assert contract["data"]["recommendations"] is None
+    assert contract["summary"]["recommendations_status"] in {"ok", "missing", "unreadable"}
 
     # events must exist and have stable shape
     ev = contract["data"]["events"]

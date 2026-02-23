@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 import subprocess
+import os
+import sys
 
 
 def test_exporter_offline(monkeypatch, tmp_path):
@@ -19,7 +21,11 @@ def test_exporter_offline(monkeypatch, tmp_path):
     shim = tmp_path / "shim"
     shim.mkdir()
     (shim / "market_health").mkdir()
-    (shim / "market_health" / "__init__.py").write_text("", encoding="utf-8")
+    (shim / "market_health" / "__init__.py").write_text(
+        "from pkgutil import extend_path\n"
+        "__path__ = extend_path(__path__, __name__)\n",
+        encoding="utf-8",
+    )
 
     # Redirect market_health.engine.compute_scores
     (shim / "market_health" / "engine.py").write_text(
@@ -31,12 +37,12 @@ def test_exporter_offline(monkeypatch, tmp_path):
     # Use the real recommendations engine from the repo by extending sys.path order
     out_p = tmp_path / "recommendations.v1.json"
 
-    env = dict(**{k: v for k, v in __import__('os').environ.items()})
-    env["PYTHONPATH"] = str(shim) + ":" + str(Path.cwd())
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(shim) + os.pathsep + str(Path.cwd())
 
     # Act
     p = subprocess.run(
-        ["python", "scripts/export_recommendations_v1.py",
+        [sys.executable, "scripts/export_recommendations_v1.py",
          "--positions", str(pos_p),
          "--out", str(out_p),
          "--horizon", "5",
@@ -51,7 +57,7 @@ def test_exporter_offline(monkeypatch, tmp_path):
     # Assert file exists and validates with our validator script
     assert out_p.exists()
     v = subprocess.run(
-        ["python", "scripts/validate_recommendations_v1.py", "--path", str(out_p)],
+        [sys.executable, "scripts/validate_recommendations_v1.py", "--path", str(out_p)],
         check=True,
         capture_output=True,
         text=True,

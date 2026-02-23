@@ -1,56 +1,14 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
-# JERBOA_UI_EXPORT_QUIET_V1
-QUIET="${JERBOA_UI_EXPORT_QUIET:-0}"
-if [ -n "${INVOCATION_ID:-}" ]; then QUIET=1; fi
-if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
-export JERBOA_UI_EXPORT_QUIET="$QUIET"
-
-OUT_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
-STATE="${HOME}/.cache/jerboa/state/market_health_refresh_all.state.json"
-ENV_JSON="${HOME}/.cache/jerboa/environment.v1.json"
-SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
-POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
-
-# Ensure python can import from repo checkout regardless of invocation dir
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-cd "$REPO_ROOT"
-
-mkdir -p "$(dirname "$OUT_JSON")"
-
-QUIET=0
-[ -n "${INVOCATION_ID:-}" ] && QUIET=1
-
-PYTHON="${JERBOA_PYTHON:-python3}"
-command -v "$PYTHON" >/dev/null 2>&1 || PYTHON=python
-
-HOME_FOR_PY="$HOME"
-if [ -n "${JERBOA_HOME_WIN:-}" ]; then
-  HOME_FOR_PY="$JERBOA_HOME_WIN"
-fi
-if command -v cygpath >/dev/null 2>&1; then
-  case "$(uname -s 2>/dev/null)" in
-    MINGW*|MSYS*|CYGWIN*) HOME_FOR_PY="$(cygpath -w "$HOME")" ;;
-  esac
-fi
-
-HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
 import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
-HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
-CACHE_DIR = HOME_ROOT / '.cache' / 'jerboa'
+out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
+out_json.parent.mkdir(parents=True, exist_ok=True)
+state_p  = Path(os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json"))
+env_p    = Path(os.path.expanduser("~/.cache/jerboa/environment.v1.json"))
+sect_p   = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
+pos_p    = Path(os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
 
-
-out_json = (CACHE_DIR / "market_health.ui.v1.json")
-state_p  = (CACHE_DIR / "state/market_health_refresh_all.state.json")
-env_p    = (CACHE_DIR / "environment.v1.json")
-sect_p   = (CACHE_DIR / "market_health.sectors.json")
-pos_p    = (CACHE_DIR / "positions.v1.json")
-
-rec_p    = (CACHE_DIR / "recommendations.v1.json")
 def read_json(p: Path):
     if not p.exists():
         return None
@@ -94,16 +52,6 @@ env   = read_json(env_p)
 sect  = read_json(sect_p)
 pos   = read_json(pos_p)
 
-rec_raw = read_json(rec_p)
-
-rec_status = "ok"
-rec = rec_raw
-if rec_raw is None:
-    rec_status = "missing"
-    rec = None
-elif isinstance(rec_raw, dict) and rec_raw.get("_error"):
-    rec_status = "unreadable"
-    rec = None
 if not status_line:
     status_line = status_line_fallback(state)
 
@@ -164,7 +112,7 @@ except Exception as e:
         "generated_at": "",
         "source": {"type": "error"},
         "points": [],
-        "errors": [str(e)],
+        "errors": [],
     }
 
 events_list = events.get("points") if isinstance(events, dict) and isinstance(events.get("points"), list) else []
@@ -207,15 +155,13 @@ payload = {
         "environment": meta(env_p),
         "sectors": meta(sect_p),
         "positions": meta(pos_p),
-        "recommendations": meta(rec_p),
           "events_provider": meta(ev_cfg_p),
     },
     "summary": {
+        "symbols_sample": symbols,
         "positions_count": len(pos_list),
-        "recommendations_status": rec_status,
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
-        "symbols_sample": symbols,
     },
     # Keep full data for now (still one file); React reads just what it needs.
     "data": {
@@ -223,7 +169,6 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
-        "recommendations": rec,
           "events": events,
     },
 }
@@ -245,9 +190,3 @@ if old == new:
 tmp = out_json.with_suffix(out_json.suffix + ".tmp")
 tmp.write_text(new, "utf-8")
 tmp.replace(out_json)
-PY
-
-# Only speak when interactive and a rewrite happened (python exits 0 even if unchanged)
-if [ "$QUIET" -ne 1 ]; then
-[ "${QUIET}" != "1" ] && echo "OK: wrote UI contract -> $OUT_JSON"
-fi
