@@ -1,0 +1,42 @@
+{
+  "asof": "2026-02-23T01:09:43Z",
+  "generated_at": "2026-02-23T01:09:43Z",
+  "inputs": {
+    "horizon_trading_days": 5,
+    "interval": "1d",
+    "min_improvement_threshold": 0.1,
+    "period": "6mo",
+    "positions_path": "/tmp/tmpg4qs38py/.cache/jerboa/positions.v1.json",
+    "scores_source": "market_health.sectors.json",
+    "snapshot_epoch": 1771808983
+  },
+  "recommendation": {
+    "action": "NOOP",
+    "constraints_applied": [
+      "min_improvement_threshold",
+      "max_swaps_per_day"
+    ],
+    "diagnostics": {
+      "best_candidate": "XLI",
+      "candidate_utility": 0.5833333333333334,
+      "delta_utility": 0.06944444444444453,
+      "held_scored": [
+        "XLE",
+        "XLRE",
+        "XLU"
+      ],
+      "held_utilities": {
+        "XLE": 0.5555555555555556,
+        "XLRE": 0.5416666666666666,
+        "XLU": 0.5138888888888888
+      },
+      "horizon_trading_days": 5,
+      "threshold": 0.1,
+      "weakest_held": "XLU"
+    },
+    "horizon_trading_days": 5,
+    "reason": "No candidate clears min improvement threshold (best Δ=0.069 < 0.100); hold.",
+    "target_trade_date": "2026-03-02"
+  },
+  "schema": "recommendations.v1"
+}

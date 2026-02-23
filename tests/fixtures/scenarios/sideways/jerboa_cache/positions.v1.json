@@ -1,0 +1,46 @@
+{
+  "asof": "2026-02-15T19:34:17.532988+00:00",
+  "generated_at": "2026-02-15T19:34:18.078425Z",
+  "positions": [
+    {
+      "asset_type": "other",
+      "avg_price": 54.555,
+      "mark_price": 54.35,
+      "market_value": 652.2,
+      "qty": 12,
+      "symbol": "XLE"
+    },
+    {
+      "asset_type": "other",
+      "avg_price": 42.056818181818,
+      "mark_price": 43.5,
+      "market_value": 957,
+      "qty": 22,
+      "symbol": "XLRE"
+    },
+    {
+      "asset_type": "other",
+      "avg_price": 43.5752,
+      "mark_price": 46.5,
+      "market_value": 1162.5,
+      "qty": 25,
+      "symbol": "XLU"
+    }
+  ],
+  "schema": "positions.v1",
+  "source": {
+    "broker": "demo",
+    "file_mtime": "2026-02-15T19:34:17.532988+00:00",
+    "file_sha256": "c2da1067ddd60403186d7078ab5b8d76fc70f7e8501c24a7f2dbc0b401c06d63",
+    "file_size": 2938,
+    "method": "fixture",
+    "note": "Normalized from saved broker positions JSON (offline).",
+    "path": "FIXTURE",
+    "type": "fixture"
+  },
+  "summary": {
+    "count": 3,
+    "equities": 0,
+    "options": 0
+  }
+}

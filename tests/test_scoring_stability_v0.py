@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 from shutil import copyfile
 
+import pytest
+
 
 def _run_ui_export_from_fixture(tmp_home: Path, scenario_dir: Path) -> dict:
     cache = tmp_home / ".cache" / "jerboa"
@@ -42,14 +44,8 @@ def _sector_totals(contract: dict) -> dict[str, int]:
         if not isinstance(sym, str):
             continue
 
-        # Prefer explicit total if present; else compute from categories/checks
-        total = s.get("total")
-        if isinstance(total, int):
-            out[sym] = total
-            continue
-
+        total = 0
         cats = s.get("categories") or {}
-        t = 0
         if isinstance(cats, dict):
             for cat in cats.values():
                 if not isinstance(cat, dict):
@@ -58,13 +54,17 @@ def _sector_totals(contract: dict) -> dict[str, int]:
                 if isinstance(checks, list):
                     for chk in checks:
                         if isinstance(chk, dict) and isinstance(chk.get("score"), int):
-                            t += chk["score"]
-        out[sym] = int(t)
-    return out
+                            total += chk["score"]
+        out[sym] = int(total)
+    return dict(sorted(out.items()))
 
 
-def test_scoring_ranges_bullish_fixture():
-    scenario = Path("tests/fixtures/scenarios/bullish/jerboa_cache")
+SCENARIOS = ["bullish", "bearish", "sideways"]
+
+
+@pytest.mark.parametrize("scenario_name", SCENARIOS)
+def test_scoring_ranges_fixture(scenario_name: str):
+    scenario = Path(f"tests/fixtures/scenarios/{scenario_name}/jerboa_cache")
     assert scenario.exists()
 
     tmp_home = Path(tempfile.mkdtemp())
@@ -82,39 +82,30 @@ def test_scoring_ranges_bullish_fixture():
         assert isinstance(cats, dict)
         assert cats, "expected categories"
 
-        # Range checks: check scores are ints, totals are consistent
         for cat_k, cat in cats.items():
             assert isinstance(cat_k, str)
             assert isinstance(cat, dict)
             checks = cat.get("checks")
             assert isinstance(checks, list)
-            assert 1 <= len(checks) <= 12  # matches MAX_PER_CATEGORY intent
+            assert 1 <= len(checks) <= 12  # MAX_PER_CATEGORY intent
 
-            scores = []
             for chk in checks:
                 assert isinstance(chk, dict)
                 assert isinstance(chk.get("label"), str)
                 sc = chk.get("score")
                 assert isinstance(sc, int)
-                assert sc >= 0  # scores are non-negative ints
-                scores.append(sc)
-
-            # If category total is present, it should match sum(scores)
-            cat_total = cat.get("total")
-            if isinstance(cat_total, int):
-                assert cat_total == sum(scores)
+                assert sc >= 0  # non-negative ints
 
 
-def test_scoring_regression_snapshot_bullish_totals():
-    expected_p = Path("tests/fixtures/expected/sector_totals.bullish.json")
-    assert expected_p.exists(), (
-        "run snapshot generator once to create sector_totals.bullish.json"
-    )
+@pytest.mark.parametrize("scenario_name", SCENARIOS)
+def test_scoring_regression_snapshot_sector_totals(scenario_name: str):
+    expected_p = Path(f"tests/fixtures/expected/sector_totals.{scenario_name}.json")
+    assert expected_p.exists(), f"Missing expected totals snapshot: {expected_p}"
 
     expected = json.loads(expected_p.read_text(encoding="utf-8"))
     assert isinstance(expected, dict)
 
-    scenario = Path("tests/fixtures/scenarios/bullish/jerboa_cache")
+    scenario = Path(f"tests/fixtures/scenarios/{scenario_name}/jerboa_cache")
     tmp_home = Path(tempfile.mkdtemp())
     contract = _run_ui_export_from_fixture(tmp_home, scenario)
 

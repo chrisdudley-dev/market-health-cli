@@ -1,0 +1,27 @@
+{
+  "changed": {
+    "market": 0,
+    "positions": 0
+  },
+  "forced": false,
+  "mtimes": {
+    "after": {
+      "env": 1771015200,
+      "positions": 1771184058,
+      "sectors": 1771015541
+    },
+    "before": {
+      "env": 1771015200,
+      "positions": 1771184058,
+      "sectors": 1771015541
+    }
+  },
+  "rc": {
+    "market": 0,
+    "positions": 0
+  },
+  "reason": "no-changes",
+  "schema": "jerboa.market_health_refresh_all.state.v1",
+  "status": "skipped",
+  "ts": "2026-02-15T19:56:57+00:00"
+}
