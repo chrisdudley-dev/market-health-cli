@@ -15,6 +15,7 @@ from typing import Any, Dict
 
 import getpass
 
+
 def _sanitize_for_disk(obj):
     """Drop secrets before writing JSON to disk."""
     if not isinstance(obj, dict):
@@ -67,7 +68,11 @@ def _chmod_dir_private(p: Path) -> None:
 def load_cfg(path: str) -> Cfg:
     p = Path(os.path.expanduser(path))
     d = _read_json(p)
-    d["client_secret"] = d.get("client_secret") or os.environ.get("SCHWAB_CLIENT_SECRET") or getpass.getpass("SCHWAB_CLIENT_SECRET: ")
+    d["client_secret"] = (
+        d.get("client_secret")
+        or os.environ.get("SCHWAB_CLIENT_SECRET")
+        or getpass.getpass("SCHWAB_CLIENT_SECRET: ")
+    )
     need = ["client_id", "redirect_uri", "auth_url", "token_url"]
     missing = [k for k in need if not d.get(k)]
     if missing:
@@ -134,6 +139,7 @@ def token_is_fresh(tok: Dict[str, Any], leeway: int = 60) -> bool:
     if not isinstance(exp, (int, float)):
         return False
     return time.time() < float(exp) - float(leeway)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(

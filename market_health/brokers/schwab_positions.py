@@ -132,7 +132,9 @@ def normalize_schwab_accounts_json(raw: Any, source_path: str = "") -> Dict[str,
                 if len(an) >= 4:
                     last4 = an[-4:]
 
-            acct_label = _as_str(sa.get("accountType") or sa.get("nickname") or "").strip()
+            acct_label = _as_str(
+                sa.get("accountType") or sa.get("nickname") or ""
+            ).strip()
             if not acct_label and last4:
                 acct_label = f"Schwab ****{last4}"
             elif not acct_label and acct_id:

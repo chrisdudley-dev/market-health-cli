@@ -7,6 +7,7 @@ import json
 import os
 import random
 import time
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -451,7 +452,6 @@ def render_pi_grid(
     _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
 
 
-
 def _is_ui_contract(obj: object) -> bool:
     """Heuristic: does this JSON look like market_health.ui.v1 contract?"""
     if not isinstance(obj, dict):
@@ -475,6 +475,7 @@ def _rows_from_ui_contract(contract: dict, sectors_filter: list[str] | None) -> 
         rows = [r for r in rows if getattr(r, "symbol", None) in keep]
     rows.sort(key=lambda r: getattr(r, "total", 0), reverse=True)
     return rows
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
@@ -538,7 +539,7 @@ def main():
             try:
                 # If json_path is a UI contract (market_health.ui.v1.json), load rows from contract.data.sectors
                 try:
-                    _raw = json.loads(Path(args.json_path).read_text(encoding='utf-8'))
+                    _raw = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
                 except Exception:
                     _raw = None
                 if _is_ui_contract(_raw):
@@ -565,19 +566,19 @@ def main():
 
         if use_pi_grid and "render_pi_grid" in globals():
             # Pi Grid prints its own legend; don't print header twice.
-            contract = getattr(args, '_ui_contract', None)
+            contract = getattr(args, "_ui_contract", None)
             if isinstance(contract, dict):
                 rec_lines = _recommendation_lines_from_contract(contract)
                 if rec_lines:
-                    console.print(Panel('\n'.join(rec_lines), title="Recommendations"))
+                    console.print(Panel("\n".join(rec_lines), title="Recommendations"))
             render_pi_grid(console, rows, cols=grid_cols, mono=args.mono)
         else:
             render_header(console, mono=args.mono)
-            contract = getattr(args, '_ui_contract', None)
+            contract = getattr(args, "_ui_contract", None)
             if isinstance(contract, dict):
                 rec_lines = _recommendation_lines_from_contract(contract)
                 if rec_lines:
-                    console.print(Panel('\n'.join(rec_lines), title="Recommendations"))
+                    console.print(Panel("\n".join(rec_lines), title="Recommendations"))
             render_overview(console, rows, mono=args.mono)
             render_details(console, rows, top_k=args.topk, mono=args.mono)
     else:
@@ -600,6 +601,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 def _recommendation_lines_from_contract(contract: dict) -> list[str]:
     """
@@ -652,12 +654,22 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
 
         # Try multiple field names to avoid tight coupling
         from_sym = (
-            rec.get("from") or rec.get("from_symbol") or rec.get("sell") or rec.get("sell_symbol")
-            or diag.get("held_to_replace") or diag.get("worst_held") or diag.get("sell_symbol")
+            rec.get("from")
+            or rec.get("from_symbol")
+            or rec.get("sell")
+            or rec.get("sell_symbol")
+            or diag.get("held_to_replace")
+            or diag.get("worst_held")
+            or diag.get("sell_symbol")
         )
         to_sym = (
-            rec.get("to") or rec.get("to_symbol") or rec.get("buy") or rec.get("buy_symbol")
-            or diag.get("best_candidate") or diag.get("best_symbol") or diag.get("candidate_symbol")
+            rec.get("to")
+            or rec.get("to_symbol")
+            or rec.get("buy")
+            or rec.get("buy_symbol")
+            or diag.get("best_candidate")
+            or diag.get("best_symbol")
+            or diag.get("candidate_symbol")
         )
 
         if from_sym and to_sym:

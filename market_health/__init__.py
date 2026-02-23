@@ -5,6 +5,7 @@ Market Health public API.
 - SECTORS_DEFAULT      -> exported if present in engine.py
 - CHECK_LABELS         -> exported if present in engine.py
 """
+
 from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 
@@ -103,6 +104,7 @@ def compute_scores(
     cand = dict(sectors=sectors, period=period, interval=interval, ttl=ttl)
     kwargs = {k: v for k, v in cand.items() if k in sig.parameters}
     return fn(**kwargs)
+
 
 # Version: safe at runtime and in editable installs
 try:

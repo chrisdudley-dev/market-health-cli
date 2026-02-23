@@ -4,10 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 import re as _re
-import sys
-import re
-import sys
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -57,7 +53,6 @@ def validate(doc: Dict[str, Any]) -> List[str]:
             )
         else:
             # Minimal YYYY-MM-DD shape check (full holiday semantics come later)
-            import re
 
             if not _re.match(r"^\d{4}-\d{2}-\d{2}$", t):
                 _err(errors, "recommendation.target_trade_date must match YYYY-MM-DD")

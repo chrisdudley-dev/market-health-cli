@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from market_health.ledger import append_event, read_events
