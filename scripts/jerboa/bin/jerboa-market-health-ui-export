@@ -38,6 +38,7 @@ HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
 import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
+from market_health.ui_contract_meta import DIMENSIONS_META_V1
 
 # Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
 HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
@@ -223,6 +224,7 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
+        "dimensions_meta": DIMENSIONS_META_V1,
         "recommendations": rec,
           "events": events,
     },

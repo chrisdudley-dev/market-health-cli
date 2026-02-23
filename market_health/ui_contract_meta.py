@@ -3,6 +3,53 @@
 
 from __future__ import annotations
 
+
+# v1: canonical dimension metadata (A-F). Kept stable by tests.
+DIMENSIONS_META_V1: dict[str, dict[str, str]] = {
+    "A": {
+        "display_name": "Narrative",
+        "description": "News/analysts/events/insiders/peers/guidance context.",
+    },
+    "B": {
+        "display_name": "Trend",
+        "description": "Trend/momentum signals (MAs, relative strength, breaks).",
+    },
+    "C": {
+        "display_name": "Flow",
+        "description": "Flow/positioning (open interest, blocks, leadership breadth).",
+    },
+    "D": {
+        "display_name": "Risk",
+        "description": "Risk/volatility inputs (ATR/IV/correlation/event risk/sizing).",
+    },
+    "E": {
+        "display_name": "Regime",
+        "description": "Macro/regime drivers (SPY trend, sector rank, breadth, VIX).",
+    },
+    "F": {
+        "display_name": "Plan",
+        "description": "Execution plan (trigger, invalidation, targets, time stop).",
+    },
+}
+
+
+def dimensions_meta_v1() -> dict[str, dict[str, str]]:
+    # Return a copy to avoid accidental mutation.
+    return {k: dict(v) for k, v in DIMENSIONS_META_V1.items()}
+
+
+def dimension_display_name(
+    key: str, meta: dict[str, dict[str, str]] | None = None
+) -> str:
+    m = meta or DIMENSIONS_META_V1
+    return (m.get(key) or {}).get("display_name") or key
+
+
+def dimension_tooltip(key: str, meta: dict[str, dict[str, str]] | None = None) -> str:
+    m = meta or DIMENSIONS_META_V1
+    return (m.get(key) or {}).get("description") or ""
+
+
 _DIM_META_CACHE = None
 
 
