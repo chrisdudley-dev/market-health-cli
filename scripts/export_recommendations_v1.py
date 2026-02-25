@@ -95,7 +95,7 @@ def main() -> int:
     ap.add_argument("--period", default="6mo")
     ap.add_argument("--interval", default="1d")
     ap.add_argument("--horizon", type=int, default=5)
-    ap.add_argument("--min-improvement", type=float, default=0.10)
+    ap.add_argument("--min-improvement", type=float, default=0.12)
     ap.add_argument("--max-swaps-per-day", type=int, default=1)
     ap.add_argument("--sector-cap", type=int, default=None)
     ap.add_argument("--turnover-cap", type=float, default=None)
