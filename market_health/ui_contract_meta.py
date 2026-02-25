@@ -26,7 +26,6 @@ DIMENSIONS_META_V1: dict[str, dict[str, str]] = {
         "display_name": "Environment",
         "description": "Macro/regime drivers (SPY trend, sector rank, breadth, VIX).",
     },
-
 }
 
 
