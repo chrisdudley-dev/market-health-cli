@@ -175,7 +175,6 @@ CHECK_LABELS: Dict[str, List[str]] = {
     "C": ["EM Fit", "OI/Flow", "Blocks/DP", "Leaders%>20D", "Money Flow", "SI/Days"],
     "D": ["ATR%", "IV%", "Correlation", "Event Risk", "Gap Plan", "Sizing/RR"],
     "E": ["SPY Trend", "Sector Rank", "Breadth", "VIX Regime", "3-Day RS", "Drivers"],
-    "F": ["Trigger", "Invalidation", "Targets", "Time Stop", "Slippage", "Alerts"],
 }
 SECTORS_DEFAULT = [
     "XLC",
@@ -831,9 +830,6 @@ def compute_scores(
         if _flag("MH_FEATURE_D_V1"):
             d_checks = _apply_dimension_overrides("D", d_checks, df_sym)
 
-        def neutral() -> List[int]:
-            return [1, 1, 1, 1, 1, 1]
-
         cats = {
             "A": {"checks": a_checks},
             "B": {
@@ -848,12 +844,6 @@ def compute_scores(
                 "checks": [
                     asdict(CheckScore(label, score))
                     for label, score in zip(CHECK_LABELS["E"], e_scores)
-                ]
-            },
-            "F": {
-                "checks": [
-                    asdict(CheckScore(label, score))
-                    for label, score in zip(CHECK_LABELS["F"], neutral())
                 ]
             },
         }
