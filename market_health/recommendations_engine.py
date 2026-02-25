@@ -120,7 +120,7 @@ def recommend(
       - sector_cap: NOOP if sector concentration would exceed cap (requires row["sector"] present)
     """
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
-    thr = float(constraints.get("min_improvement_threshold", 0.10))
+    thr = float(constraints.get("min_improvement_threshold", 0.12))
 
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
