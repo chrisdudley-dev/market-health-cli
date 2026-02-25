@@ -76,7 +76,9 @@ def score_row_points(row: Dict[str, Any]) -> Tuple[int, int]:
 
     points = 0
     checks_n = 0
-    for _, cat in cats.items():
+    # Canonical core utility is A-E only (ignore legacy F or any extra categories)
+    for key in ("A", "B", "C", "D", "E"):
+        cat = cats.get(key)
         if not isinstance(cat, dict):
             continue
         checks = cat.get("checks", [])
