@@ -192,9 +192,9 @@ DIMENSIONS_META = {
         "description": "Risk/volatility/correlation stress signals.",
     },
     "E": {
-        "display_name": "Execution",
-        "subtitle": "Liquidity / Frictions",
-        "description": "Liquidity, frictions, and sizing constraints.",
+        "display_name": "Environment",
+        "subtitle": "Macro / Regime",
+        "description": "Macro/regime drivers (SPY trend, sector rank, breadth, VIX).",
     },
 }
 payload = {
