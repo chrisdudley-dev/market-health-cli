@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 
-# v1: canonical dimension metadata (A-E). Kept stable by tests.
+# v1: canonical dimension metadata (A-F). Kept stable by tests.
 DIMENSIONS_META_V1: dict[str, dict[str, str]] = {
     "A": {
         "display_name": "Narrative",
@@ -23,8 +23,12 @@ DIMENSIONS_META_V1: dict[str, dict[str, str]] = {
         "description": "Risk/volatility inputs (ATR/IV/correlation/event risk/sizing).",
     },
     "E": {
-        "display_name": "Environment",
+        "display_name": "Regime",
         "description": "Macro/regime drivers (SPY trend, sector rank, breadth, VIX).",
+    },
+    "F": {
+        "display_name": "Plan",
+        "description": "Execution plan (levels, triggers, invalidation, sizing, timing).",
     },
 }
 
