@@ -54,7 +54,7 @@ CHECK_LABELS: Dict[str, List[str]] = {
     "F": ["Trigger", "Invalidation", "Targets", "Time Stop", "Slippage", "Alerts"],
 }
 MAX_PER_CATEGORY = 12
-MAX_TOTAL = MAX_PER_CATEGORY * 6
+MAX_TOTAL = MAX_PER_CATEGORY * 5
 
 
 # ---------- data structures ----------
@@ -128,7 +128,7 @@ def chip(s: int, mono: bool = False) -> Text:
 # ---------- demo dataset (used only if you pass --demo) ----------
 def build_demo_sector(symbol: str, rng: random.Random) -> SectorRow:
     cats: Dict[str, Category] = {}
-    for key in "ABCDEF":
+    for key in "ABCDE":
         checks = [Check(label, rng.choice([0, 1, 2])) for label in CHECK_LABELS[key]]
         cats[key] = Category(key, checks)
     return SectorRow(symbol, cats)
@@ -142,7 +142,7 @@ def build_demo_dataset(symbols: List[str], seed: int) -> List[SectorRow]:
 # ---------- JSON / live -> rows ----------
 def build_sector_from_json(item: dict) -> SectorRow:
     cats: Dict[str, Category] = {}
-    for key in "ABCDEF":
+    for key in "ABCDE":
         node = item.get("categories", {}).get(key, {})
         checks_json = node.get("checks", [])
         checks: List[Check] = []
@@ -211,15 +211,15 @@ def render_overview(
     console: Console, rows: List[SectorRow], mono: bool = False
 ) -> None:
     tbl = Table(
-        title="Overview (A–F totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
+        title="Overview (A–E totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
     )
     tbl.add_column("Sector", justify="left", style="bold cyan")
-    for key in "ABCDEF":
+    for key in "ABCDE":
         tbl.add_column(key, justify="center")
     tbl.add_column("Total", justify="center", style="bold")
     for row_data in rows:
         cells: List[Text] = [Text(row_data.symbol)]
-        for key in "ABCDEF":
+        for key in "ABCDE":
             cells.append(
                 score_cell(row_data.categories[key].total, MAX_PER_CATEGORY, mono)
             )
@@ -243,7 +243,7 @@ def render_details(
         for i in range(1, 7):
             t.add_column(str(i), justify="center")
         t.add_column("Cat Total", justify="center")
-        for key in "ABCDEF":
+        for key in "ABCDE":
             cat = row_data.categories[key]
             row_cells: List[Text] = [Text(dimension_heading(key))]
             row_cells.extend([chip(ch.score, mono) for ch in cat.checks])
@@ -253,7 +253,7 @@ def render_details(
 
 
 # ---------- Pi Grid (compact, no legend) ----------
-MAX_TOTAL = MAX_PER_CATEGORY * 6  # 6 categories A..F
+MAX_TOTAL = MAX_PER_CATEGORY * 5  # 5 categories A..E
 
 
 # POSITIONS_V1_PANEL_V1: positions cache panel under the grid (read-only)
