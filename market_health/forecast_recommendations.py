@@ -176,6 +176,8 @@ def recommend_forecast_mode(
         "weakest_held": weakest,
         "best_candidate": best.to_symbol,
         "robust_edge": best.robust_edge,
+        "decision_metric": "robust_edge",
+        "edge": best.robust_edge,
         "avg_edge": best.avg_edge,
         "edges_by_h": {str(h): best.edges_by_h.get(h) for h in horizons},
         # keep legacy UI key until #115 updates display text
