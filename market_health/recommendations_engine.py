@@ -76,7 +76,9 @@ def score_row_points(row: Dict[str, Any]) -> Tuple[int, int]:
 
     points = 0
     checks_n = 0
-    for _, cat in cats.items():
+    # Canonical core utility is A-E only (ignore legacy F or any extra categories)
+    for key in ("A", "B", "C", "D", "E"):
+        cat = cats.get(key)
         if not isinstance(cat, dict):
             continue
         checks = cat.get("checks", [])
@@ -118,7 +120,7 @@ def recommend(
       - sector_cap: NOOP if sector concentration would exceed cap (requires row["sector"] present)
     """
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
-    thr = float(constraints.get("min_improvement_threshold", 0.10))
+    thr = float(constraints.get("min_improvement_threshold", 0.12))
 
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)

@@ -28,7 +28,7 @@ DIMENSIONS_META_V1: dict[str, dict[str, str]] = {
     },
     "F": {
         "display_name": "Plan",
-        "description": "Execution plan (trigger, invalidation, targets, time stop).",
+        "description": "Execution plan (levels, triggers, invalidation, sizing, timing).",
     },
 }
 
