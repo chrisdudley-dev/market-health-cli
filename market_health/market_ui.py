@@ -644,7 +644,9 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
             if "best_candidate" in diag:
                 lines.append(f"Best candidate: {diag.get('best_candidate')}")
             if "delta_utility" in diag:
-                lines.append(f"Delta utility: {diag.get('delta_utility')}")
+                dm = diag.get('decision_metric') or ('robust_edge' if diag.get('mode') == 'forecast' else 'delta_utility')
+                val = diag.get('edge', diag.get('delta_utility'))
+                lines.append(f"Edge ({dm}): {val}")
         return lines
 
     if action == "SWAP":
@@ -680,11 +682,15 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
             lines.append("Swap: (details unavailable)")
 
         if "delta_utility" in diag:
-            lines.append(f"Delta utility: {diag.get('delta_utility')}")
+            dm = diag.get('decision_metric') or ('robust_edge' if diag.get('mode') == 'forecast' else 'delta_utility')
+            val = diag.get('edge', diag.get('delta_utility'))
+            lines.append(f"Edge ({dm}): {val}")
         return lines
 
     # Fallback for other actions
     diag = rec.get("diagnostics") or {}
     if isinstance(diag, dict) and "delta_utility" in diag:
-        lines.append(f"Delta utility: {diag.get('delta_utility')}")
+        dm = diag.get('decision_metric') or ('robust_edge' if diag.get('mode') == 'forecast' else 'delta_utility')
+        val = diag.get('edge', diag.get('delta_utility'))
+        lines.append(f"Edge ({dm}): {val}")
     return lines
