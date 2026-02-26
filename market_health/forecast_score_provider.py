@@ -25,6 +25,7 @@ from .forecast_features import (
     sma,
     up_down_volume_ratio,
     zscore,
+    ema,
 )
 from .forecast_types import category_dict
 
@@ -103,7 +104,7 @@ def compute_forecast_universe(
 
         dispersion_now = cross_sectional_dispersion(returns_by_symbol, idx)
 
-        ema20 = sma(close, 20)  # SMA is fine as proxy for the orchestrator; check modules don't care
+        ema20 = ema(close, 20)  # SMA is fine as proxy for the orchestrator; check modules don't care
         sma50 = sma(close, 50)
         ema20_now = ema20[idx] if idx < len(ema20) else None
         sma50_now = sma50[idx] if idx < len(sma50) else None
