@@ -1,0 +1,145 @@
+"""
+forecast_checks_a_announcements.py
+
+Forecast-mode Dimension A (Announcements) checks — exactly 6 checks.
+
+A1) Catalyst Window
+A2) Macro Calendar Pressure
+A3) Earnings Cluster
+A4) Policy / Regulation Risk
+A5) Headline Shock Proxy
+A6) Narrative Momentum
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Sequence
+
+from .forecast_types import ForecastCheck, neutral_check
+
+
+def compute_a_checks(
+    *,
+    H: int,
+    calendar: Optional[Dict[str, Any]] = None,
+    vix_features: Optional[Dict[str, Any]] = None,
+    ext_z: Optional[float] = None,
+    bb_width: Optional[float] = None,
+    atrp14: Optional[float] = None,
+    rs_slope_10: Optional[float] = None,
+    returns: Optional[Sequence[Optional[float]]] = None,
+) -> List[ForecastCheck]:
+    vix_features = vix_features or {}
+    return [
+        a1_catalyst_window(H=H, calendar=calendar),
+        a2_macro_calendar_pressure(H=H, vix_features=vix_features),
+        a3_earnings_cluster(H=H, calendar=calendar),
+        a4_policy_reg_risk(H=H, calendar=calendar),
+        a5_headline_shock_proxy(ext_z=ext_z, bb_width=bb_width, atrp14=atrp14),
+        a6_narrative_momentum(rs_slope_10=rs_slope_10, returns=returns),
+    ]
+
+
+def a1_catalyst_window(*, H: int, calendar: Optional[Dict[str, Any]]) -> ForecastCheck:
+    meaning = "Are there scheduled catalysts within the next H trading days that can dominate outcomes?"
+    if not calendar:
+        return neutral_check("Catalyst Window", meaning, "No calendar feed; neutral.")
+    in_window = bool(calendar.get("catalysts_in_window", False))
+    score = 0 if in_window else 2
+    return ForecastCheck("Catalyst Window", meaning, score, {"H": H, "catalysts_in_window": in_window})
+
+
+def a2_macro_calendar_pressure(*, H: int, vix_features: Dict[str, Any]) -> ForecastCheck:
+    meaning = "Is upcoming macro uncertainty likely to pressure decision quality into H?"
+    if not vix_features:
+        return neutral_check("Macro Calendar Pressure", meaning, "No VIX feed; neutral.")
+    vix_slope = vix_features.get("vix_slope_10", [])
+    vix_rank = vix_features.get("vix_rank_60", [])
+    slope_now = vix_slope[-1] if isinstance(vix_slope, list) and vix_slope else None
+    rank_now = vix_rank[-1] if isinstance(vix_rank, list) and vix_rank else None
+    elevated = (rank_now is not None and rank_now >= 0.75)
+    rising = (slope_now is not None and slope_now > 0.0)
+    if elevated and rising:
+        sc = 0
+    elif elevated or rising:
+        sc = 1
+    else:
+        sc = 2
+    return ForecastCheck("Macro Calendar Pressure", meaning, sc, {"H": H, "vix_rank_60": rank_now, "vix_slope_10": slope_now})
+
+
+def a3_earnings_cluster(*, H: int, calendar: Optional[Dict[str, Any]]) -> ForecastCheck:
+    meaning = "Are many major constituents reporting soon, increasing variance and headline risk into H?"
+    if not calendar:
+        return neutral_check("Earnings Cluster", meaning, "No earnings calendar; neutral.")
+    cluster = bool(calendar.get("earnings_cluster", False))
+    sc = 0 if cluster else 2
+    return ForecastCheck("Earnings Cluster", meaning, sc, {"H": H, "earnings_cluster": cluster})
+
+
+def a4_policy_reg_risk(*, H: int, calendar: Optional[Dict[str, Any]]) -> ForecastCheck:
+    meaning = "Are sector-relevant policy or regulatory decisions approaching inside H?"
+    if not calendar:
+        return neutral_check("Policy / Regulation Risk", meaning, "No policy calendar; neutral.")
+    policy_risk = bool(calendar.get("policy_decision_in_window", False))
+    sc = 0 if policy_risk else 2
+    return ForecastCheck("Policy / Regulation Risk", meaning, sc, {"H": H, "policy_decision_in_window": policy_risk})
+
+
+def a5_headline_shock_proxy(*, ext_z: Optional[float], bb_width: Optional[float], atrp14: Optional[float]) -> ForecastCheck:
+    meaning = "Is the sector recently shock-prone (gappy/unstable), implying higher surprise risk?"
+    z = ext_z if ext_z is not None else 0.0
+    width = bb_width if bb_width is not None else 0.0
+    a = atrp14 if atrp14 is not None else 0.0
+    if (z >= 2.5) or (width >= 10.0) or (a >= 3.0):
+        sc = 0
+    elif (z >= 1.5) or (width >= 6.0) or (a >= 2.0):
+        sc = 1
+    else:
+        sc = 2
+    return ForecastCheck("Headline Shock Proxy", meaning, sc, {"ext_z_20": ext_z, "bb_width": bb_width, "atrp14": atrp14})
+
+
+def a6_narrative_momentum(*, rs_slope_10: Optional[float], returns: Optional[Sequence[Optional[float]]]) -> ForecastCheck:
+    meaning = "Is the narrative sticking (RS improving, few fast reversals) rather than constantly fading?"
+    if rs_slope_10 is None:
+        return neutral_check("Narrative Momentum", meaning, "Insufficient RS history; neutral.")
+    rev = recent_reversal_rate(returns, window=10) if returns is not None else None
+    rev_val = rev if rev is not None else 0.5
+    slope = rs_slope_10
+    if slope > 0.0 and rev_val < 0.30:
+        sc = 2
+    elif slope >= -0.0005 and rev_val < 0.45:
+        sc = 1
+    else:
+        sc = 0
+    return ForecastCheck("Narrative Momentum", meaning, sc, {"rs_slope_10": rs_slope_10, "reversal_rate_10": rev})
+
+
+def recent_reversal_rate(returns: Optional[Sequence[Optional[float]]], window: int) -> Optional[float]:
+    if returns is None:
+        return None
+    if window <= 2 or len(returns) < window:
+        return None
+    w = returns[-window:]
+    s: List[int] = []
+    for r in w:
+        if r is None:
+            continue
+        if r > 0:
+            s.append(1)
+        elif r < 0:
+            s.append(-1)
+        else:
+            s.append(0)
+    if len(s) < 3:
+        return None
+    flips = 0
+    total = 0
+    for i in range(1, len(s)):
+        if s[i] == 0 or s[i - 1] == 0:
+            continue
+        total += 1
+        if s[i] != s[i - 1]:
+            flips += 1
+    return (flips / total) if total else None
