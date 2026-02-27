@@ -122,6 +122,14 @@ def recommend(
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
     thr = float(constraints.get("min_improvement_threshold", 0.12))
 
+    # Forecast-mode path (Issue #113)
+    fs = constraints.get("forecast_scores")
+    if isinstance(fs, dict) and fs:
+        held_syms = extract_held_symbols(positions)
+        if any(str(h).upper() in fs for h in held_syms):
+            from market_health.forecast_recommendations import recommend_forecast_mode
+
+            return recommend_forecast_mode(positions=positions, constraints=constraints)
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
 
@@ -208,6 +216,10 @@ def recommend(
         "weakest_held": weakest,
         "best_candidate": best,
         "delta_utility": delta,
+        "decision_metric": "delta_utility",
+        "edge": delta,
+        "health_score_from": float(util[weakest].get("utility", 0.0)),
+        "health_score_to": float(util[best].get("utility", 0.0)),
         "held_scored": held_present,
         "held_utilities": {h: float(util[h].get("utility", 0.0)) for h in held_present},
         "candidate_utility": float(util[best].get("utility", 0.0)),
