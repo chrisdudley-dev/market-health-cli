@@ -52,6 +52,7 @@ sect_p   = (CACHE_DIR / "market_health.sectors.json")
 pos_p    = (CACHE_DIR / "positions.v1.json")
 
 rec_p    = (CACHE_DIR / "recommendations.v1.json")
+forecast_p = (CACHE_DIR / "forecast_scores.v1.json")
 def read_json(p: Path):
     if not p.exists():
         return None
@@ -97,6 +98,8 @@ pos   = read_json(pos_p)
 
 rec_raw = read_json(rec_p)
 
+forecast_raw = read_json(forecast_p)
+
 rec_status = "ok"
 rec = rec_raw
 if rec_raw is None:
@@ -105,6 +108,16 @@ if rec_raw is None:
 elif isinstance(rec_raw, dict) and rec_raw.get("_error"):
     rec_status = "unreadable"
     rec = None
+
+forecast_status = "ok"
+forecast = forecast_raw
+if forecast_raw is None:
+    forecast_status = "missing"
+    forecast = None
+elif isinstance(forecast_raw, dict) and forecast_raw.get("_error"):
+    forecast_status = "unreadable"
+    forecast = None
+
 if not status_line:
     status_line = status_line_fallback(state)
 
@@ -209,11 +222,13 @@ payload = {
         "sectors": meta(sect_p),
         "positions": meta(pos_p),
         "recommendations": meta(rec_p),
+        "forecast_scores": meta(forecast_p),
           "events_provider": meta(ev_cfg_p),
     },
     "summary": {
         "positions_count": len(pos_list),
         "recommendations_status": rec_status,
+        "forecast_scores_status": forecast_status,
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
         "symbols_sample": symbols,
@@ -226,6 +241,7 @@ payload = {
         "positions": pos,
         "dimensions_meta": DIMENSIONS_META_V1,
         "recommendations": rec,
+        "forecast_scores": forecast,
           "events": events,
     },
 }
