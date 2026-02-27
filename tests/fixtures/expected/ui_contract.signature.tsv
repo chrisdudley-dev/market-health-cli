@@ -62,6 +62,7 @@ data.events.points	list[]
 data.events.schema	str
 data.events.source.type	str
 data.events.status	str
+data.forecast_scores	NoneType
 data.positions.positions	list[dict]
 data.positions.positions[].asset_type	str
 data.positions.positions[].avg_price	float
@@ -163,6 +164,10 @@ meta.events_provider.bytes	int
 meta.events_provider.exists	bool
 meta.events_provider.mtime	int
 meta.events_provider.path	str
+meta.forecast_scores.bytes	int
+meta.forecast_scores.exists	bool
+meta.forecast_scores.mtime	int
+meta.forecast_scores.path	str
 meta.positions.bytes	int
 meta.positions.exists	bool
 meta.positions.mtime	int
@@ -183,6 +188,7 @@ schema	str
 status_line	str
 summary.events_count	int
 summary.events_status	str
+summary.forecast_scores_status	str
 summary.positions_count	int
 summary.recommendations_status	str
 summary.symbols_sample	list[str]
