@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Only run on staged Python files
-files="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)"
-if [ -z "${files}" ]; then
+# Collect staged Python files (NUL-delimited to handle spaces safely)
+mapfile -d '' files < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.py' || true)
+if [ "${#files[@]}" -eq 0 ]; then
   exit 0
 fi
 
@@ -28,12 +28,10 @@ run_ruff() {
 }
 
 echo "[pre-commit] ruff format (staged .py files)"
-# Format the files (may modify them)
-run_ruff format ${files}
+run_ruff format -- "${files[@]}"
 
 # Re-stage any formatting changes
-git add ${files}
+git add -- "${files[@]}"
 
 echo "[pre-commit] ruff check (staged .py files)"
-run_ruff check ${files}
-
+run_ruff check -- "${files[@]}"
