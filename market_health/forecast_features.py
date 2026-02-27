@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import sqrt
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 Number = Union[int, float]
 
@@ -109,7 +109,9 @@ def rolling_max(values: Sequence[Number], window: int) -> List[Optional[float]]:
     return out
 
 
-def rolling_std(returns: Sequence[Optional[Number]], window: int) -> List[Optional[float]]:
+def rolling_std(
+    returns: Sequence[Optional[Number]], window: int
+) -> List[Optional[float]]:
     if window <= 1:
         raise ValueError("window must be >= 2")
     r = [None if v is None else float(v) for v in returns]
@@ -144,7 +146,9 @@ def zscore(values: Sequence[Number], window: int) -> List[Optional[float]]:
     return out
 
 
-def rolling_percentile_rank(values: Sequence[Number], window: int) -> List[Optional[float]]:
+def rolling_percentile_rank(
+    values: Sequence[Number], window: int
+) -> List[Optional[float]]:
     if window <= 1:
         raise ValueError("window must be >= 2")
     v = _as_float_list(values)
@@ -161,7 +165,9 @@ def rolling_percentile_rank(values: Sequence[Number], window: int) -> List[Optio
     return out
 
 
-def linear_regression_slope(values: Sequence[Number], window: int) -> List[Optional[float]]:
+def linear_regression_slope(
+    values: Sequence[Number], window: int
+) -> List[Optional[float]]:
     if window <= 1:
         raise ValueError("window must be >= 2")
     v = _as_float_list(values)
@@ -181,7 +187,9 @@ def linear_regression_slope(values: Sequence[Number], window: int) -> List[Optio
     return out
 
 
-def normalized_slope(values: Sequence[Number], window: int, eps: float = 1e-12) -> List[Optional[float]]:
+def normalized_slope(
+    values: Sequence[Number], window: int, eps: float = 1e-12
+) -> List[Optional[float]]:
     v = _as_float_list(values)
     sl = linear_regression_slope(v, window)
     denom = sma([abs(x) for x in v], window)
@@ -194,19 +202,23 @@ def normalized_slope(values: Sequence[Number], window: int, eps: float = 1e-12) 
     return out
 
 
-def true_range(high: Sequence[Number], low: Sequence[Number], close: Sequence[Number]) -> List[Optional[float]]:
+def true_range(
+    high: Sequence[Number], low: Sequence[Number], close: Sequence[Number]
+) -> List[Optional[float]]:
     _require_same_length(high, low, close)
     h = _as_float_list(high)
-    l = _as_float_list(low)
+    lo = _as_float_list(low)
     c = _as_float_list(close)
     n = len(c)
     out = _none_list(n)
     for i in range(1, n):
-        out[i] = max(h[i] - l[i], abs(h[i] - c[i - 1]), abs(l[i] - c[i - 1]))
+        out[i] = max(h[i] - lo[i], abs(h[i] - c[i - 1]), abs(lo[i] - c[i - 1]))
     return out
 
 
-def atr(high: Sequence[Number], low: Sequence[Number], close: Sequence[Number], window: int) -> List[Optional[float]]:
+def atr(
+    high: Sequence[Number], low: Sequence[Number], close: Sequence[Number], window: int
+) -> List[Optional[float]]:
     if window <= 0:
         raise ValueError("window must be positive")
     tr = true_range(high, low, close)
@@ -222,7 +234,9 @@ def atr(high: Sequence[Number], low: Sequence[Number], close: Sequence[Number], 
     return out
 
 
-def atr_percent(high: Sequence[Number], low: Sequence[Number], close: Sequence[Number], window: int) -> List[Optional[float]]:
+def atr_percent(
+    high: Sequence[Number], low: Sequence[Number], close: Sequence[Number], window: int
+) -> List[Optional[float]]:
     a = atr(high, low, close, window)
     c = _as_float_list(close)
     out = _none_list(len(c))
@@ -233,7 +247,9 @@ def atr_percent(high: Sequence[Number], low: Sequence[Number], close: Sequence[N
     return out
 
 
-def bollinger_bands(close: Sequence[Number], window: int = 20, k: float = 2.0) -> Dict[str, List[Optional[float]]]:
+def bollinger_bands(
+    close: Sequence[Number], window: int = 20, k: float = 2.0
+) -> Dict[str, List[Optional[float]]]:
     c = _as_float_list(close)
     mid = sma(c, window)
     std = _none_list(len(c))
@@ -257,7 +273,9 @@ def bollinger_bands(close: Sequence[Number], window: int = 20, k: float = 2.0) -
     return {"mid": mid, "upper": upper, "lower": lower, "width_pct": width_pct}
 
 
-def up_down_volume_ratio(close: Sequence[Number], volume: Sequence[Number], window: int = 20) -> List[Optional[float]]:
+def up_down_volume_ratio(
+    close: Sequence[Number], volume: Sequence[Number], window: int = 20
+) -> List[Optional[float]]:
     if window <= 0:
         raise ValueError("window must be positive")
     _require_same_length(close, volume)
@@ -281,20 +299,24 @@ def up_down_volume_ratio(close: Sequence[Number], volume: Sequence[Number], wind
     return out
 
 
-def close_location_value(high: Sequence[Number], low: Sequence[Number], close: Sequence[Number]) -> List[Optional[float]]:
+def close_location_value(
+    high: Sequence[Number], low: Sequence[Number], close: Sequence[Number]
+) -> List[Optional[float]]:
     _require_same_length(high, low, close)
     h = _as_float_list(high)
-    l = _as_float_list(low)
+    lo = _as_float_list(low)
     c = _as_float_list(close)
     n = len(c)
     out = _none_list(n)
     for i in range(n):
-        rng = h[i] - l[i]
-        out[i] = None if rng == 0 else (((c[i] - l[i]) - (h[i] - c[i])) / rng)
+        rng = h[i] - lo[i]
+        out[i] = None if rng == 0 else (((c[i] - lo[i]) - (h[i] - c[i])) / rng)
     return out
 
 
-def rs_ratio(asset_close: Sequence[Number], benchmark_close: Sequence[Number]) -> List[Optional[float]]:
+def rs_ratio(
+    asset_close: Sequence[Number], benchmark_close: Sequence[Number]
+) -> List[Optional[float]]:
     _require_same_length(asset_close, benchmark_close)
     a = _as_float_list(asset_close)
     b = _as_float_list(benchmark_close)
@@ -304,7 +326,9 @@ def rs_ratio(asset_close: Sequence[Number], benchmark_close: Sequence[Number]) -
     return out
 
 
-def rolling_correlation(x: Sequence[Optional[Number]], y: Sequence[Optional[Number]], window: int) -> List[Optional[float]]:
+def rolling_correlation(
+    x: Sequence[Optional[Number]], y: Sequence[Optional[Number]], window: int
+) -> List[Optional[float]]:
     if window <= 1:
         raise ValueError("window must be >= 2")
     _require_same_length(x, y)
@@ -331,7 +355,9 @@ def rolling_correlation(x: Sequence[Optional[Number]], y: Sequence[Optional[Numb
     return out
 
 
-def cross_sectional_dispersion(returns_by_symbol: Dict[str, Sequence[Optional[Number]]], index: int) -> Optional[float]:
+def cross_sectional_dispersion(
+    returns_by_symbol: Dict[str, Sequence[Optional[Number]]], index: int
+) -> Optional[float]:
     vals: List[float] = []
     for series in returns_by_symbol.values():
         if index >= len(series):
@@ -357,6 +383,7 @@ class OHLCV:
 
 class FeatureCache:
     """Compute-once cache (optional). Here kept minimal for future expansion."""
+
     def __init__(self) -> None:
         self._cache: Dict[str, Dict[str, Any]] = {}
 

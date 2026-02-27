@@ -19,6 +19,7 @@ class ForecastCheck:
     score: 0/1/2
     metrics: debug payload to explain how the score was produced
     """
+
     label: str
     meaning: str
     score: int
@@ -47,7 +48,12 @@ def category_dict(checks: List[ForecastCheck]) -> Dict[str, Any]:
     pts, mx = sum_points(checks)
     return {
         "checks": [
-            {"label": c.label, "meaning": c.meaning, "score": int(c.score), "metrics": c.metrics}
+            {
+                "label": c.label,
+                "meaning": c.meaning,
+                "score": int(c.score),
+                "metrics": c.metrics,
+            }
             for c in checks
         ],
         "points": pts,

@@ -36,19 +36,30 @@ def compute_d_checks(
     support_cushion_proxy: Optional[float] = None,
 ) -> List[ForecastCheck]:
     return [
-        d1_volatility_trend(atrp14=atrp14, atrp_slope_10=atrp_slope_10, bb_width=bb_width),
+        d1_volatility_trend(
+            atrp14=atrp14, atrp_slope_10=atrp_slope_10, bb_width=bb_width
+        ),
         d2_tail_gap_risk(H=H, returns=returns, calendar=calendar, atrp14=atrp14),
         d3_market_coupling_trend(corr5=corr5, corr20=corr20),
         d4_liquidity_stress(returns=returns, volume=volume),
         d5_drawdown_vulnerability(close=close, lo20=lo20, atrp14=atrp14),
-        d6_risk_reward_feasibility(atrp14=atrp14, support_cushion_proxy=support_cushion_proxy, corr20=corr20),
+        d6_risk_reward_feasibility(
+            atrp14=atrp14, support_cushion_proxy=support_cushion_proxy, corr20=corr20
+        ),
     ]
 
 
-def d1_volatility_trend(*, atrp14: Optional[float], atrp_slope_10: Optional[float], bb_width: Optional[float]) -> ForecastCheck:
+def d1_volatility_trend(
+    *,
+    atrp14: Optional[float],
+    atrp_slope_10: Optional[float],
+    bb_width: Optional[float],
+) -> ForecastCheck:
     meaning = "Is risk rising or falling (volatility expanding/contracting) into H?"
     if atrp14 is None or atrp_slope_10 is None:
-        return neutral_check("Volatility Trend", meaning, "No H/L feed or insufficient history; neutral.")
+        return neutral_check(
+            "Volatility Trend", meaning, "No H/L feed or insufficient history; neutral."
+        )
     width = bb_width if bb_width is not None else 0.0
     elevated = (atrp14 >= 2.5) or (width >= 8.0)
     rising = atrp_slope_10 > 0.0
@@ -58,19 +69,40 @@ def d1_volatility_trend(*, atrp14: Optional[float], atrp_slope_10: Optional[floa
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Volatility Trend", meaning, sc, {"atrp14": atrp14, "atrp_slope_10": atrp_slope_10, "bb_width": bb_width, "elevated": elevated, "rising": rising})
+    return ForecastCheck(
+        "Volatility Trend",
+        meaning,
+        sc,
+        {
+            "atrp14": atrp14,
+            "atrp_slope_10": atrp_slope_10,
+            "bb_width": bb_width,
+            "elevated": elevated,
+            "rising": rising,
+        },
+    )
 
 
-def d2_tail_gap_risk(*, H: int, returns: Optional[Sequence[Optional[float]]], calendar: Optional[Dict[str, Any]], atrp14: Optional[float]) -> ForecastCheck:
+def d2_tail_gap_risk(
+    *,
+    H: int,
+    returns: Optional[Sequence[Optional[float]]],
+    calendar: Optional[Dict[str, Any]],
+    atrp14: Optional[float],
+) -> ForecastCheck:
     meaning = "Is gap/tail risk elevated into H (rare large moves more likely)?"
     if returns is None or len(returns) < 30:
-        return neutral_check("Tail / Gap Risk", meaning, "Insufficient returns history; neutral.")
+        return neutral_check(
+            "Tail / Gap Risk", meaning, "Insufficient returns history; neutral."
+        )
     w = [r for r in returns[-20:] if r is not None]
     if len(w) < 10:
-        return neutral_check("Tail / Gap Risk", meaning, "Insufficient usable returns window; neutral.")
+        return neutral_check(
+            "Tail / Gap Risk", meaning, "Insufficient usable returns window; neutral."
+        )
     m = sum(w) / len(w)
     var = sum((r - m) ** 2 for r in w) / max(1, (len(w) - 1))
-    sd = var ** 0.5
+    sd = var**0.5
     big = sum(1 for r in w if sd > 0 and abs(r) > 2.0 * sd)
     freq = big / len(w)
     catalyst = bool(calendar.get("catalysts_in_window", False)) if calendar else False
@@ -81,13 +113,30 @@ def d2_tail_gap_risk(*, H: int, returns: Optional[Sequence[Optional[float]]], ca
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Tail / Gap Risk", meaning, sc, {"H": H, "big_move_freq_20": freq, "sd_20": sd, "catalyst_in_window": catalyst, "atrp14": atrp14})
+    return ForecastCheck(
+        "Tail / Gap Risk",
+        meaning,
+        sc,
+        {
+            "H": H,
+            "big_move_freq_20": freq,
+            "sd_20": sd,
+            "catalyst_in_window": catalyst,
+            "atrp14": atrp14,
+        },
+    )
 
 
-def d3_market_coupling_trend(*, corr5: Optional[float], corr20: Optional[float]) -> ForecastCheck:
+def d3_market_coupling_trend(
+    *, corr5: Optional[float], corr20: Optional[float]
+) -> ForecastCheck:
     meaning = "Is market coupling increasing (less diversification, more systemic drawdown risk) into H?"
     if corr5 is None or corr20 is None:
-        return neutral_check("Market Coupling Trend", meaning, "Insufficient correlation history; neutral.")
+        return neutral_check(
+            "Market Coupling Trend",
+            meaning,
+            "Insufficient correlation history; neutral.",
+        )
     rising = corr5 > corr20 + 0.05
     high = corr5 >= 0.85
     if high and rising:
@@ -96,17 +145,30 @@ def d3_market_coupling_trend(*, corr5: Optional[float], corr20: Optional[float])
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Market Coupling Trend", meaning, sc, {"corr5": corr5, "corr20": corr20, "high": high, "rising": rising})
+    return ForecastCheck(
+        "Market Coupling Trend",
+        meaning,
+        sc,
+        {"corr5": corr5, "corr20": corr20, "high": high, "rising": rising},
+    )
 
 
-def d4_liquidity_stress(*, returns: Optional[Sequence[Optional[float]]], volume: Optional[Sequence[Number]]) -> ForecastCheck:
+def d4_liquidity_stress(
+    *, returns: Optional[Sequence[Optional[float]]], volume: Optional[Sequence[Number]]
+) -> ForecastCheck:
     meaning = "Are there signs of stressed trading conditions (higher friction, erratic moves) into H?"
     if returns is None or volume is None or len(returns) < 25 or len(volume) < 25:
-        return neutral_check("Liquidity Stress", meaning, "No volume feed or insufficient history; neutral.")
+        return neutral_check(
+            "Liquidity Stress",
+            meaning,
+            "No volume feed or insufficient history; neutral.",
+        )
     rets = [r for r in returns[-20:] if r is not None]
     vols = [float(v) for v in volume][-20:]
     if len(rets) < 10 or len(vols) < 10:
-        return neutral_check("Liquidity Stress", meaning, "Insufficient usable window; neutral.")
+        return neutral_check(
+            "Liquidity Stress", meaning, "Insufficient usable window; neutral."
+        )
     n = min(len(rets), len(vols))
     impacts = [abs(rets[i]) / max(1.0, vols[i]) for i in range(n)]
     imp_now = impacts[-1]
@@ -118,13 +180,24 @@ def d4_liquidity_stress(*, returns: Optional[Sequence[Optional[float]]], volume:
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Liquidity Stress", meaning, sc, {"impact_now": imp_now, "impact_median": imp_med, "impact_ratio": ratio})
+    return ForecastCheck(
+        "Liquidity Stress",
+        meaning,
+        sc,
+        {"impact_now": imp_now, "impact_median": imp_med, "impact_ratio": ratio},
+    )
 
 
-def d5_drawdown_vulnerability(*, close: Optional[float], lo20: Optional[float], atrp14: Optional[float]) -> ForecastCheck:
-    meaning = "Is the sector close to damage levels where a small drop breaks structure?"
+def d5_drawdown_vulnerability(
+    *, close: Optional[float], lo20: Optional[float], atrp14: Optional[float]
+) -> ForecastCheck:
+    meaning = (
+        "Is the sector close to damage levels where a small drop breaks structure?"
+    )
     if close is None or lo20 is None:
-        return neutral_check("Drawdown Vulnerability", meaning, "Insufficient history; neutral.")
+        return neutral_check(
+            "Drawdown Vulnerability", meaning, "Insufficient history; neutral."
+        )
     dist_pct = ((close - lo20) / close) * 100.0 if close else 0.0
     denom = atrp14 if (atrp14 is not None and atrp14 > 0) else 1.0
     vuln_proxy = dist_pct / denom
@@ -134,13 +207,25 @@ def d5_drawdown_vulnerability(*, close: Optional[float], lo20: Optional[float], 
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Drawdown Vulnerability", meaning, sc, {"dist_pct_to_20d_low": dist_pct, "atrp14": atrp14, "vuln_proxy": vuln_proxy})
+    return ForecastCheck(
+        "Drawdown Vulnerability",
+        meaning,
+        sc,
+        {"dist_pct_to_20d_low": dist_pct, "atrp14": atrp14, "vuln_proxy": vuln_proxy},
+    )
 
 
-def d6_risk_reward_feasibility(*, atrp14: Optional[float], support_cushion_proxy: Optional[float], corr20: Optional[float]) -> ForecastCheck:
+def d6_risk_reward_feasibility(
+    *,
+    atrp14: Optional[float],
+    support_cushion_proxy: Optional[float],
+    corr20: Optional[float],
+) -> ForecastCheck:
     meaning = "Given forecast risk, can you size it and still have acceptable risk/reward feasibility?"
     if atrp14 is None or support_cushion_proxy is None:
-        return neutral_check("Risk/Reward Feasibility", meaning, "Insufficient risk inputs; neutral.")
+        return neutral_check(
+            "Risk/Reward Feasibility", meaning, "Insufficient risk inputs; neutral."
+        )
     c = corr20 if corr20 is not None else 0.5
     if atrp14 >= 3.0 and support_cushion_proxy < 0.5 and c >= 0.85:
         sc = 0
@@ -148,4 +233,13 @@ def d6_risk_reward_feasibility(*, atrp14: Optional[float], support_cushion_proxy
         sc = 1
     else:
         sc = 2
-    return ForecastCheck("Risk/Reward Feasibility", meaning, sc, {"atrp14": atrp14, "support_cushion_proxy": support_cushion_proxy, "corr20": corr20})
+    return ForecastCheck(
+        "Risk/Reward Feasibility",
+        meaning,
+        sc,
+        {
+            "atrp14": atrp14,
+            "support_cushion_proxy": support_cushion_proxy,
+            "corr20": corr20,
+        },
+    )

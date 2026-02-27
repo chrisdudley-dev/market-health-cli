@@ -58,7 +58,9 @@ def compute_forecast_universe(
     _ = policy  # reserved for future use
 
     # Precompute returns for dispersion/correlation
-    returns_by_symbol: Dict[str, list[Optional[float]]] = {s.upper(): pct_change(ohlcv.close) for s, ohlcv in universe.items()}
+    returns_by_symbol: Dict[str, list[Optional[float]]] = {
+        s.upper(): pct_change(ohlcv.close) for s, ohlcv in universe.items()
+    }
     spy_returns = pct_change(spy.close)
 
     # Optional VIX features
@@ -81,7 +83,16 @@ def compute_forecast_universe(
         idx = n - 1
 
         if n == 0:
-            results[sym_u] = {h: {"forecast_score": 0.0, "points": 0, "max_points": 0, "categories": {}, "diagnostics": {"note": "empty_series"}} for h in horizons}
+            results[sym_u] = {
+                h: {
+                    "forecast_score": 0.0,
+                    "points": 0,
+                    "max_points": 0,
+                    "categories": {},
+                    "diagnostics": {"note": "empty_series"},
+                }
+                for h in horizons
+            }
             continue
 
         # Shared features at "now"
@@ -104,7 +115,9 @@ def compute_forecast_universe(
 
         dispersion_now = cross_sectional_dispersion(returns_by_symbol, idx)
 
-        ema20 = ema(close, 20)  # SMA is fine as proxy for the orchestrator; check modules don't care
+        ema20 = ema(
+            close, 20
+        )  # SMA is fine as proxy for the orchestrator; check modules don't care
         sma50 = sma(close, 50)
         ema20_now = ema20[idx] if idx < len(ema20) else None
         sma50_now = sma50[idx] if idx < len(sma50) else None
@@ -125,7 +138,9 @@ def compute_forecast_universe(
         if ohlcv.high is not None and ohlcv.low is not None:
             atrp = atr_percent(ohlcv.high, ohlcv.low, close, 14)
             atrp14_now = atrp[idx] if idx < len(atrp) else None
-            atrp_slope_10 = normalized_slope([x if x is not None else 0.0 for x in atrp], 10)
+            atrp_slope_10 = normalized_slope(
+                [x if x is not None else 0.0 for x in atrp], 10
+            )
             atrp_slope_10_now = atrp_slope_10[idx] if idx < len(atrp_slope_10) else None
             clv = close_location_value(ohlcv.high, ohlcv.low, close)
             clv_now = clv[idx] if idx < len(clv) else None
@@ -139,7 +154,11 @@ def compute_forecast_universe(
             vol_rank = rolling_percentile_rank([float(v) for v in ohlcv.volume], 20)
             vol_rank_now = vol_rank[idx] if idx < len(vol_rank) else None
 
-        last_ret = returns_by_symbol.get(sym_u, [None])[idx] if sym_u in returns_by_symbol and idx < len(returns_by_symbol[sym_u]) else None
+        last_ret = (
+            returns_by_symbol.get(sym_u, [None])[idx]
+            if sym_u in returns_by_symbol and idx < len(returns_by_symbol[sym_u])
+            else None
+        )
 
         results[sym_u] = {}
 
@@ -171,7 +190,9 @@ def compute_forecast_universe(
                 vol_rank_20=vol_rank_now,
             )
 
-            support_cushion_proxy = b_checks[3].metrics.get("cushion_proxy") if len(b_checks) >= 4 else None
+            support_cushion_proxy = (
+                b_checks[3].metrics.get("cushion_proxy") if len(b_checks) >= 4 else None
+            )
 
             c_checks = compute_c_checks(
                 ext_z_20=ext_z_now,
