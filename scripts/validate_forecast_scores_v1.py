@@ -36,12 +36,19 @@ def validate(doc: Dict[str, Any]) -> List[str]:
         _err(errors, "asof must be a non-empty ISO datetime string")
 
     horizons = doc.get("horizons_trading_days")
-    if not isinstance(horizons, list) or not horizons or not all(isinstance(x, int) and x >= 0 for x in horizons):
+    if (
+        not isinstance(horizons, list)
+        or not horizons
+        or not all(isinstance(x, int) and x >= 0 for x in horizons)
+    ):
         _err(errors, "horizons_trading_days must be a non-empty list[int>=0]")
 
     scores = doc.get("scores")
     if not isinstance(scores, dict) or not scores:
-        _err(errors, "scores must be a non-empty object mapping symbol -> horizon -> payload")
+        _err(
+            errors,
+            "scores must be a non-empty object mapping symbol -> horizon -> payload",
+        )
         return errors
 
     for sym, by_h in scores.items():
@@ -55,7 +62,10 @@ def validate(doc: Dict[str, Any]) -> List[str]:
         for hk, payload in by_h.items():
             h = _as_int_key(hk)
             if h is None:
-                _err(errors, f"scores[{sym}] horizon key must be int or digit-string, got {hk!r}")
+                _err(
+                    errors,
+                    f"scores[{sym}] horizon key must be int or digit-string, got {hk!r}",
+                )
                 continue
             if horizons and h not in horizons:
                 _err(errors, f"scores[{sym}][{h}] horizon not in horizons_trading_days")
@@ -85,31 +95,57 @@ def validate(doc: Dict[str, Any]) -> List[str]:
                     continue
                 cat = cats.get(code)
                 if not isinstance(cat, dict):
-                    _err(errors, f"scores[{sym}][{h}].categories[{code}] must be an object")
+                    _err(
+                        errors,
+                        f"scores[{sym}][{h}].categories[{code}] must be an object",
+                    )
                     continue
 
                 checks = cat.get("checks")
                 if not isinstance(checks, list) or len(checks) != 6:
-                    _err(errors, f"scores[{sym}][{h}].categories[{code}].checks must be list length 6")
+                    _err(
+                        errors,
+                        f"scores[{sym}][{h}].categories[{code}].checks must be list length 6",
+                    )
                     continue
 
                 for i, chk in enumerate(checks):
                     if not isinstance(chk, dict):
-                        _err(errors, f"scores[{sym}][{h}].categories[{code}].checks[{i}] must be object")
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}] must be object",
+                        )
                         continue
                     if not isinstance(chk.get("label"), str) or not chk.get("label"):
-                        _err(errors, f"scores[{sym}][{h}].categories[{code}].checks[{i}].label must be non-empty string")
-                    if not isinstance(chk.get("meaning"), str) or not chk.get("meaning"):
-                        _err(errors, f"scores[{sym}][{h}].categories[{code}].checks[{i}].meaning must be non-empty string")
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].label must be non-empty string",
+                        )
+                    if not isinstance(chk.get("meaning"), str) or not chk.get(
+                        "meaning"
+                    ):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].meaning must be non-empty string",
+                        )
                     sc = chk.get("score")
                     if sc not in (0, 1, 2):
-                        _err(errors, f"scores[{sym}][{h}].categories[{code}].checks[{i}].score must be 0/1/2")
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].score must be 0/1/2",
+                        )
                     if "metrics" in chk and not isinstance(chk.get("metrics"), dict):
-                        _err(errors, f"scores[{sym}][{h}].categories[{code}].checks[{i}].metrics must be object")
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].metrics must be object",
+                        )
 
             diag = payload.get("diagnostics")
             if diag is not None and not isinstance(diag, dict):
-                _err(errors, f"scores[{sym}][{h}].diagnostics must be an object when present")
+                _err(
+                    errors,
+                    f"scores[{sym}][{h}].diagnostics must be an object when present",
+                )
 
     return errors
 
