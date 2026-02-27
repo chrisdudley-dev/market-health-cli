@@ -259,12 +259,7 @@ def main() -> int:
                 if isinstance(forecast_doc, dict)
                 else None
             ),
-            "disagreement_veto_edge": args.disagreement_veto_edge,
-            "cooldown_trading_days": args.cooldown_trading_days,
             "cooldown_history": [],
-            "max_weight_per_symbol": args.max_weight,
-            "min_distinct_symbols": args.min_distinct,
-            "hhi_cap": args.hhi_cap,
         },
     )
 
