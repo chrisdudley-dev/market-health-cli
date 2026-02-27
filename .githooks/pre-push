@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [ -x ".venv/bin/python" ]; then
+  PY=".venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+else
+  PY="python"
+fi
+
+if "${PY}" -m ruff --version >/dev/null 2>&1; then
+  "${PY}" -m ruff format --check .
+  "${PY}" -m ruff check .
+else
+  echo "ERROR: ruff not found. Install with: ${PY} -m pip install ruff" >&2
+  exit 1
+fi
+
+# Uncomment if you want tests too:
+# ${PY} -m pytest -q
+
