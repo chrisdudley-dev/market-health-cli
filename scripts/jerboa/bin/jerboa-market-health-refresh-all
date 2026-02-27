@@ -56,11 +56,14 @@ pos_rc=0
 mkt_rc=0
 rec_rc=0
 
-# Positions refresh
+# Positions refresh (prefer existing positions.v1.json unless forced or CSV provided)
 if [ "${ARGS[0]:-}" = "--csv" ] && [ -n "${ARGS[1]:-}" ]; then
   "${HOME}/bin/jerboa-market-health-positions-refresh" --csv "${ARGS[1]}" || pos_rc=$?
-else
+elif [ "$FORCE" -eq 1 ] || [ ! -s "$POS_JSON" ] || [ "${JERBOA_POSITIONS_ALWAYS_REFRESH:-0}" = "1" ]; then
   "${HOME}/bin/jerboa-market-health-positions-refresh" || pos_rc=$?
+else
+  # positions.v1.json already exists and is non-empty; skip noisy discovery refresh
+  pos_rc=0
 fi
 
 # Market refresh (safe arg passing)
@@ -127,6 +130,11 @@ PY
     "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
   else
     rec_rc=127
+  fi
+
+  # Forecast scores (fail-soft)
+  if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
+    "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" --quiet >/dev/null || true
   fi
 
   "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
