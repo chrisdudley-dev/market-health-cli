@@ -1,0 +1,3575 @@
+{
+  "horizons_trading_days": [
+    1,
+    5
+  ],
+  "schema": "golden.forecast_scores.v1",
+  "scores": {
+    "SPY": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 1
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 2
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 1
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 1
+              },
+              {
+                "label": "Participation Trend",
+                "score": 1
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 2
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 1
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 1
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 2
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 2
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 2
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 1
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.616667,
+        "max_points": 60,
+        "points": 37
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 1
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 2
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 1
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 1
+              },
+              {
+                "label": "Participation Trend",
+                "score": 1
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 2
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 1
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 1
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 2
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 2
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 2
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 1
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.616667,
+        "max_points": 60,
+        "points": 37
+      }
+    },
+    "XLB": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      }
+    },
+    "XLC": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      }
+    },
+    "XLE": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 2
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 2
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 1
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 2
+              },
+              {
+                "label": "Support Cushion",
+                "score": 2
+              },
+              {
+                "label": "Participation Trend",
+                "score": 1
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 2
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 1
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 1
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 2
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 2
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 2
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 2
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.7,
+        "max_points": 60,
+        "points": 42
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 2
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 2
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 1
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 2
+              },
+              {
+                "label": "Support Cushion",
+                "score": 2
+              },
+              {
+                "label": "Participation Trend",
+                "score": 1
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 2
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 1
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 1
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 2
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 2
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 2
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 2
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.7,
+        "max_points": 60,
+        "points": 42
+      }
+    },
+    "XLF": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 0
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 1
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.35,
+        "max_points": 60,
+        "points": 21
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 0
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 1
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.35,
+        "max_points": 60,
+        "points": 21
+      }
+    },
+    "XLI": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 2
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.4,
+        "max_points": 60,
+        "points": 24
+      }
+    },
+    "XLK": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 0
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 1
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.35,
+        "max_points": 60,
+        "points": 21
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 0
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 1
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.35,
+        "max_points": 60,
+        "points": 21
+      }
+    },
+    "XLP": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      }
+    },
+    "XLRE": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      }
+    },
+    "XLU": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      }
+    },
+    "XLV": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      }
+    },
+    "XLY": {
+      "1": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      },
+      "5": {
+        "categories": {
+          "A": {
+            "checks": [
+              {
+                "label": "Catalyst Window",
+                "score": 1
+              },
+              {
+                "label": "Macro Calendar Pressure",
+                "score": 1
+              },
+              {
+                "label": "Earnings Cluster",
+                "score": 1
+              },
+              {
+                "label": "Policy / Regulation Risk",
+                "score": 1
+              },
+              {
+                "label": "Headline Shock Proxy",
+                "score": 1
+              },
+              {
+                "label": "Narrative Momentum",
+                "score": 0
+              }
+            ]
+          },
+          "B": {
+            "checks": [
+              {
+                "label": "Trend Persistence",
+                "score": 0
+              },
+              {
+                "label": "Follow-Through Setup",
+                "score": 0
+              },
+              {
+                "label": "RS Momentum vs SPY",
+                "score": 0
+              },
+              {
+                "label": "Support Cushion",
+                "score": 0
+              },
+              {
+                "label": "Participation Trend",
+                "score": 0
+              },
+              {
+                "label": "Acceleration vs Exhaustion",
+                "score": 1
+              }
+            ]
+          },
+          "C": {
+            "checks": [
+              {
+                "label": "Extension Risk",
+                "score": 2
+              },
+              {
+                "label": "Volume Climax Risk",
+                "score": 2
+              },
+              {
+                "label": "Breadth Thinning",
+                "score": 2
+              },
+              {
+                "label": "Flow Pressure",
+                "score": 0
+              },
+              {
+                "label": "Positioning Asymmetry",
+                "score": 0
+              },
+              {
+                "label": "Correlation Crowding",
+                "score": 0
+              }
+            ]
+          },
+          "D": {
+            "checks": [
+              {
+                "label": "Volatility Trend",
+                "score": 1
+              },
+              {
+                "label": "Tail / Gap Risk",
+                "score": 0
+              },
+              {
+                "label": "Market Coupling Trend",
+                "score": 1
+              },
+              {
+                "label": "Liquidity Stress",
+                "score": 2
+              },
+              {
+                "label": "Drawdown Vulnerability",
+                "score": 0
+              },
+              {
+                "label": "Risk/Reward Feasibility",
+                "score": 2
+              }
+            ]
+          },
+          "E": {
+            "checks": [
+              {
+                "label": "SPY Outlook",
+                "score": 2
+              },
+              {
+                "label": "VIX Outlook",
+                "score": 1
+              },
+              {
+                "label": "Leadership Persistence",
+                "score": 1
+              },
+              {
+                "label": "Breadth Regime",
+                "score": 0
+              },
+              {
+                "label": "Cross-Regime Pressure",
+                "score": 1
+              },
+              {
+                "label": "Driver Alignment",
+                "score": 0
+              }
+            ]
+          }
+        },
+        "forecast_score": 0.383333,
+        "max_points": 60,
+        "points": 23
+      }
+    }
+  },
+  "symbols": [
+    "SPY",
+    "XLB",
+    "XLC",
+    "XLE",
+    "XLF",
+    "XLI",
+    "XLK",
+    "XLP",
+    "XLRE",
+    "XLU",
+    "XLV",
+    "XLY"
+  ]
+}
