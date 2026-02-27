@@ -13,7 +13,7 @@ Pure functions; no I/O.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Mapping, Optional, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional
 
 
 @dataclass(frozen=True)
