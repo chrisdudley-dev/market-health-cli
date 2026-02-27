@@ -22,7 +22,9 @@ class TestCooldownPolicy(unittest.TestCase):
 
     def test_no_veto_after_window(self):
         now = datetime(2026, 2, 26, 12, 0, 0)
-        hist = [SwapEvent(ts=now - timedelta(days=10), from_symbol="XLK", to_symbol="XLF")]
+        hist = [
+            SwapEvent(ts=now - timedelta(days=10), from_symbol="XLK", to_symbol="XLF")
+        ]
         res = check_cooldown(
             proposed_from="XLK",
             proposed_to="XLF",
@@ -34,8 +36,15 @@ class TestCooldownPolicy(unittest.TestCase):
 
     def test_disable_when_zero(self):
         now = datetime(2026, 2, 26, 12, 0, 0)
-        hist = [SwapEvent(ts=now - timedelta(days=1), from_symbol="XLK", to_symbol="XLF")]
-        res = check_cooldown(proposed_from="XLK", proposed_to="XLF", history=hist, cooldown_trading_days=0)
+        hist = [
+            SwapEvent(ts=now - timedelta(days=1), from_symbol="XLK", to_symbol="XLF")
+        ]
+        res = check_cooldown(
+            proposed_from="XLK",
+            proposed_to="XLF",
+            history=hist,
+            cooldown_trading_days=0,
+        )
         self.assertFalse(res.vetoed)
 
 

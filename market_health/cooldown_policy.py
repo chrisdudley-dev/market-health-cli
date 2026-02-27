@@ -17,6 +17,7 @@ from typing import Iterable, Optional, Sequence, Tuple
 @dataclass(frozen=True)
 class SwapEvent:
     """A historical swap action."""
+
     ts: datetime
     from_symbol: str
     to_symbol: str
