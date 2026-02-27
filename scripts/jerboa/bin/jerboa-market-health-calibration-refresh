@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+QUIET=0
+if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+
+SELF="${BASH_SOURCE[0]:-$0}"
+SELF="$(readlink -f "$SELF")"
+ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
+
+OUT="${HOME}/.cache/jerboa/calibration.v1.json"
+rc=0
+
+if [ "$QUIET" -eq 1 ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_calibration_v1.py" --out "$OUT" --quiet || rc=$?
+else
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_calibration_v1.py" --out "$OUT" || rc=$?
+fi
+
+if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/validate_calibration_v1.py" --path "$OUT" >/dev/null || rc=$?
+fi
+
+if [ "$QUIET" -ne 1 ]; then
+  if [ "$rc" -eq 0 ]; then
+    echo "OK: calibration refresh"
+  else
+    echo "ERR: calibration refresh failed (rc=$rc)"
+  fi
+fi
+
+exit "$rc"
