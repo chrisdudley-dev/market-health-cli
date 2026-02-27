@@ -60,18 +60,24 @@ def _weights_from_positions(positions: Any) -> Dict[str, float]:
     return {s: 1.0 / n for s in held}
 
 
-def _held_min_score(sym: str, scores: Dict[str, Any], horizons: Tuple[int, ...]) -> float:
+def _held_min_score(
+    sym: str, scores: Dict[str, Any], horizons: Tuple[int, ...]
+) -> float:
     by_h = scores.get(sym, {})
     vals: List[float] = []
     if isinstance(by_h, dict):
         for H in horizons:
             payload = by_h.get(H) or by_h.get(str(H))
-            if isinstance(payload, dict) and isinstance(payload.get("forecast_score"), (int, float)):
+            if isinstance(payload, dict) and isinstance(
+                payload.get("forecast_score"), (int, float)
+            ):
                 vals.append(float(payload["forecast_score"]))
     return min(vals) if vals else float("inf")
 
 
-def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> Recommendation:
+def recommend_forecast_mode(
+    *, positions: Any, constraints: Dict[str, Any]
+) -> Recommendation:
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
     thr = float(constraints.get("min_improvement_threshold", 0.12))
     veto_edge = float(constraints.get("disagreement_veto_edge", 0.0))
@@ -90,7 +96,11 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
         )
 
     horizons_raw = constraints.get("forecast_horizons") or (1, 5)
-    horizons = tuple(int(h) for h in horizons_raw) if isinstance(horizons_raw, (list, tuple)) else (1, 5)
+    horizons = (
+        tuple(int(h) for h in horizons_raw)
+        if isinstance(horizons_raw, (list, tuple))
+        else (1, 5)
+    )
 
     applied = (
         "forecast_mode",
@@ -109,7 +119,11 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
             reason="No held symbols found; nothing to do.",
             horizon_trading_days=horizon,
             constraints_applied=applied,
-            diagnostics={"mode": "forecast", "threshold": thr, "forecast_horizons": horizons},
+            diagnostics={
+                "mode": "forecast",
+                "threshold": thr,
+                "forecast_horizons": horizons,
+            },
         )
 
     held_present = [h for h in held if h in scores]
@@ -119,10 +133,17 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
             reason="Held symbols not found in forecast-scored universe; cannot compare.",
             horizon_trading_days=horizon,
             constraints_applied=applied,
-            diagnostics={"mode": "forecast", "held": held, "forecast_horizons": horizons},
+            diagnostics={
+                "mode": "forecast",
+                "held": held,
+                "forecast_horizons": horizons,
+            },
         )
 
-    weakest = min(held_present, key=lambda s: (_held_min_score(s, scores, horizons), stable_tiebreak_key(s)))
+    weakest = min(
+        held_present,
+        key=lambda s: (_held_min_score(s, scores, horizons), stable_tiebreak_key(s)),
+    )
 
     candidates = [s for s in scores.keys() if s not in set(held_present)]
     if not candidates:
@@ -131,7 +152,11 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
             reason="No candidates available outside held set.",
             horizon_trading_days=horizon,
             constraints_applied=applied,
-            diagnostics={"mode": "forecast", "held": held_present, "forecast_horizons": horizons},
+            diagnostics={
+                "mode": "forecast",
+                "held": held_present,
+                "forecast_horizons": horizons,
+            },
         )
 
     ranked = rank_candidates_by_robust_edge(
@@ -193,11 +218,17 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
         min_distinct_symbols=int(constraints.get("min_distinct_symbols", 4)),
         hhi_cap=float(constraints.get("hhi_cap", 0.20)),
     )
-    diagnostics.update({
-        "diversity_ok": div.ok,
-        "diversity_reasons": list(div.reasons),
-        "diversity": {"max_weight": div.max_weight, "distinct": div.distinct, "hhi": div.hhi},
-    })
+    diagnostics.update(
+        {
+            "diversity_ok": div.ok,
+            "diversity_reasons": list(div.reasons),
+            "diversity": {
+                "max_weight": div.max_weight,
+                "distinct": div.distinct,
+                "hhi": div.hhi,
+            },
+        }
+    )
     if not div.ok:
         triggered.append("diversity_constraints")
 
@@ -211,7 +242,9 @@ def recommend_forecast_mode(*, positions: Any, constraints: Dict[str, Any]) -> R
             history=hist,
             cooldown_trading_days=cooldown_days,
         )
-        diagnostics.update({"cooldown_vetoed": cd.vetoed, "cooldown_reason": cd.veto_reason})
+        diagnostics.update(
+            {"cooldown_vetoed": cd.vetoed, "cooldown_reason": cd.veto_reason}
+        )
         if cd.vetoed:
             triggered.append("cooldown")
 

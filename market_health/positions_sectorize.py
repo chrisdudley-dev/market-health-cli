@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 
-DEFAULT_OVERRIDES_PATH = os.path.expanduser("~/.config/jerboa/symbol_sector_overrides.json")
+DEFAULT_OVERRIDES_PATH = os.path.expanduser(
+    "~/.config/jerboa/symbol_sector_overrides.json"
+)
 
 
 def _read_overrides(path: str = DEFAULT_OVERRIDES_PATH) -> Dict[str, str]:
@@ -113,7 +115,13 @@ def sectorize_positions(
         else:
             unmapped.append(sym)
 
-    out_positions = [{"symbol": k, "market_value": float(v)} for k, v in sorted(agg.items())]
+    out_positions = [
+        {"symbol": k, "market_value": float(v)} for k, v in sorted(agg.items())
+    ]
     out = {"schema": "positions.v1", "positions": out_positions}
-    meta = {"mode": "sectorized", "mapped": sorted(set(mapped)), "unmapped": sorted(set(unmapped))}
+    meta = {
+        "mode": "sectorized",
+        "mapped": sorted(set(mapped)),
+        "unmapped": sorted(set(unmapped)),
+    }
     return out, meta

@@ -38,7 +38,9 @@ def _get_payload(scores: Mapping[str, Any], symbol: str) -> Optional[Mapping[str
     return v if isinstance(v, dict) else None
 
 
-def _get_forecast_score(scores: Mapping[str, Any], symbol: str, H: int) -> Optional[float]:
+def _get_forecast_score(
+    scores: Mapping[str, Any], symbol: str, H: int
+) -> Optional[float]:
     by_h = _get_payload(scores, symbol)
     if by_h is None:
         return None

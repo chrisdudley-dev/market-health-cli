@@ -90,7 +90,9 @@ def check_diversity(
     """
     w = normalize_weights(weights)
     if not w:
-        return DiversityResult(ok=False, reasons=["empty_weights"], max_weight=0.0, distinct=0, hhi=0.0)
+        return DiversityResult(
+            ok=False, reasons=["empty_weights"], max_weight=0.0, distinct=0, hhi=0.0
+        )
 
     vals = list(w.values())
     mx = max(vals) if vals else 0.0
@@ -105,4 +107,10 @@ def check_diversity(
     if hhi > hhi_cap:
         reasons.append(f"hhi_exceeded:{hhi:.4f}>{hhi_cap:.4f}")
 
-    return DiversityResult(ok=(len(reasons) == 0), reasons=reasons, max_weight=mx, distinct=distinct, hhi=hhi)
+    return DiversityResult(
+        ok=(len(reasons) == 0),
+        reasons=reasons,
+        max_weight=mx,
+        distinct=distinct,
+        hhi=hhi,
+    )
