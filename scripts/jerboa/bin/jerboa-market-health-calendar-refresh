@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+QUIET=0
+if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+
+SELF="${BASH_SOURCE[0]:-$0}"
+SELF="$(readlink -f "$SELF")"
+ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
+
+OUT="${HOME}/.cache/jerboa/calendar.v1.json"
+SRC_DEFAULT="${HOME}/.cache/jerboa/calendar.source.json"
+
+args=()
+if [ -f "$SRC_DEFAULT" ]; then
+  args+=(--source "$SRC_DEFAULT")
+fi
+
+rc=0
+if [ "$QUIET" -eq 1 ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_calendar_v1.py" "${args[@]}" --quiet || rc=$?
+else
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_calendar_v1.py" "${args[@]}" || rc=$?
+fi
+
+if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/validate_calendar_v1.py" --path "$OUT" >/dev/null || rc=$?
+fi
+
+if [ "$QUIET" -ne 1 ]; then
+  if [ "$rc" -eq 0 ]; then
+    echo "OK: calendar refresh"
+  else
+    echo "ERR: calendar refresh failed (rc=$rc)"
+  fi
+fi
+exit "$rc"
