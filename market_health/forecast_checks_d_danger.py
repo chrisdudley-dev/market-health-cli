@@ -34,10 +34,20 @@ def compute_d_checks(
     close: Optional[float] = None,
     lo20: Optional[float] = None,
     support_cushion_proxy: Optional[float] = None,
+    iv: Optional[float] = None,
+    iv_rank_1y: Optional[float] = None,
+    iv_percentile_1y: Optional[float] = None,
+    iv_status: Optional[str] = None,
 ) -> List[ForecastCheck]:
     return [
         d1_volatility_trend(
-            atrp14=atrp14, atrp_slope_10=atrp_slope_10, bb_width=bb_width
+            atrp14=atrp14,
+            atrp_slope_10=atrp_slope_10,
+            bb_width=bb_width,
+            iv=iv,
+            iv_rank_1y=iv_rank_1y,
+            iv_percentile_1y=iv_percentile_1y,
+            iv_status=iv_status,
         ),
         d2_tail_gap_risk(H=H, returns=returns, calendar=calendar, atrp14=atrp14),
         d3_market_coupling_trend(corr5=corr5, corr20=corr20),
@@ -54,31 +64,81 @@ def d1_volatility_trend(
     atrp14: Optional[float],
     atrp_slope_10: Optional[float],
     bb_width: Optional[float],
+    iv: Optional[float] = None,
+    iv_rank_1y: Optional[float] = None,
+    iv_percentile_1y: Optional[float] = None,
+    iv_status: Optional[str] = None,
 ) -> ForecastCheck:
     meaning = "Is risk rising or falling (volatility expanding/contracting) into H?"
-    if atrp14 is None or atrp_slope_10 is None:
+
+    atrp14 = locals().get("atrp14")
+    atrp_slope_10 = locals().get("atrp_slope_10")
+    bb_width = locals().get("bb_width")
+    iv = locals().get("iv")
+    iv_rank_1y = locals().get("iv_rank_1y")
+    iv_percentile_1y = locals().get("iv_percentile_1y")
+    iv_status = locals().get("iv_status")
+
+    have_atr = (atrp14 is not None) and (atrp_slope_10 is not None)
+    have_iv = (iv_status == "ok") and (
+        iv is not None or iv_rank_1y is not None or iv_percentile_1y is not None
+    )
+    if not have_atr and not have_iv:
         return neutral_check(
-            "Volatility Trend", meaning, "No H/L feed or insufficient history; neutral."
+            "Volatility Trend", meaning, "No ATR or IV inputs; neutral."
         )
-    width = bb_width if bb_width is not None else 0.0
-    elevated = (atrp14 >= 2.5) or (width >= 8.0)
-    rising = atrp_slope_10 > 0.0
+
+    width = float(bb_width) if isinstance(bb_width, (int, float)) else 0.0
+    elevated_proxy = False
+    rising = False
+    if have_atr:
+        elevated_proxy = (float(atrp14) >= 2.5) or (width >= 8.0)
+        rising = bool(float(atrp_slope_10) > 0.0)
+
+    elevated_iv = False
+    if have_iv:
+        r = float(iv_rank_1y) if isinstance(iv_rank_1y, (int, float)) else 0.0
+        p = (
+            float(iv_percentile_1y)
+            if isinstance(iv_percentile_1y, (int, float))
+            else 0.0
+        )
+        elevated_iv = (r >= 0.80) or (p >= 0.80)
+
+    elevated = elevated_proxy or elevated_iv
     if elevated and rising:
         sc = 0
     elif elevated or rising:
         sc = 1
     else:
         sc = 2
+
+    note = (
+        "used iv.v1 (rank/percentile) alongside ATR/BB proxies where present"
+        if have_iv
+        else (
+            "iv.v1 status=ok but no symbol metrics; used ATR/BB proxies"
+            if iv_status == "ok"
+            else f"iv.v1 missing (status={iv_status}); used ATR/BB proxies"
+        )
+    )
     return ForecastCheck(
         "Volatility Trend",
         meaning,
         sc,
         {
+            "note": note,
             "atrp14": atrp14,
             "atrp_slope_10": atrp_slope_10,
             "bb_width": bb_width,
+            "iv": iv,
+            "iv_rank_1y": iv_rank_1y,
+            "iv_percentile_1y": iv_percentile_1y,
+            "elevated_proxy": elevated_proxy,
+            "elevated_iv": elevated_iv,
             "elevated": elevated,
             "rising": rising,
+            "iv_status": iv_status,
         },
     )
 
