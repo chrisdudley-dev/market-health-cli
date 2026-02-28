@@ -208,6 +208,61 @@ def main() -> int:
     out_p = Path(args.out)
     cache_dir = Path(args.cache_dir)
 
+    # Issue #121: load upstream provider caches (no network I/O in scoring)
+    flow_by_symbol = {}
+    flow_meta = {"path": str(cache_dir / "flow.v1.json"), "status": "missing"}
+    try:
+        fp = cache_dir / "flow.v1.json"
+        if fp.exists():
+            obj = _read_json(fp)
+            flow_meta["status"] = str(obj.get("status") or "")
+            flow_meta["generated_at"] = obj.get("generated_at")
+            flow_meta["source"] = obj.get("source")
+            pts = obj.get("points") or []
+            if isinstance(pts, list):
+                for row in pts:
+                    if (
+                        isinstance(row, dict)
+                        and isinstance(row.get("symbol"), str)
+                        and isinstance(row.get("metrics"), dict)
+                    ):
+                        sym = row["symbol"].strip().upper()
+                        flow_by_symbol[sym] = {
+                            str(k): float(v)
+                            for k, v in row["metrics"].items()
+                            if isinstance(v, (int, float))
+                        }
+            flow_meta["points"] = len(flow_by_symbol)
+    except Exception as e:
+        flow_meta["status"] = "error"
+        flow_meta["error"] = str(e)
+
+    iv_by_symbol = {}
+    iv_meta = {"path": str(cache_dir / "iv.v1.json"), "status": "missing"}
+    try:
+        ip = cache_dir / "iv.v1.json"
+        if ip.exists():
+            obj = _read_json(ip)
+            iv_meta["status"] = str(obj.get("status") or "")
+            iv_meta["generated_at"] = obj.get("generated_at")
+            iv_meta["source"] = obj.get("source")
+            pts = obj.get("points") or []
+            if isinstance(pts, list):
+                for row in pts:
+                    if isinstance(row, dict) and isinstance(row.get("symbol"), str):
+                        sym = row["symbol"].strip().upper()
+                        iv_by_symbol[sym] = {
+                            "iv": float(row.get("iv") or 0.0),
+                            "iv_rank_1y": float(row.get("iv_rank_1y") or 0.0),
+                            "iv_percentile_1y": float(
+                                row.get("iv_percentile_1y") or 0.0
+                            ),
+                        }
+            iv_meta["points"] = len(iv_by_symbol)
+    except Exception as e:
+        iv_meta["status"] = "error"
+        iv_meta["error"] = str(e)
+
     horizons = _parse_horizons(str(args.horizons))
     if not horizons:
         horizons = [1, 5]
@@ -258,6 +313,10 @@ def main() -> int:
         universe=universe,
         spy=spy,
         horizons_trading_days=tuple(horizons),
+        flow_by_symbol=flow_by_symbol,
+        flow_status=flow_meta.get("status"),
+        iv_by_symbol=iv_by_symbol,
+        iv_status=iv_meta.get("status"),
     )
 
     doc: Dict[str, Any] = {
@@ -271,6 +330,14 @@ def main() -> int:
             "symbols": len(scores),
         },
     }
+
+    # Issue #121: record provider cache metadata for auditability
+
+    doc.setdefault("inputs", {})
+
+    doc["inputs"]["flow"] = flow_meta
+
+    doc["inputs"]["iv"] = iv_meta
 
     changed = atomic_write_json(out_p, doc)
     if not args.quiet:

@@ -13,7 +13,7 @@ C6) Correlation Crowding
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from .forecast_types import ForecastCheck, neutral_check
 
@@ -28,12 +28,19 @@ def compute_c_checks(
     up_down_vol_ratio_20: Optional[float] = None,
     corr20: Optional[float] = None,
     dispersion: Optional[float] = None,
+    flow_metrics: Optional[Dict[str, float]] = None,
+    flow_status: Optional[str] = None,
 ) -> List[ForecastCheck]:
     return [
         c1_extension_risk(ext_z_20=ext_z_20),
         c2_volume_climax_risk(vol_rank_20=vol_rank_20, last_ret=last_ret, clv=clv),
         c3_breadth_thinning(returns=returns),
-        c4_flow_pressure(up_down_vol_ratio_20=up_down_vol_ratio_20, clv=clv),
+        c4_flow_pressure(
+            up_down_vol_ratio_20=up_down_vol_ratio_20,
+            clv=clv,
+            flow_metrics=flow_metrics,
+            flow_status=flow_status,
+        ),
         c5_positioning_asymmetry(returns=returns),
         c6_correlation_crowding(corr20=corr20, dispersion=dispersion),
     ]
@@ -107,15 +114,59 @@ def c3_breadth_thinning(
 
 
 def c4_flow_pressure(
-    *, up_down_vol_ratio_20: Optional[float], clv: Optional[float]
+    *,
+    up_down_vol_ratio_20: Optional[float],
+    clv: Optional[float],
+    flow_metrics: Optional[Dict[str, float]] = None,
+    flow_status: Optional[str] = None,
 ) -> ForecastCheck:
     meaning = "Are flows likely to force continuation or reversal (accumulation vs distribution proxy)?"
-    if up_down_vol_ratio_20 is None:
-        return neutral_check("Flow Pressure", meaning, "No volume feed; neutral.")
-    clv_val = clv if clv is not None else 0.0
-    if up_down_vol_ratio_20 >= 1.2 and clv_val > 0.0:
+
+    fm = locals().get("flow_metrics")
+    fs = locals().get("flow_status")
+    u = locals().get("up_down_vol_ratio_20")
+    clv = locals().get("clv")
+
+    if fs == "ok" and isinstance(fm, dict) and fm:
+        cpr = fm.get("call_put_ratio")
+        net = fm.get("net_premium")
+        oi = fm.get("oi_change")
+        bull = (net is not None and net > 0) or (cpr is not None and cpr >= 1.05)
+        bear = (net is not None and net < 0) or (cpr is not None and cpr <= 0.95)
+        crowded = oi is not None and abs(oi) >= 0.05
+        if bull and not bear:
+            sc = 2
+        elif bear and not bull:
+            sc = 0
+        else:
+            sc = 1
+        return ForecastCheck(
+            "Flow Pressure",
+            meaning,
+            sc,
+            {
+                "note": "used flow.v1 (call_put_ratio/net_premium/oi_change where present)",
+                "call_put_ratio": cpr,
+                "net_premium": net,
+                "oi_change": oi,
+                "crowded": crowded,
+                "flow_status": fs,
+            },
+        )
+
+    proxy_note = (
+        "flow.v1 status=ok but no symbol metrics; used volume proxy"
+        if fs == "ok"
+        else f"flow.v1 missing (status={fs}); used volume proxy"
+    )
+    if u is None:
+        return neutral_check(
+            "Flow Pressure", meaning, f"{proxy_note}; no volume feed; neutral."
+        )
+    clv_val = clv if isinstance(clv, (int, float)) else 0.0
+    if u >= 1.2 and clv_val > 0.0:
         sc = 2
-    elif up_down_vol_ratio_20 >= 1.0:
+    elif u >= 1.0:
         sc = 1
     else:
         sc = 0
@@ -123,7 +174,12 @@ def c4_flow_pressure(
         "Flow Pressure",
         meaning,
         sc,
-        {"up_down_vol_ratio_20": up_down_vol_ratio_20, "clv": clv},
+        {
+            "note": proxy_note,
+            "up_down_vol_ratio_20": u,
+            "clv": clv,
+            "flow_status": fs,
+        },
     )
 
 

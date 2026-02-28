@@ -46,6 +46,10 @@ def compute_forecast_universe(
     vix_close: Optional[Sequence[Number]] = None,
     calendar: Optional[Dict[str, Any]] = None,
     policy: Optional[Dict[str, Any]] = None,
+    flow_by_symbol: Optional[Dict[str, Dict[str, float]]] = None,
+    flow_status: Optional[str] = None,
+    iv_by_symbol: Optional[Dict[str, Dict[str, float]]] = None,
+    iv_status: Optional[str] = None,
 ) -> Dict[str, Dict[int, Dict[str, Any]]]:
     """
     Returns results[symbol][H] with:
@@ -203,6 +207,8 @@ def compute_forecast_universe(
                 up_down_vol_ratio_20=updn_now,
                 corr20=corr20_now,
                 dispersion=dispersion_now,
+                flow_metrics=(flow_by_symbol.get(sym_u) if flow_by_symbol else None),
+                flow_status=flow_status,
             )
 
             d_checks = compute_d_checks(
@@ -218,6 +224,18 @@ def compute_forecast_universe(
                 close=close[idx],
                 lo20=lo20_now,
                 support_cushion_proxy=support_cushion_proxy,
+                iv=(iv_by_symbol.get(sym_u, {}).get("iv") if iv_by_symbol else None),
+                iv_rank_1y=(
+                    iv_by_symbol.get(sym_u, {}).get("iv_rank_1y")
+                    if iv_by_symbol
+                    else None
+                ),
+                iv_percentile_1y=(
+                    iv_by_symbol.get(sym_u, {}).get("iv_percentile_1y")
+                    if iv_by_symbol
+                    else None
+                ),
+                iv_status=iv_status,
             )
 
             e_checks = compute_e_checks(
