@@ -18,6 +18,24 @@ from typing import Any, Dict, List, Optional, Sequence
 from .forecast_types import ForecastCheck, neutral_check
 
 
+def make_check(label, meaning, score, metrics):
+    """Standard ForecastCheck shape: label/meaning/metrics/score (0/1/2)."""
+    try:
+        sc = int(score)
+    except Exception:
+        sc = 1
+    if sc < 0:
+        sc = 0
+    elif sc > 2:
+        sc = 2
+    return ForecastCheck(
+        label=str(label),
+        meaning=str(meaning),
+        metrics=(metrics or {}),
+        score=sc,
+    )
+
+
 def compute_a_checks(
     *,
     H: int,
@@ -44,10 +62,33 @@ def a1_catalyst_window(*, H: int, calendar: Optional[Dict[str, Any]]) -> Forecas
     meaning = "Are there scheduled catalysts within the next H trading days that can dominate outcomes?"
     if not calendar:
         return neutral_check("Catalyst Window", meaning, "No calendar feed; neutral.")
-    in_window = bool(calendar.get("catalysts_in_window", False))
+
+    sym = str(calendar.get("symbol") or "").strip().upper()
+
+    # Recommended policy: only treat catalysts as relevant if symbol is explicitly listed.
+    syms = calendar.get("catalyst_symbols_in_window")
+    if not isinstance(syms, list):
+        # fallback: tolerate nested window shape if present
+        cat = calendar.get("catalyst")
+        if isinstance(cat, dict) and isinstance(cat.get("symbols"), list):
+            syms = cat.get("symbols")
+        else:
+            syms = []
+
+    syms_u = {s.strip().upper() for s in syms if isinstance(s, str) and s.strip()}
+    in_window = bool(sym and sym in syms_u)
+
     score = 0 if in_window else 2
-    return ForecastCheck(
-        "Catalyst Window", meaning, score, {"H": H, "catalysts_in_window": in_window}
+    return make_check(
+        "Catalyst Window",
+        meaning,
+        score,
+        {
+            "H": H,
+            "symbol": sym,
+            "catalysts_in_window": in_window,
+            "catalyst_symbols_in_window": sorted(syms_u),
+        },
     )
 
 
@@ -87,10 +128,40 @@ def a3_earnings_cluster(*, H: int, calendar: Optional[Dict[str, Any]]) -> Foreca
         return neutral_check(
             "Earnings Cluster", meaning, "No earnings calendar; neutral."
         )
-    cluster = bool(calendar.get("earnings_cluster", False))
+
+    sym = str(calendar.get("symbol") or "").strip().upper()
+
+    # Prefer horizon-aware keys populated by the provider calendar context.
+    cluster = calendar.get("earnings_cluster_in_window", None)
+    if cluster is None:
+        cluster = calendar.get("earnings_in_window", None)
+
+    # Back-compat: legacy key
+    if cluster is None:
+        cluster = calendar.get("earnings_cluster", False)
+
+    # Final fallback: infer from count if present
+    if not isinstance(cluster, bool):
+        try:
+            cnt = int(calendar.get("earnings_count_in_window", 0) or 0)
+        except Exception:
+            cnt = 0
+        cluster = bool(cnt > 0)
+
     sc = 0 if cluster else 2
+
     return ForecastCheck(
-        "Earnings Cluster", meaning, sc, {"H": H, "earnings_cluster": cluster}
+        "Earnings Cluster",
+        meaning,
+        sc,
+        {
+            "H": H,
+            "symbol": sym,
+            "earnings_cluster": cluster,
+            "earnings_count_in_window": calendar.get("earnings_count_in_window"),
+            "earnings_next_date": calendar.get("earnings_next_date"),
+            "earnings_symbols_in_window": calendar.get("earnings_symbols_in_window"),
+        },
     )
 
 

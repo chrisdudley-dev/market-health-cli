@@ -166,10 +166,29 @@ def d2_tail_gap_risk(
     big = sum(1 for r in w if sd > 0 and abs(r) > 2.0 * sd)
     freq = big / len(w)
     catalyst = bool(calendar.get("catalysts_in_window", False)) if calendar else False
+    # Horizon scaling: convert per-day tail frequency into P(>=1 event) within H trading days,
+    # and scale ATR-like magnitude by sqrt(H). This makes H5 meaningfully differ from H1.
+    H_int = 1
+    try:
+        H_int = max(1, int(H or 1))
+    except Exception:
+        H_int = 1
+    try:
+        freq_h = 1.0 - (1.0 - float(freq)) ** H_int
+    except Exception:
+        freq_h = None
+
     atr = atrp14 if atrp14 is not None else 0.0
-    if (freq >= 0.10) or (catalyst and atr >= 2.0):
+    try:
+        atr_h = float(atr) * (H_int**0.5)
+    except Exception:
+        atr_h = None
+
+    if (freq_h is not None and freq_h >= 0.10) or (
+        catalyst and atr_h is not None and atr_h >= 2.0
+    ):
         sc = 0
-    elif (freq >= 0.05) or catalyst:
+    elif (freq_h is not None and freq_h >= 0.05) or catalyst:
         sc = 1
     else:
         sc = 2
@@ -179,6 +198,9 @@ def d2_tail_gap_risk(
         sc,
         {
             "H": H,
+            "H_int": H_int,
+            "freq_h": freq_h,
+            "atr_h": atr_h,
             "big_move_freq_20": freq,
             "sd_20": sd,
             "catalyst_in_window": catalyst,

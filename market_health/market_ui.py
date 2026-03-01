@@ -299,88 +299,47 @@ def _sector_for_symbol(sym: str):
 
 
 def _render_positions_panel(
-    console,
-    mono: bool = False,
-    max_rows: int = 8,
-    sector_style: Optional[Dict[str, str]] = None,
+    console, mono: bool = False, max_rows: int = 8, sector_style=None
 ) -> None:
-    """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
+    """Render 'My Positions' tri-score panel.
+
+    Prefer ASCII prototype output (matches the 3-digit 0/1/2 cells),
+    fallback to the Rich tri-score renderer.
+    """
+    # 1) ASCII prototype (preferred)
     try:
-        import json
-        from rich.panel import Panel
-        from rich.table import Table
-        from rich import box
+        from .ui_triscore_ascii import render_positions_triscore_ascii  # type: ignore
 
-        path = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
-        if not os.path.isfile(path):
-            return
-
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        positions = data.get("positions") or []
-        source = data.get("source") or {}
-        src_type = source.get("type") or "unknown"
-
-        if not positions:
-            msg = (
-                "No positions imported yet.\n"
-                "Export a Thinkorswim Position Statement CSV to:\n"
-                "  ~/imports/thinkorswim\n"
-                "Then run:\n"
-                "  jerboa-market-health-positions-refresh"
+        try:
+            txt = render_positions_triscore_ascii(
+                mono=mono, max_rows=max_rows, sector_style=sector_style
             )
-            if mono:
-                console.print(
-                    "Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)"
-                )
-            else:
-                console.print(
-                    Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan")
-                )
+        except TypeError:
+            try:
+                txt = render_positions_triscore_ascii(mono=mono)
+            except TypeError:
+                txt = render_positions_triscore_ascii()
+        if txt:
+            console.print(str(txt).rstrip())
             return
-
-        t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
-        t.add_column("Sym")
-        t.add_column("Acct")
-        t.add_column("Type")
-        t.add_column("Qty", justify="right")
-        t.add_column("Details")
-
-        for p in positions[:max_rows]:
-            sym = str(p.get("symbol", "?"))
-            sym_cell = Text(sym)
-            sec = _sector_for_symbol(sym)
-            st = (sector_style or {}).get(sec or "", "")
-            if st and ((not mono) or FORCE_COLOR):
-                sym_cell.stylize(st)
-            acct = str(p.get("account_label") or "")
-            typ = str(p.get("asset_type", "?"))
-            qty = str(p.get("qty", ""))
-
-            details = ""
-            if typ == "option":
-                details = f"{p.get('expiry', '?')}  {p.get('strike', '?')}  {p.get('right', '?')}"
-
-            t.add_row(sym_cell, acct, typ, qty, details)
-
-        title = f"Positions ({len(positions)})  •  source={src_type}"
-        if mono:
-            console.print(title)
-            for p in positions[:max_rows]:
-                sym = str(p.get("symbol", "?"))
-                typ = str(p.get("asset_type", "?"))
-                qty = str(p.get("qty", ""))
-                acct = str(p.get("account_label") or "")
-                det = ""
-                if typ == "option":
-                    det = f"{p.get('expiry', '?')} {p.get('strike', '?')} {p.get('right', '?')}"
-                console.print(f"- {sym}  acct={acct}  {typ}  qty={qty}  {det}".rstrip())
-        else:
-            console.print(Panel(t, title=title, border_style="cyan"))
-
     except Exception:
-        # Never break the widget for positions issues
+        pass
+
+    # 2) Rich renderer fallback
+    try:
+        from .ui_triscore import render_positions_triscore
+
+        try:
+            out = render_positions_triscore(
+                mono=mono, max_rows=max_rows, sector_style=sector_style
+            )
+        except TypeError:
+            out = render_positions_triscore(mono=mono)
+        if out is not None:
+            console.print(out)
+            return
+    except Exception as e:
+        console.print(f"[yellow]Tri-Score panel unavailable: {e}[/yellow]")
         return
 
 

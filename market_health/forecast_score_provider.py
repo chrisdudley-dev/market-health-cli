@@ -7,8 +7,10 @@ Computes features from OHLCV and delegates 0/1/2 scoring to A–E modules (6 che
 
 from __future__ import annotations
 
+from pathlib import Path
+from functools import lru_cache
+import json
 from typing import Any, Dict, Optional, Sequence, Union
-
 from .forecast_features import (
     OHLCV,
     atr_percent,
@@ -28,12 +30,84 @@ from .forecast_features import (
     ema,
 )
 from .forecast_types import category_dict
-
 from .forecast_checks_a_announcements import compute_a_checks
 from .forecast_checks_b_backdrop import compute_b_checks
 from .forecast_checks_c_crowding import compute_c_checks
 from .forecast_checks_d_danger import compute_d_checks
 from .forecast_checks_e_environment import compute_e_checks
+
+
+CAL_PATH = Path.home() / ".cache" / "jerboa" / "calendar.v1.json"
+
+
+@lru_cache(maxsize=1)
+def _load_calendar_v1() -> object:
+    try:
+        if CAL_PATH.exists():
+            return json.loads(CAL_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return None
+
+
+def _calendar_ctx_for_symbol(calendar: object, sym: str, H: int) -> object:
+    """
+    Build a symbol-aware calendar context for forecast checks.
+
+    Recommended policy:
+      - ignore global-only catalysts (symbol="") for per-symbol relative scoring
+      - only set catalysts_in_window True if sym is explicitly listed
+    """
+    if calendar is None:
+        calendar = _load_calendar_v1()
+    if not isinstance(calendar, dict):
+        return calendar
+
+    cal = calendar
+    # If passed a full calendar.v1 doc, pick the horizon window.
+    if "windows" in cal and isinstance(cal.get("windows"), dict):
+        by_h = (cal.get("windows") or {}).get("by_h")
+        if isinstance(by_h, dict):
+            win = by_h.get(str(int(H)))
+            if isinstance(win, dict):
+                cal = win
+
+    if not isinstance(cal, dict):
+        return calendar
+
+    ctx = dict(cal)
+    sym_u = (sym or "").strip().upper()
+    ctx["symbol"] = sym_u
+
+    # Prefer calendar window bucket: ctx["catalyst"] = {"count":..., "symbols":[...]}
+    cat = ctx.get("catalyst")
+    if isinstance(cat, dict):
+        syms = cat.get("symbols") if isinstance(cat.get("symbols"), list) else []
+        cnt = int(cat.get("count", 0) or 0)
+    else:
+        syms = (
+            ctx.get("catalyst_symbols_in_window")
+            if isinstance(ctx.get("catalyst_symbols_in_window"), list)
+            else []
+        )
+        cnt = int(ctx.get("catalysts_count_in_window", 0) or 0)
+
+    syms_u = {s.strip().upper() for s in syms if isinstance(s, str) and s.strip()}
+    ctx["catalyst_symbols_in_window"] = list(syms)
+    ctx["catalysts_count_in_window"] = cnt
+
+    # Symbol-specific in-window
+    ctx["catalysts_in_window"] = bool(sym_u and sym_u in syms_u)
+
+    # If there are catalysts but no symbols listed, treat as global-only and IGNORE for per-symbol scoring.
+    if cnt > 0 and not syms_u:
+        ctx["catalysts_in_window"] = False
+        ctx["global_catalysts_in_window"] = True
+    else:
+        ctx["global_catalysts_in_window"] = False
+
+    return ctx
+
 
 Number = Union[int, float]
 
@@ -170,7 +244,7 @@ def compute_forecast_universe(
             # Dimension modules (exactly 6 each)
             a_checks = compute_a_checks(
                 H=H,
-                calendar=calendar,
+                calendar=_calendar_ctx_for_symbol(calendar, sym, H),
                 vix_features=vix_features,
                 ext_z=ext_z_now,
                 bb_width=bb_width,
@@ -217,7 +291,7 @@ def compute_forecast_universe(
                 atrp_slope_10=atrp_slope_10_now,
                 bb_width=bb_width,
                 returns=returns_by_symbol.get(sym_u),
-                calendar=calendar,
+                calendar=_calendar_ctx_for_symbol(calendar, sym, H),
                 corr5=corr5_now,
                 corr20=corr20_now,
                 volume=ohlcv.volume,
