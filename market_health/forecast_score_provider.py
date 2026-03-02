@@ -322,11 +322,11 @@ def compute_forecast_universe(
             )
 
             categories = {
-                "A": category_dict(a_checks),
-                "B": category_dict(b_checks),
-                "C": category_dict(c_checks),
-                "D": category_dict(d_checks),
-                "E": category_dict(e_checks),
+                "A": category_dict(a_checks, horizon_days=int(H)),
+                "B": category_dict(b_checks, horizon_days=int(H)),
+                "C": category_dict(c_checks, horizon_days=int(H)),
+                "D": category_dict(d_checks, horizon_days=int(H)),
+                "E": category_dict(e_checks, horizon_days=int(H)),
             }
 
             total_points = sum(categories[k]["points"] for k in categories)

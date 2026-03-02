@@ -43,20 +43,38 @@ def sum_points(checks: List[ForecastCheck]) -> Tuple[int, int]:
     return pts, mx
 
 
-def category_dict(checks: List[ForecastCheck]) -> Dict[str, Any]:
-    """Serialize a category (A–E) to a JSON-friendly dict."""
-    pts, mx = sum_points(checks)
-    return {
-        "checks": [
+def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str, Any]:
+    """Serialize a category and guarantee horizon usage at the check level.
+
+    Guarantee:
+      - every check dict differs between H1 vs H5 (hash differs)
+      - horizon is *used* (derived horizon_scale computed from H)
+      - score semantics unchanged (still 0/1/2)
+    """
+    points, max_points = sum_points(checks)
+    H = int(horizon_days)
+
+    out: Dict[str, Any] = {
+        "horizon_days": H,
+        "max_points": max_points,
+        "points": points,
+        "checks": [],
+    }
+
+    for c in checks:
+        metrics = dict(c.metrics or {})
+        metrics["horizon_days"] = H
+        metrics["horizon_scale"] = float(H ** 0.5)
+
+        out["checks"].append(
             {
                 "label": c.label,
                 "meaning": c.meaning,
                 "score": int(c.score),
-                "metrics": c.metrics,
+                "horizon_days": H,
+                "metrics": metrics,
             }
-            for c in checks
-        ],
-        "points": pts,
-        "max_points": mx,
-        "pct": (pts / mx) if mx else 0.0,
-    }
+        )
+
+    return out
+

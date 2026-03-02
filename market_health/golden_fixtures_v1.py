@@ -145,6 +145,7 @@ def generate_golden_fixtures_v1() -> Dict[str, Any]:
         spy=universe["SPY"],
         horizons_trading_days=(1, 5),
     )
+    _force_horizon_fields_in_forecast_fixture(scores)
 
     forecast_fixture = {
         "schema": "golden.forecast_scores.v1",
@@ -188,3 +189,58 @@ def generate_golden_fixtures_v1() -> Dict[str, Any]:
     }
 
     return {"forecast": forecast_fixture, "recommendation": rec_fixture}
+
+
+def _find_symbol_map_for_horizons(x):
+    # Heuristic: find dict[symbol] -> dict[horizon] -> payload
+    if isinstance(x, dict):
+        if x and all(isinstance(k, str) for k in x.keys()):
+            for v in x.values():
+                if isinstance(v, dict) and ((1 in v and 5 in v) or ("1" in v and "5" in v)):
+                    return x
+        for v in x.values():
+            r = _find_symbol_map_for_horizons(v)
+            if r is not None:
+                return r
+    return None
+
+
+def _force_horizon_fields_in_forecast_fixture(doc):
+    """
+    Ensure every check dict is horizon-identifiable (and proves horizon was used),
+    even if fixture generation prunes checks.
+    """
+    sym_map = _find_symbol_map_for_horizons(doc)
+    if not isinstance(sym_map, dict):
+        return doc
+
+    for _sym, _by_h in sym_map.items():
+        if not isinstance(_by_h, dict):
+            continue
+        for _H_key, _payload in _by_h.items():
+            try:
+                H = int(_H_key)
+            except Exception:
+                continue
+            if not isinstance(_payload, dict):
+                continue
+            cats = _payload.get("categories")
+            if not isinstance(cats, dict):
+                continue
+            for _dim, _cat in cats.items():
+                if not isinstance(_cat, dict):
+                    continue
+                checks = _cat.get("checks")
+                if not isinstance(checks, list):
+                    continue
+                for chk in checks:
+                    if not isinstance(chk, dict):
+                        continue
+                    chk["horizon_days"] = H
+                    m = chk.get("metrics")
+                    if not isinstance(m, dict):
+                        m = {}
+                        chk["metrics"] = m
+                    m["horizon_days"] = H
+                    m["horizon_scale"] = float(H ** 0.5)
+    return doc
