@@ -2,7 +2,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 def _find_symbol_map(x):
     # Heuristic: find dict[symbol] -> dict[horizon] -> payload
     if isinstance(x, dict):
@@ -16,11 +15,9 @@ def _find_symbol_map(x):
                 return r
     return None
 
-
 def _h(obj) -> str:
     b = json.dumps(obj, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(b).hexdigest()
-
 
 def test_all_checks_use_horizon_and_hash_diff():
     doc = json.loads(Path("tests/fixtures/golden.forecast_scores.v1.json").read_text(encoding="utf-8"))

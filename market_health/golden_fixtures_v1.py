@@ -188,7 +188,7 @@ def generate_golden_fixtures_v1() -> Dict[str, Any]:
         "recommendation": _sanitize_rec(rec),
     }
 
-    return {"forecast": forecast_fixture, "recommendation": rec_fixture}
+    return {"forecast": _force_horizon_fields_in_forecast_fixture(forecast_fixture), "recommendation": rec_fixture}
 
 
 def _find_symbol_map_for_horizons(x):
