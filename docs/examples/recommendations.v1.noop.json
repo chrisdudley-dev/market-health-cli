@@ -1,0 +1,24 @@
+{
+  "asof": "2026-02-20T20:00:00Z",
+  "generated_at": "2026-02-20T20:00:02Z",
+  "inputs": {
+    "engine": "market_health.recommendations_engine",
+    "engine_version": "v0",
+    "positions_schema": "positions.v1",
+    "ui_schema": "jerboa.market_health.ui.v1"
+  },
+  "recommendation": {
+    "action": "NOOP",
+    "constraints_applied": [
+      "min_improvement_threshold"
+    ],
+    "diagnostics": {
+      "best_delta_utility": 0.03,
+      "threshold": 0.1
+    },
+    "horizon_trading_days": 5,
+    "reason": "No candidate exceeds the minimum improvement threshold after constraints; hold positions.",
+    "target_trade_date": "2026-02-27"
+  },
+  "schema": "recommendations.v1"
+}

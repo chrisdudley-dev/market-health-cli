@@ -1,0 +1,35 @@
+{
+  "schema": "calendar.stub.v1",
+  "generated_at": "2026-02-10T00:00:00Z",
+  "source": { "type": "stub", "note": "sample-only; replace with real provider later" },
+  "events": [
+    {
+      "ts": "2026-02-12T21:00:00Z",
+      "symbol": "AAPL",
+      "kind": "earnings",
+      "label": "Sample: earnings window (stub)",
+      "extra": { "timing": "after_close" }
+    },
+    {
+      "ts": "2026-02-15T14:30:00Z",
+      "symbol": "AAPL",
+      "kind": "ex_dividend",
+      "label": "Sample: ex-div date (stub)",
+      "extra": { "amount": 0.24 }
+    },
+    {
+      "ts": "2026-02-20T00:00:00Z",
+      "symbol": "SPY",
+      "kind": "macro",
+      "label": "Sample: macro event (stub)",
+      "extra": { "type": "CPI" }
+    },
+    {
+      "ts": "2026-03-01T00:00:00Z",
+      "symbol": "SPY",
+      "kind": "split",
+      "label": "Sample: split event (stub)",
+      "extra": { "ratio": "2:1" }
+    }
+  ]
+}

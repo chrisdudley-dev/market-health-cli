@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/market-health-cli/schemas/recommendations.v1.schema.json",
+  "title": "recommendations.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "asof", "recommendation"],
+  "properties": {
+    "schema": { "const": "recommendations.v1" },
+    "asof": {
+      "type": "string",
+      "description": "ISO8601 timestamp for when inputs were sampled / computed."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO8601 timestamp for when this document was emitted."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Optional metadata for auditing (hashes, versions, input schemas).",
+      "additionalProperties": true
+    },
+    "recommendation": {
+      "description": "Single v0 recommendation decision (SWAP or NOOP).",
+      "oneOf": [
+        { "$ref": "#/$defs/swap" },
+        { "$ref": "#/$defs/noop" }
+      ]
+    }
+  },
+  "$defs": {
+    "date_or_null": {
+      "description": "YYYY-MM-DD (or null if not yet computed).",
+      "oneOf": [
+        { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        { "type": "null" }
+      ]
+    },
+    "common": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "reason", "horizon_trading_days", "target_trade_date", "constraints_applied"],
+      "properties": {
+        "action": { "type": "string", "enum": ["SWAP", "NOOP"] },
+        "reason": { "type": "string" },
+        "horizon_trading_days": { "type": "integer", "minimum": 0 },
+        "target_trade_date": { "$ref": "#/$defs/date_or_null" },
+        "constraints_applied": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "diagnostics": {
+          "type": "object",
+          "description": "Optional explainability payload (scores, deltas, rankings).",
+          "additionalProperties": true
+        }
+      }
+    },
+    "swap": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["action", "reason", "from_symbol", "to_symbol", "horizon_trading_days", "target_trade_date", "constraints_applied"],
+          "properties": {
+            "action": { "const": "SWAP" },
+            "reason": { "type": "string" },
+            "from_symbol": { "type": "string" },
+            "to_symbol": { "type": "string" },
+            "horizon_trading_days": { "type": "integer", "minimum": 0 },
+            "target_trade_date": { "$ref": "#/$defs/date_or_null" },
+            "constraints_applied": { "type": "array", "items": { "type": "string" } },
+            "diagnostics": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "noop": {
+      "allOf": [
+        { "$ref": "#/$defs/common" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["action", "reason", "horizon_trading_days", "target_trade_date", "constraints_applied"],
+          "properties": {
+            "action": { "const": "NOOP" },
+            "reason": { "type": "string" },
+            "horizon_trading_days": { "type": "integer", "minimum": 0 },
+            "target_trade_date": { "$ref": "#/$defs/date_or_null" },
+            "constraints_applied": { "type": "array", "items": { "type": "string" } },
+            "diagnostics": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    }
+  }
+}

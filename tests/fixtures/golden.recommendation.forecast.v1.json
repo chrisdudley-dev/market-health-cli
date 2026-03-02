@@ -1,0 +1,42 @@
+{
+  "positions": {
+    "positions": [
+      {
+        "market_value": 1000.0,
+        "symbol": "XLK"
+      },
+      {
+        "market_value": 1000.0,
+        "symbol": "XLF"
+      }
+    ],
+    "schema": "positions.v1"
+  },
+  "recommendation": {
+    "action": "SWAP",
+    "constraints_applied": [
+      "forecast_mode",
+      "robust_edge=min(edge(H))",
+      "disagreement_veto_edge",
+      "diversity_constraints",
+      "cooldown",
+      "max_swaps_per_day",
+      "min_improvement_threshold"
+    ],
+    "constraints_triggered": [],
+    "diagnostics": {
+      "decision_metric": "robust_edge",
+      "edge": 0.35,
+      "edges_by_h": {
+        "1": 0.35,
+        "5": 0.35
+      },
+      "mode": "forecast",
+      "robust_edge": 0.35
+    },
+    "from_symbol": "XLF",
+    "reason": "Forecast robust edge 0.350 clears threshold 0.120.",
+    "to_symbol": "XLE"
+  },
+  "schema": "golden.recommendation.forecast.v1"
+}

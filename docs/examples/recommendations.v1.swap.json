@@ -1,0 +1,28 @@
+{
+  "asof": "2026-02-20T20:00:00Z",
+  "generated_at": "2026-02-20T20:00:02Z",
+  "inputs": {
+    "engine": "market_health.recommendations_engine",
+    "engine_version": "v0",
+    "positions_schema": "positions.v1",
+    "ui_schema": "jerboa.market_health.ui.v1"
+  },
+  "recommendation": {
+    "action": "SWAP",
+    "constraints_applied": [
+      "min_improvement_threshold",
+      "max_swaps_per_day"
+    ],
+    "diagnostics": {
+      "delta_utility": 0.18,
+      "rank_from": 10,
+      "rank_to": 2
+    },
+    "from_symbol": "XLK",
+    "horizon_trading_days": 5,
+    "reason": "XLK is the weakest holding under current regime; XLF ranks higher with sufficient margin after constraints.",
+    "target_trade_date": "2026-02-27",
+    "to_symbol": "XLF"
+  },
+  "schema": "recommendations.v1"
+}

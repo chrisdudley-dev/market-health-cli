@@ -1,0 +1,5 @@
+{
+  "bot_token": "123456789:REPLACE_ME",
+  "chat_id": "REPLACE_ME",
+  "api_base": "https://api.telegram.org"
+}

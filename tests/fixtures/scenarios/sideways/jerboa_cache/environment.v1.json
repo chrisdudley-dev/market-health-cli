@@ -1,0 +1,1859 @@
+{
+  "asof": "2026-02-13T20:40:00+00:00",
+  "engine": {
+    "git_rev": "8ef5c4b"
+  },
+  "schema": "environment.v1",
+  "sectors": [
+    {
+      "band": "RED",
+      "buckets": {
+        "A": 5,
+        "B": 2,
+        "C": 2,
+        "D": 8,
+        "E": 1,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 0
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 0
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 0
+            },
+            {
+              "label": "20D Break",
+              "score": 0
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 0
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 1
+            },
+            {
+              "label": "OI/Flow",
+              "score": 0
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 0
+            },
+            {
+              "label": "Money Flow",
+              "score": 0
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 2
+            },
+            {
+              "label": "Correlation",
+              "score": 1
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 1
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 0
+            },
+            {
+              "label": "Breadth",
+              "score": 0
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 0
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 33,
+      "symbol": "XLC",
+      "total": 24
+    },
+    {
+      "band": "RED",
+      "buckets": {
+        "A": 5,
+        "B": 0,
+        "C": 2,
+        "D": 9,
+        "E": 1,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 0
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 0
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 0
+            },
+            {
+              "label": "BB Mid",
+              "score": 0
+            },
+            {
+              "label": "20D Break",
+              "score": 0
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 0
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 1
+            },
+            {
+              "label": "OI/Flow",
+              "score": 0
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 0
+            },
+            {
+              "label": "Money Flow",
+              "score": 0
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 2
+            },
+            {
+              "label": "Correlation",
+              "score": 2
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 1
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 0
+            },
+            {
+              "label": "Breadth",
+              "score": 0
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 0
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 32,
+      "symbol": "XLF",
+      "total": 23
+    },
+    {
+      "band": "YELLOW",
+      "buckets": {
+        "A": 6,
+        "B": 9,
+        "C": 7,
+        "D": 7,
+        "E": 6,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 1
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 1
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 1
+            },
+            {
+              "label": "OI/Flow",
+              "score": 1
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 0
+            },
+            {
+              "label": "Correlation",
+              "score": 2
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 1
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 1
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 57,
+      "symbol": "XLI",
+      "total": 41
+    },
+    {
+      "band": "YELLOW",
+      "buckets": {
+        "A": 6,
+        "B": 9,
+        "C": 7,
+        "D": 5,
+        "E": 7,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 1
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 1
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 0
+            },
+            {
+              "label": "OI/Flow",
+              "score": 2
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 0
+            },
+            {
+              "label": "Correlation",
+              "score": 1
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 0
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 2
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 56,
+      "symbol": "XLB",
+      "total": 40
+    },
+    {
+      "band": "YELLOW",
+      "buckets": {
+        "A": 6,
+        "B": 9,
+        "C": 6,
+        "D": 6,
+        "E": 7,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 1
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 1
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 0
+            },
+            {
+              "label": "OI/Flow",
+              "score": 1
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 1
+            },
+            {
+              "label": "Correlation",
+              "score": 1
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 0
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 2
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 56,
+      "symbol": "XLRE",
+      "total": 40
+    },
+    {
+      "band": "GREEN",
+      "buckets": {
+        "A": 7,
+        "B": 11,
+        "C": 7,
+        "D": 5,
+        "E": 7,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 2
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 2
+            },
+            {
+              "label": "Vol x",
+              "score": 1
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 0
+            },
+            {
+              "label": "OI/Flow",
+              "score": 1
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 1
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 1
+            },
+            {
+              "label": "Correlation",
+              "score": 0
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 0
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 2
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 60,
+      "symbol": "XLU",
+      "total": 43
+    },
+    {
+      "band": "YELLOW",
+      "buckets": {
+        "A": 5,
+        "B": 9,
+        "C": 7,
+        "D": 4,
+        "E": 6,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 0
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 1
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 0
+            },
+            {
+              "label": "OI/Flow",
+              "score": 2
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 0
+            },
+            {
+              "label": "Correlation",
+              "score": 0
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 0
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 1
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 51,
+      "symbol": "XLP",
+      "total": 37
+    },
+    {
+      "band": "RED",
+      "buckets": {
+        "A": 5,
+        "B": 1,
+        "C": 2,
+        "D": 8,
+        "E": 1,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 0
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 0
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 1
+            },
+            {
+              "label": "BB Mid",
+              "score": 0
+            },
+            {
+              "label": "20D Break",
+              "score": 0
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 0
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 1
+            },
+            {
+              "label": "OI/Flow",
+              "score": 0
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 0
+            },
+            {
+              "label": "Money Flow",
+              "score": 0
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 1
+            },
+            {
+              "label": "Correlation",
+              "score": 2
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 1
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 0
+            },
+            {
+              "label": "Breadth",
+              "score": 0
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 0
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 32,
+      "symbol": "XLY",
+      "total": 23
+    },
+    {
+      "band": "RED",
+      "buckets": {
+        "A": 5,
+        "B": 2,
+        "C": 3,
+        "D": 8,
+        "E": 1,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 0
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 0
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 0
+            },
+            {
+              "label": "20D Break",
+              "score": 0
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 0
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 2
+            },
+            {
+              "label": "OI/Flow",
+              "score": 0
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 0
+            },
+            {
+              "label": "Money Flow",
+              "score": 0
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 0
+            },
+            {
+              "label": "Correlation",
+              "score": 2
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 2
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 0
+            },
+            {
+              "label": "Breadth",
+              "score": 0
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 0
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 35,
+      "symbol": "XLK",
+      "total": 25
+    },
+    {
+      "band": "YELLOW",
+      "buckets": {
+        "A": 6,
+        "B": 9,
+        "C": 7,
+        "D": 5,
+        "E": 6,
+        "F": 6
+      },
+      "categories": {
+        "A": {
+          "checks": [
+            {
+              "label": "News",
+              "score": 1
+            },
+            {
+              "label": "Analysts",
+              "score": 1
+            },
+            {
+              "label": "Event",
+              "score": 1
+            },
+            {
+              "label": "Insiders",
+              "score": 1
+            },
+            {
+              "label": "Peers/Macro",
+              "score": 1
+            },
+            {
+              "label": "Guidance",
+              "score": 1
+            }
+          ]
+        },
+        "B": {
+          "checks": [
+            {
+              "label": "Stacked MAs",
+              "score": 2
+            },
+            {
+              "label": "RS vs SPY",
+              "score": 2
+            },
+            {
+              "label": "BB Mid",
+              "score": 2
+            },
+            {
+              "label": "20D Break",
+              "score": 1
+            },
+            {
+              "label": "Vol x",
+              "score": 0
+            },
+            {
+              "label": "Hold 20EMA",
+              "score": 2
+            }
+          ]
+        },
+        "C": {
+          "checks": [
+            {
+              "label": "EM Fit",
+              "score": 0
+            },
+            {
+              "label": "OI/Flow",
+              "score": 2
+            },
+            {
+              "label": "Blocks/DP",
+              "score": 0
+            },
+            {
+              "label": "Leaders%>20D",
+              "score": 2
+            },
+            {
+              "label": "Money Flow",
+              "score": 2
+            },
+            {
+              "label": "SI/Days",
+              "score": 1
+            }
+          ]
+        },
+        "D": {
+          "checks": [
+            {
+              "label": "ATR%",
+              "score": 2
+            },
+            {
+              "label": "IV%",
+              "score": 0
+            },
+            {
+              "label": "Correlation",
+              "score": 1
+            },
+            {
+              "label": "Event Risk",
+              "score": 1
+            },
+            {
+              "label": "Gap Plan",
+              "score": 1
+            },
+            {
+              "label": "Sizing/RR",
+              "score": 0
+            }
+          ]
+        },
+        "E": {
+          "checks": [
+            {
+              "label": "SPY Trend",
+              "score": 0
+            },
+            {
+              "label": "Sector Rank",
+              "score": 1
+            },
+            {
+              "label": "Breadth",
+              "score": 2
+            },
+            {
+              "label": "VIX Regime",
+              "score": 0
+            },
+            {
+              "label": "3-Day RS",
+              "score": 2
+            },
+            {
+              "label": "Drivers",
+              "score": 1
+            }
+          ]
+        },
+        "F": {
+          "checks": [
+            {
+              "label": "Trigger",
+              "score": 1
+            },
+            {
+              "label": "Invalidation",
+              "score": 1
+            },
+            {
+              "label": "Targets",
+              "score": 1
+            },
+            {
+              "label": "Time Stop",
+              "score": 1
+            },
+            {
+              "label": "Slippage",
+              "score": 1
+            },
+            {
+              "label": "Alerts",
+              "score": 1
+            }
+          ]
+        }
+      },
+      "max_total": 72,
+      "pct": 54,
+      "symbol": "XLE",
+      "total": 39
+    }
+  ]
+}

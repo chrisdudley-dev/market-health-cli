@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SERVICE="jerboa-market-health-refresh-all.service"
+STATE="${HOME}/.cache/jerboa/state/market_health_refresh_all.state.json"
+OUTDIR="${HOME}/.cache/jerboa/alerts"
+mkdir -p "$OUTDIR"
+
+stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+OUT="${OUTDIR}/market-health-failure-${stamp}.txt"
+
+{
+  echo "== Jerboa Market Health FAILURE BUNDLE =="
+  echo "utc: $(date -u)"
+  echo
+
+  echo "== State (state.json) =="
+  if [ -f "$STATE" ]; then
+    cat "$STATE"
+  else
+    echo "STATE missing: $STATE"
+  fi
+  echo
+
+  echo "== Recent logs ($SERVICE, last 200 lines) =="
+  journalctl --user -u "$SERVICE" -n 200 --no-pager || true
+  echo
+
+  echo "== Last timer line =="
+  systemctl --user list-timers --all --no-pager 2>/dev/null | grep -n 'jerboa-market-health-refresh-all' || true
+} > "$OUT"
+
+# Optional hook for notifications (Telegram/email/etc).
+# If set, this will run:  $JERBOA_ALERT_HOOK "$OUT"
+if [ -n "${JERBOA_ALERT_HOOK:-}" ]; then
+  # shellcheck disable=SC2086
+  ${JERBOA_ALERT_HOOK} "$OUT" || true
+fi
+
+echo "WROTE: $OUT"

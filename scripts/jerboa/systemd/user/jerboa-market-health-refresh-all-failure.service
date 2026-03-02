@@ -1,0 +1,6 @@
+[Unit]
+Description=Jerboa Market Health - refresh-all failure handler
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/jerboa-market-health-alert

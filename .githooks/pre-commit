@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Collect staged Python files (NUL-delimited to handle spaces safely)
+mapfile -d '' files < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.py' || true)
+if [ "${#files[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+# Prefer repo venv if present
+if [ -x ".venv/bin/python" ]; then
+  PY=".venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+else
+  PY="python"
+fi
+
+run_ruff() {
+  if "${PY}" -m ruff --version >/dev/null 2>&1; then
+    "${PY}" -m ruff "$@"
+  elif command -v ruff >/dev/null 2>&1; then
+    ruff "$@"
+  else
+    echo "ERROR: ruff not found. Install with: ${PY} -m pip install ruff" >&2
+    exit 1
+  fi
+}
+
+echo "[pre-commit] ruff format (staged .py files)"
+run_ruff format -- "${files[@]}"
+
+# Re-stage any formatting changes
+git add -- "${files[@]}"
+
+echo "[pre-commit] ruff check (staged .py files)"
+run_ruff check -- "${files[@]}"

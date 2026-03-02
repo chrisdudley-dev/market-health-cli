@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+QUIET=0
+if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
+
+OUT="${HOME}/.cache/jerboa/forecast_scores.v1.json"
+SRC_DEFAULT="${HOME}/.cache/jerboa/ohlcv.sectors.v1.json"
+rc=0
+
+args=()
+if [ -f "$SRC_DEFAULT" ]; then
+  args+=(--source "$SRC_DEFAULT")
+fi
+
+if [ "$QUIET" -eq 1 ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" --quiet || rc=$?
+else
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" || rc=$?
+fi
+
+if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
+  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/validate_forecast_scores_v1.py" --path "$OUT" >/dev/null || rc=$?
+fi
+
+if [ "$QUIET" -ne 1 ]; then
+  if [ "$rc" -eq 0 ]; then
+    echo "OK: forecast scores refresh"
+  else
+    echo "ERR: forecast scores refresh failed (rc=$rc)"
+  fi
+fi
+exit "$rc"

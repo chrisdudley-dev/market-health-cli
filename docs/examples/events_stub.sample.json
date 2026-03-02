@@ -1,0 +1,23 @@
+{
+  "schema": "events.stub.v1",
+  "generated_at": "2026-02-10T00:00:00Z",
+  "source": { "type": "stub", "note": "sample-only; replace with real provider later" },
+  "events": [
+    {
+      "ts": "2026-02-10T00:00:00Z",
+      "symbol": "SPY",
+      "type": "macro",
+      "headline": "Sample: CPI print (stub)",
+      "impact": 0.70,
+      "confidence": 0.60
+    },
+    {
+      "ts": "2026-02-10T00:00:00Z",
+      "symbol": "AAPL",
+      "type": "earnings",
+      "headline": "Sample: earnings window (stub)",
+      "impact": 0.55,
+      "confidence": 0.50
+    }
+  ]
+}
