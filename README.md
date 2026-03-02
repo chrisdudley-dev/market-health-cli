@@ -93,29 +93,11 @@ python market_ui.py --sectors XLK XLF XLY XLV
 
 ---
 
-## Dimensions (A–E)
-
-The UI uses five mnemonic **Dimensions (A–E)**. The letter codes are stable identifiers; the human-facing names come from the ui.v1 contract (`dimensions_meta`).
-
-| Code | Dimension | Meaning |
-|---|---|---|
-| A | Announcements | catalysts/events/news/earnings/macro |
-| B | Backdrop | context/regime (currently reflected across trend/structure + environment/regime) |
-| C | Crowding | flow/positioning/participation (“who’s in this”) |
-| D | Danger | risk/volatility/correlation stress |
-| E | Execution | frictions, liquidity, sizing constraints (migration in progress) |
-
-Migration note:
-- The scoring engine currently computes **A–F check groups** (6 × 6 = 36 checks).
-- During the transition, **Backdrop** is effectively represented by today’s **B** (Trend & Structure) and **E** (Environment & Regime).
-- **Execution** is currently **F** (Execution & Frictions) and is planned to migrate into **E**.
-
-## Scoring framework (current A–F check groups)
-
+## Scoring framework (A–F categories)
 
 Your framework is organized into **6 categories (A–F)**. Each category contains **6 checks/variables** for a total of **36 distinct factors**. These roll up into each sector’s score and color.
 
-### A — Announcements
+### A — Catalyst Health
 **Focus:** external events, sentiment, and “catalysts.”  
 **Variables:**
 - **News** — recent headlines, sentiment, or price/volume proxy spikes
@@ -125,7 +107,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Peers/Macro** — sector‑wide or macro catalysts impacting the symbol
 - **Guidance** — outlook revisions and earnings guidance
 
-### B — Backdrop (Trend & Structure)
+### B — Trend & Structure
 **Focus:** technical price/volume structure.  
 **Variables:**
 - **Stacked MAs** — alignment 9EMA > 20EMA > 50SMA
@@ -135,7 +117,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Vol ×** — volume expansion vs. 20‑day average
 - **Hold 20EMA** — pullbacks respecting the 20EMA
 
-### C — Crowding (Position & Flow)
+### C — Position & Flow
 **Focus:** positioning, flows, participation.  
 **Variables:**
 - **EM Fit** — fit to an exponential moving structure
@@ -145,7 +127,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Money Flow** — net inflows/outflows
 - **SI/Days** — short interest vs. average daily volume
 
-### D — Danger (Risk & Volatility)
+### D — Risk & Volatility
 **Focus:** volatility, correlation, risk control.  
 **Variables:**
 - **ATR%** — Average True Range as % of price
@@ -155,7 +137,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Gap Plan** — gap‑risk strategy placeholder
 - **Sizing/RR** — position sizing & risk/reward vs ATR/EMA
 
-### E — Environment & Regime (Backdrop)
+### E — Environment & Regime
 **Focus:** broader market/sector regime.  
 **Variables:**
 - **SPY Trend** — SPY alignment with 20/50‑day averages
@@ -165,7 +147,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **3‑Day RS** — short‑term RS vs. SPY
 - **Drivers** — macro drivers alignment (placeholder)
 
-### F — Execution & Frictions (future: E Execution)
+### F — Execution & Frictions
 **Focus:** trade management and execution discipline.  
 **Variables:**
 - **Trigger** — defined trade trigger present
@@ -175,7 +157,7 @@ Your framework is organized into **6 categories (A–F)**. Each category contain
 - **Slippage** — liquidity / bid‑ask cost
 - **Alerts** — monitoring/alerting in place
 
-> **Summary:** 36 checks total (6 × 6). A = Announcements; B/E form Backdrop context; C = Crowding; D = Danger; F = Execution (planned to move into E).
+> **Summary:** 36 checks total (6 × 6). A–C emphasize catalysts/technicals/positioning; D–E cover risk and environment; F captures execution discipline.
 
 ---
 
@@ -243,45 +225,3 @@ requirements.txt
 ## License
 
 MIT © Christopher Dudley
-
-## Install
-
-```bash
-python -m venv .venv
-. .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e ".[dev]"
-```
-
-
-## Quick start
-
-Run the UI (Pi Grid):
-
-```bash
-python -m market_health.market_ui --pi-grid
-```
-
-Export the UI contract (writes to `~/.cache/jerboa/market_health.ui.v1.json`):
-
-```bash
-bash scripts/jerboa/bin/jerboa-market-health-ui-export
-```
-
-
-## Architecture
-
-- Refresh/export pipeline writes cache artifacts under `~/.cache/jerboa/...`
-- The UI reads one contract: `market_health.ui.v1.json`
-- Recommendations are embedded from `recommendations.v1.json`
-
-Key entry points:
-- `scripts/jerboa/bin/jerboa-market-health-ui-export`
-- `scripts/export_recommendations_v1.py`
-- `market_health/market_ui.py`
-
-## Docs
-
-- `docs/SCORING.md` — scoring semantics + A/C/D feature flags
-- `docs/UI_CONTRACT.md` — UI contract fields + example
-- `docs/TESTING.md` — local gates + fixture regeneration

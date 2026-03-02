@@ -28,10 +28,7 @@ include-package-data = true
 
 # setuptools-scm pulls version from Git tags like v0.2.3
 [tool.setuptools_scm]
-tag_regex = '^(?:v)?(?P<version>\d+\.\d+\.\d+)$'
+tag_regex = '^v?(?P<version>\\d+\\.\\d+\\.\\d+)$'
 version_scheme = "post-release"
 local_scheme = "no-local-version"
-fallback_version = "0.2.3"
-
-[project.optional-dependencies]
-dev = ["ruff>=0.6", "pytest>=8"]
+fallback_version = "0.0.0"
