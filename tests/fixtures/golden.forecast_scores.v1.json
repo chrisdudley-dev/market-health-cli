@@ -12,7 +12,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -20,11 +20,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -149,9 +149,9 @@
             ]
           }
         },
-        "forecast_score": 0.616667,
+        "forecast_score": 0.666667,
         "max_points": 60,
-        "points": 37
+        "points": 40
       },
       "5": {
         "categories": {
@@ -159,7 +159,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -167,11 +167,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -296,9 +296,9 @@
             ]
           }
         },
-        "forecast_score": 0.616667,
+        "forecast_score": 0.666667,
         "max_points": 60,
-        "points": 37
+        "points": 40
       }
     },
     "XLB": {
@@ -308,7 +308,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -316,11 +316,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -445,9 +445,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.45,
         "max_points": 60,
-        "points": 24
+        "points": 27
       },
       "5": {
         "categories": {
@@ -455,7 +455,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 0
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -463,11 +463,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -592,9 +592,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.416667,
         "max_points": 60,
-        "points": 24
+        "points": 25
       }
     },
     "XLC": {
@@ -604,7 +604,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -612,11 +612,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -741,9 +741,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.45,
         "max_points": 60,
-        "points": 24
+        "points": 27
       },
       "5": {
         "categories": {
@@ -751,7 +751,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -759,11 +759,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -888,9 +888,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.45,
         "max_points": 60,
-        "points": 24
+        "points": 27
       }
     },
     "XLE": {
@@ -900,7 +900,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -908,11 +908,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1037,9 +1037,9 @@
             ]
           }
         },
-        "forecast_score": 0.7,
+        "forecast_score": 0.75,
         "max_points": 60,
-        "points": 42
+        "points": 45
       },
       "5": {
         "categories": {
@@ -1047,7 +1047,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1055,11 +1055,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1184,9 +1184,9 @@
             ]
           }
         },
-        "forecast_score": 0.7,
+        "forecast_score": 0.75,
         "max_points": 60,
-        "points": 42
+        "points": 45
       }
     },
     "XLF": {
@@ -1196,7 +1196,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1204,11 +1204,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1333,9 +1333,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.4,
         "max_points": 60,
-        "points": 21
+        "points": 24
       },
       "5": {
         "categories": {
@@ -1343,7 +1343,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1351,11 +1351,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1480,9 +1480,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.4,
         "max_points": 60,
-        "points": 21
+        "points": 24
       }
     },
     "XLI": {
@@ -1492,7 +1492,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1500,11 +1500,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1629,9 +1629,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.45,
         "max_points": 60,
-        "points": 24
+        "points": 27
       },
       "5": {
         "categories": {
@@ -1639,7 +1639,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1647,11 +1647,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1776,9 +1776,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.45,
         "max_points": 60,
-        "points": 24
+        "points": 27
       }
     },
     "XLK": {
@@ -1788,7 +1788,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1796,11 +1796,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -1925,9 +1925,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.4,
         "max_points": 60,
-        "points": 21
+        "points": 24
       },
       "5": {
         "categories": {
@@ -1935,7 +1935,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -1943,11 +1943,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2072,9 +2072,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.4,
         "max_points": 60,
-        "points": 21
+        "points": 24
       }
     },
     "XLP": {
@@ -2084,7 +2084,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2092,11 +2092,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2221,9 +2221,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       },
       "5": {
         "categories": {
@@ -2231,7 +2231,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2239,11 +2239,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2368,9 +2368,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       }
     },
     "XLRE": {
@@ -2380,7 +2380,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2388,11 +2388,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2517,9 +2517,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       },
       "5": {
         "categories": {
@@ -2527,7 +2527,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2535,11 +2535,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2664,9 +2664,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       }
     },
     "XLU": {
@@ -2676,7 +2676,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2684,11 +2684,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2813,9 +2813,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       },
       "5": {
         "categories": {
@@ -2823,7 +2823,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2831,11 +2831,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -2960,9 +2960,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       }
     },
     "XLV": {
@@ -2972,7 +2972,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -2980,11 +2980,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -3109,9 +3109,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       },
       "5": {
         "categories": {
@@ -3119,7 +3119,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -3127,11 +3127,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -3256,9 +3256,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       }
     },
     "XLY": {
@@ -3268,7 +3268,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -3276,11 +3276,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -3405,9 +3405,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       },
       "5": {
         "categories": {
@@ -3415,7 +3415,7 @@
             "checks": [
               {
                 "label": "Catalyst Window",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Macro Calendar Pressure",
@@ -3423,11 +3423,11 @@
               },
               {
                 "label": "Earnings Cluster",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Policy / Regulation Risk",
-                "score": 1
+                "score": 2
               },
               {
                 "label": "Headline Shock Proxy",
@@ -3552,9 +3552,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.433333,
         "max_points": 60,
-        "points": 23
+        "points": 26
       }
     }
   },
