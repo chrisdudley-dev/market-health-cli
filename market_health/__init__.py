@@ -1,13 +1,12 @@
 """
 Market Health public API.
 
-This module provides a stable surface for callers/tests while allowing the
-engine implementation to evolve.
+Stable surface for callers/tests while allowing engine internals to evolve.
 
-Public:
+Exports:
 - compute_scores(...)
-- SECTORS_DEFAULT (if available in engine)
-- CHECK_LABELS    (if available in engine)
+- SECTORS_DEFAULT (if present in engine)
+- CHECK_LABELS    (if present in engine)
 - __version__
 """
 
@@ -26,12 +25,10 @@ try:
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0+unknown"
 
-
 try:
     from . import engine as _engine  # type: ignore
 except ImportError:  # pragma: no cover
     _engine = None  # type: ignore
-
 
 SECTORS_DEFAULT: Optional[Any] = getattr(_engine, "SECTORS_DEFAULT", None) if _engine else None
 CHECK_LABELS: Optional[Any] = getattr(_engine, "CHECK_LABELS", None) if _engine else None
@@ -50,14 +47,14 @@ def compute_scores(
     """
     Compute sector scores via market_health.engine, with a stable signature.
 
-    Supports dependency injection for offline tests:
+    Supports offline test injection:
       - ttl_sec=0
       - download_fn=fake_download
     """
     if _engine is None:
         raise ImportError("market_health.engine could not be imported")
 
-    # Back-compat: if caller uses ttl=, map it to ttl_sec (unless ttl_sec explicitly set).
+    # Back-compat: map ttl -> ttl_sec if ttl_sec wasn't explicitly changed.
     if ttl is not None and ttl_sec == 300:
         ttl_sec = int(ttl)
 
@@ -66,7 +63,7 @@ def compute_scores(
     if sectors is None:
         raise ValueError("No sectors provided and SECTORS_DEFAULT not found in engine.py")
 
-    # Prefer engine.compute_scores if present (current implementation).
+    # Prefer engine.compute_scores if present.
     fn = getattr(_engine, "compute_scores", None)
     if callable(fn):
         import inspect
