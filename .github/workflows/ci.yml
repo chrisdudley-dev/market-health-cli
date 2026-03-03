@@ -26,6 +26,7 @@ jobs:
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
           python -m pip install ruff
+          python -m pip install pytest
 
       - name: Lint
         run: |
