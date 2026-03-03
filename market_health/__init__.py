@@ -30,8 +30,12 @@ try:
 except ImportError:  # pragma: no cover
     _engine = None  # type: ignore
 
-SECTORS_DEFAULT: Optional[Any] = getattr(_engine, "SECTORS_DEFAULT", None) if _engine else None
-CHECK_LABELS: Optional[Any] = getattr(_engine, "CHECK_LABELS", None) if _engine else None
+SECTORS_DEFAULT: Optional[Any] = (
+    getattr(_engine, "SECTORS_DEFAULT", None) if _engine else None
+)
+CHECK_LABELS: Optional[Any] = (
+    getattr(_engine, "CHECK_LABELS", None) if _engine else None
+)
 
 
 def compute_scores(
@@ -61,7 +65,9 @@ def compute_scores(
     if sectors is None:
         sectors = getattr(_engine, "SECTORS_DEFAULT", None)
     if sectors is None:
-        raise ValueError("No sectors provided and SECTORS_DEFAULT not found in engine.py")
+        raise ValueError(
+            "No sectors provided and SECTORS_DEFAULT not found in engine.py"
+        )
 
     # Prefer engine.compute_scores if present.
     fn = getattr(_engine, "compute_scores", None)

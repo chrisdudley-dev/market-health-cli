@@ -254,7 +254,8 @@ def compute_forecast_universe(
             )
 
             b_checks = compute_b_checks(
-                horizon_days=H, close=close[idx],
+                horizon_days=H,
+                close=close[idx],
                 ema20=ema20_now,
                 sma50=sma50_now,
                 slope_close_10=slope_close_10_now,
@@ -273,7 +274,8 @@ def compute_forecast_universe(
             )
 
             c_checks = compute_c_checks(
-                horizon_days=H, ext_z_20=ext_z_now,
+                horizon_days=H,
+                ext_z_20=ext_z_now,
                 vol_rank_20=vol_rank_now,
                 last_ret=last_ret,
                 clv=clv_now,
@@ -313,7 +315,8 @@ def compute_forecast_universe(
             )
 
             e_checks = compute_e_checks(
-                horizon_days=H, symbol=sym_u,
+                horizon_days=H,
+                symbol=sym_u,
                 spy_slope_10=spy_slope_10_now,
                 vix_features=vix_features,
                 returns_by_symbol=returns_by_symbol,

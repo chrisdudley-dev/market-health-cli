@@ -19,7 +19,8 @@ from .forecast_types import ForecastCheck, neutral_check
 
 
 def compute_c_checks(
-    *, horizon_days: int,
+    *,
+    horizon_days: int,
     ext_z_20: Optional[float] = None,
     vol_rank_20: Optional[float] = None,
     last_ret: Optional[float] = None,
@@ -33,22 +34,32 @@ def compute_c_checks(
 ) -> List[ForecastCheck]:
     return [
         c1_extension_risk(horizon_days=horizon_days, ext_z_20=ext_z_20),
-        c2_volume_climax_risk(horizon_days=horizon_days, vol_rank_20=vol_rank_20, last_ret=last_ret, clv=clv),
+        c2_volume_climax_risk(
+            horizon_days=horizon_days,
+            vol_rank_20=vol_rank_20,
+            last_ret=last_ret,
+            clv=clv,
+        ),
         c3_breadth_thinning(horizon_days=horizon_days, returns=returns),
-        c4_flow_pressure(horizon_days=horizon_days, up_down_vol_ratio_20=up_down_vol_ratio_20,
+        c4_flow_pressure(
+            horizon_days=horizon_days,
+            up_down_vol_ratio_20=up_down_vol_ratio_20,
             clv=clv,
             flow_metrics=flow_metrics,
             flow_status=flow_status,
         ),
         c5_positioning_asymmetry(horizon_days=horizon_days, returns=returns),
-        c6_correlation_crowding(horizon_days=horizon_days, corr20=corr20, dispersion=dispersion),
+        c6_correlation_crowding(
+            horizon_days=horizon_days, corr20=corr20, dispersion=dispersion
+        ),
     ]
 
 
 def c1_extension_risk(*, horizon_days: int, ext_z_20: Optional[float]) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is the move too far too fast, increasing mean reversion risk into H?"
     if ext_z_20 is None:
         return neutral_check(
@@ -64,11 +75,16 @@ def c1_extension_risk(*, horizon_days: int, ext_z_20: Optional[float]) -> Foreca
 
 
 def c2_volume_climax_risk(
-    *, horizon_days: int, vol_rank_20: Optional[float], last_ret: Optional[float], clv: Optional[float]
+    *,
+    horizon_days: int,
+    vol_rank_20: Optional[float],
+    last_ret: Optional[float],
+    clv: Optional[float],
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Did a volume climax likely mark distribution or instability into H?"
     if vol_rank_20 is None or last_ret is None:
         return neutral_check(
@@ -96,7 +112,8 @@ def c3_breadth_thinning(
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is participation narrowing (few big days dominate), increasing fragility into H?"
     if returns is None or len(returns) < 25:
         return neutral_check(
@@ -122,7 +139,8 @@ def c3_breadth_thinning(
 
 
 def c4_flow_pressure(
-    *, horizon_days: int,
+    *,
+    horizon_days: int,
     up_down_vol_ratio_20: Optional[float],
     clv: Optional[float],
     flow_metrics: Optional[Dict[str, float]] = None,
@@ -130,7 +148,8 @@ def c4_flow_pressure(
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Are flows likely to force continuation or reversal (accumulation vs distribution proxy)?"
 
     fm = locals().get("flow_metrics")
@@ -199,7 +218,8 @@ def c5_positioning_asymmetry(
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is behavior one-sided (downside tail skew), so small shocks can cause outsized moves?"
     if returns is None or len(returns) < 30:
         return neutral_check(
@@ -236,7 +256,8 @@ def c6_correlation_crowding(
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is diversification collapsing (high correlation / low dispersion), reducing rotation edge?"
     if corr20 is None or dispersion is None:
         return neutral_check(

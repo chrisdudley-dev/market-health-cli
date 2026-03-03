@@ -22,7 +22,8 @@ CYCLICAL: Set[str] = {"XLY", "XLI", "XLF", "XLB", "XLK", "XLC", "XLE", "XLRE"}
 
 
 def compute_e_checks(
-    *, horizon_days: int,
+    *,
+    horizon_days: int,
     symbol: str,
     spy_slope_10: Optional[float] = None,
     vix_features: Optional[Dict[str, Any]] = None,
@@ -37,20 +38,33 @@ def compute_e_checks(
     return [
         spy_check,
         vix_check,
-        e3_leadership_persistence(horizon_days=horizon_days, symbol=symbol_u, returns_by_symbol=returns_by_symbol),
+        e3_leadership_persistence(
+            horizon_days=horizon_days,
+            symbol=symbol_u,
+            returns_by_symbol=returns_by_symbol,
+        ),
         e4_breadth_regime(horizon_days=horizon_days, dispersion=dispersion),
-        e5_cross_regime_pressure(horizon_days=horizon_days, symbol=symbol_u, returns_by_symbol=returns_by_symbol),
-        e6_driver_alignment(horizon_days=horizon_days, rs_slope_10=rs_slope_10,
+        e5_cross_regime_pressure(
+            horizon_days=horizon_days,
+            symbol=symbol_u,
+            returns_by_symbol=returns_by_symbol,
+        ),
+        e6_driver_alignment(
+            horizon_days=horizon_days,
+            rs_slope_10=rs_slope_10,
             spy_outlook_score=spy_check.score,
             vix_outlook_score=vix_check.score,
         ),
     ]
 
 
-def e1_spy_outlook(*, horizon_days: int, spy_slope_10: Optional[float]) -> ForecastCheck:
+def e1_spy_outlook(
+    *, horizon_days: int, spy_slope_10: Optional[float]
+) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is the broad market setup improving or deteriorating into H?"
     if spy_slope_10 is None:
         return neutral_check(
@@ -68,7 +82,8 @@ def e1_spy_outlook(*, horizon_days: int, spy_slope_10: Optional[float]) -> Forec
 def e2_vix_outlook(*, horizon_days: int, vix_features: Dict[str, Any]) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is volatility regime likely to rise or fall into H (risk-on vs risk-off pressure)?"
     if not vix_features:
         return neutral_check("VIX Outlook", meaning, "No VIX feed; neutral.")
@@ -90,14 +105,16 @@ def e2_vix_outlook(*, horizon_days: int, vix_features: Dict[str, Any]) -> Foreca
 
 
 def e3_leadership_persistence(
-    *, horizon_days: int,
+    *,
+    horizon_days: int,
     symbol: str,
     returns_by_symbol: Optional[Dict[str, Sequence[Optional[float]]]],
     window: int = 5,
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Are sector ranks stable (leaders staying leaders) or rotating rapidly?"
     if not returns_by_symbol:
         return neutral_check(
@@ -153,10 +170,13 @@ def e3_leadership_persistence(
     )
 
 
-def e4_breadth_regime(*, horizon_days: int, dispersion: Optional[float]) -> ForecastCheck:
+def e4_breadth_regime(
+    *, horizon_days: int, dispersion: Optional[float]
+) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = (
         "Is market participation broad or narrow (proxy via cross-sector dispersion)?"
     )
@@ -172,14 +192,16 @@ def e4_breadth_regime(*, horizon_days: int, dispersion: Optional[float]) -> Fore
 
 
 def e5_cross_regime_pressure(
-    *, horizon_days: int,
+    *,
+    horizon_days: int,
     symbol: str,
     returns_by_symbol: Optional[Dict[str, Sequence[Optional[float]]]],
     window: int = 5,
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = (
         "Are conditions favoring offense or defense (risk-on vs risk-off tilt into H)?"
     )
@@ -240,11 +262,16 @@ def e5_cross_regime_pressure(
 
 
 def e6_driver_alignment(
-    *, horizon_days: int, rs_slope_10: Optional[float], spy_outlook_score: int, vix_outlook_score: int
+    *,
+    horizon_days: int,
+    rs_slope_10: Optional[float],
+    spy_outlook_score: int,
+    vix_outlook_score: int,
 ) -> ForecastCheck:
     # horizon-derived intermediate (ensures horizon_days is used in this check)
     h = int(horizon_days) if int(horizon_days) > 0 else 1
-    h_window = int(round(10 * (h ** 0.5)))
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Are dominant drivers likely to support this sector into H (proxy: RS improving under environment)?"
     if rs_slope_10 is None:
         return neutral_check(
