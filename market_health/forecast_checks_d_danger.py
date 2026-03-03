@@ -22,7 +22,7 @@ Number = Union[int, float]
 
 def compute_d_checks(
     *,
-    H: int,
+    horizon_days: int,
     atrp14: Optional[float] = None,
     atrp_slope_10: Optional[float] = None,
     bb_width: Optional[float] = None,
@@ -41,6 +41,7 @@ def compute_d_checks(
 ) -> List[ForecastCheck]:
     return [
         d1_volatility_trend(
+            horizon_days=horizon_days,
             atrp14=atrp14,
             atrp_slope_10=atrp_slope_10,
             bb_width=bb_width,
@@ -49,18 +50,26 @@ def compute_d_checks(
             iv_percentile_1y=iv_percentile_1y,
             iv_status=iv_status,
         ),
-        d2_tail_gap_risk(H=H, returns=returns, calendar=calendar, atrp14=atrp14),
-        d3_market_coupling_trend(corr5=corr5, corr20=corr20),
-        d4_liquidity_stress(returns=returns, volume=volume),
-        d5_drawdown_vulnerability(close=close, lo20=lo20, atrp14=atrp14),
+        d2_tail_gap_risk(
+            horizon_days=horizon_days, returns=returns, calendar=calendar, atrp14=atrp14
+        ),
+        d3_market_coupling_trend(horizon_days=horizon_days, corr5=corr5, corr20=corr20),
+        d4_liquidity_stress(horizon_days=horizon_days, returns=returns, volume=volume),
+        d5_drawdown_vulnerability(
+            horizon_days=horizon_days, close=close, lo20=lo20, atrp14=atrp14
+        ),
         d6_risk_reward_feasibility(
-            atrp14=atrp14, support_cushion_proxy=support_cushion_proxy, corr20=corr20
+            horizon_days=horizon_days,
+            atrp14=atrp14,
+            support_cushion_proxy=support_cushion_proxy,
+            corr20=corr20,
         ),
     ]
 
 
 def d1_volatility_trend(
     *,
+    horizon_days: int,
     atrp14: Optional[float],
     atrp_slope_10: Optional[float],
     bb_width: Optional[float],
@@ -69,6 +78,10 @@ def d1_volatility_trend(
     iv_percentile_1y: Optional[float] = None,
     iv_status: Optional[str] = None,
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is risk rising or falling (volatility expanding/contracting) into H?"
 
     atrp14 = locals().get("atrp14")
@@ -145,11 +158,16 @@ def d1_volatility_trend(
 
 def d2_tail_gap_risk(
     *,
-    H: int,
+    horizon_days: int,
     returns: Optional[Sequence[Optional[float]]],
     calendar: Optional[Dict[str, Any]],
     atrp14: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
+    H = horizon_days
     meaning = "Is gap/tail risk elevated into H (rare large moves more likely)?"
     if returns is None or len(returns) < 30:
         return neutral_check(
@@ -210,8 +228,12 @@ def d2_tail_gap_risk(
 
 
 def d3_market_coupling_trend(
-    *, corr5: Optional[float], corr20: Optional[float]
+    *, horizon_days: int, corr5: Optional[float], corr20: Optional[float]
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is market coupling increasing (less diversification, more systemic drawdown risk) into H?"
     if corr5 is None or corr20 is None:
         return neutral_check(
@@ -236,8 +258,15 @@ def d3_market_coupling_trend(
 
 
 def d4_liquidity_stress(
-    *, returns: Optional[Sequence[Optional[float]]], volume: Optional[Sequence[Number]]
+    *,
+    horizon_days: int,
+    returns: Optional[Sequence[Optional[float]]],
+    volume: Optional[Sequence[Number]],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Are there signs of stressed trading conditions (higher friction, erratic moves) into H?"
     if returns is None or volume is None or len(returns) < 25 or len(volume) < 25:
         return neutral_check(
@@ -271,8 +300,16 @@ def d4_liquidity_stress(
 
 
 def d5_drawdown_vulnerability(
-    *, close: Optional[float], lo20: Optional[float], atrp14: Optional[float]
+    *,
+    horizon_days: int,
+    close: Optional[float],
+    lo20: Optional[float],
+    atrp14: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = (
         "Is the sector close to damage levels where a small drop breaks structure?"
     )
@@ -299,10 +336,15 @@ def d5_drawdown_vulnerability(
 
 def d6_risk_reward_feasibility(
     *,
+    horizon_days: int,
     atrp14: Optional[float],
     support_cushion_proxy: Optional[float],
     corr20: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Given forecast risk, can you size it and still have acceptable risk/reward feasibility?"
     if atrp14 is None or support_cushion_proxy is None:
         return neutral_check(

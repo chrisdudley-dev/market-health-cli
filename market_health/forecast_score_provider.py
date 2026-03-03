@@ -243,7 +243,7 @@ def compute_forecast_universe(
         for H in horizons:
             # Dimension modules (exactly 6 each)
             a_checks = compute_a_checks(
-                H=H,
+                horizon_days=H,
                 calendar=_calendar_ctx_for_symbol(calendar, sym, H),
                 vix_features=vix_features,
                 ext_z=ext_z_now,
@@ -254,6 +254,7 @@ def compute_forecast_universe(
             )
 
             b_checks = compute_b_checks(
+                horizon_days=H,
                 close=close[idx],
                 ema20=ema20_now,
                 sma50=sma50_now,
@@ -273,6 +274,7 @@ def compute_forecast_universe(
             )
 
             c_checks = compute_c_checks(
+                horizon_days=H,
                 ext_z_20=ext_z_now,
                 vol_rank_20=vol_rank_now,
                 last_ret=last_ret,
@@ -286,7 +288,7 @@ def compute_forecast_universe(
             )
 
             d_checks = compute_d_checks(
-                H=H,
+                horizon_days=H,
                 atrp14=atrp14_now,
                 atrp_slope_10=atrp_slope_10_now,
                 bb_width=bb_width,
@@ -313,6 +315,7 @@ def compute_forecast_universe(
             )
 
             e_checks = compute_e_checks(
+                horizon_days=H,
                 symbol=sym_u,
                 spy_slope_10=spy_slope_10_now,
                 vix_features=vix_features,

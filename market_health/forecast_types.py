@@ -64,7 +64,7 @@ def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str
     for c in checks:
         metrics = dict(c.metrics or {})
         metrics["horizon_days"] = H
-        metrics["horizon_scale"] = float(H ** 0.5)
+        metrics["horizon_scale"] = float(H**0.5)
 
         out["checks"].append(
             {
@@ -77,4 +77,3 @@ def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str
         )
 
     return out
-

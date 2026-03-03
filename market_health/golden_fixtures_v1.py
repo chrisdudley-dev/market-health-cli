@@ -188,7 +188,10 @@ def generate_golden_fixtures_v1() -> Dict[str, Any]:
         "recommendation": _sanitize_rec(rec),
     }
 
-    return {"forecast": _force_horizon_fields_in_forecast_fixture(forecast_fixture), "recommendation": rec_fixture}
+    return {
+        "forecast": _force_horizon_fields_in_forecast_fixture(forecast_fixture),
+        "recommendation": rec_fixture,
+    }
 
 
 def _find_symbol_map_for_horizons(x):
@@ -196,7 +199,9 @@ def _find_symbol_map_for_horizons(x):
     if isinstance(x, dict):
         if x and all(isinstance(k, str) for k in x.keys()):
             for v in x.values():
-                if isinstance(v, dict) and ((1 in v and 5 in v) or ("1" in v and "5" in v)):
+                if isinstance(v, dict) and (
+                    (1 in v and 5 in v) or ("1" in v and "5" in v)
+                ):
                     return x
         for v in x.values():
             r = _find_symbol_map_for_horizons(v)
@@ -242,5 +247,5 @@ def _force_horizon_fields_in_forecast_fixture(doc):
                         m = {}
                         chk["metrics"] = m
                     m["horizon_days"] = H
-                    m["horizon_scale"] = float(H ** 0.5)
+                    m["horizon_scale"] = float(H**0.5)
     return doc

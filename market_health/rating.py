@@ -36,8 +36,9 @@ def quantile_bounds(scores: Iterable[int], qs=(10, 30, 70, 90)) -> List[int]:
     return [pct(q) for q in qs]
 
 
-def choose_bounds(scores: Iterable[int], scheme="hybrid",
-                  qs=(10, 30, 70, 90), guard=5) -> List[int]:
+def choose_bounds(
+    scores: Iterable[int], scheme="hybrid", qs=(10, 30, 70, 90), guard=5
+) -> List[int]:
     """
     scheme="fixed"    -> fixed 20/40/60/80
     scheme="quantile" -> quantiles of today's cross-section

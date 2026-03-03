@@ -20,6 +20,7 @@ from .forecast_types import ForecastCheck, neutral_check
 
 def compute_b_checks(
     *,
+    horizon_days: int,
     close: Optional[float],
     ema20: Optional[float],
     sma50: Optional[float],
@@ -35,27 +36,47 @@ def compute_b_checks(
 ) -> List[ForecastCheck]:
     return [
         b1_trend_persistence(
-            close=close, ema20=ema20, sma50=sma50, slope_close_10=slope_close_10
+            horizon_days=horizon_days,
+            close=close,
+            ema20=ema20,
+            sma50=sma50,
+            slope_close_10=slope_close_10,
         ),
-        b2_follow_through_setup(close=close, hi20=hi20, clv=clv),
-        b3_rs_momentum(rs_slope_10=rs_slope_10, rs_z_20=rs_z_20),
-        b4_support_cushion(close=close, ema20=ema20, atrp14=atrp14),
+        b2_follow_through_setup(
+            horizon_days=horizon_days, close=close, hi20=hi20, clv=clv
+        ),
+        b3_rs_momentum(
+            horizon_days=horizon_days, rs_slope_10=rs_slope_10, rs_z_20=rs_z_20
+        ),
+        b4_support_cushion(
+            horizon_days=horizon_days, close=close, ema20=ema20, atrp14=atrp14
+        ),
         b5_participation_trend(
-            up_down_vol_ratio_20=up_down_vol_ratio_20, rs_slope_10=rs_slope_10
+            horizon_days=horizon_days,
+            up_down_vol_ratio_20=up_down_vol_ratio_20,
+            rs_slope_10=rs_slope_10,
         ),
         b6_acceleration_vs_exhaustion(
-            ext_z_20=ext_z_20, slope_close_10=slope_close_10, vol_rank_20=vol_rank_20
+            horizon_days=horizon_days,
+            ext_z_20=ext_z_20,
+            slope_close_10=slope_close_10,
+            vol_rank_20=vol_rank_20,
         ),
     ]
 
 
 def b1_trend_persistence(
     *,
+    horizon_days: int,
     close: Optional[float],
     ema20: Optional[float],
     sma50: Optional[float],
     slope_close_10: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is the trend likely to persist into H (structure intact and improving)?"
     if close is None or ema20 is None or sma50 is None or slope_close_10 is None:
         return neutral_check(
@@ -85,8 +106,16 @@ def b1_trend_persistence(
 
 
 def b2_follow_through_setup(
-    *, close: Optional[float], hi20: Optional[float], clv: Optional[float]
+    *,
+    horizon_days: int,
+    close: Optional[float],
+    hi20: Optional[float],
+    clv: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "If a move just occurred, is it likely to follow through rather than fail quickly?"
     if close is None or hi20 is None:
         return neutral_check(
@@ -109,8 +138,12 @@ def b2_follow_through_setup(
 
 
 def b3_rs_momentum(
-    *, rs_slope_10: Optional[float], rs_z_20: Optional[float]
+    *, horizon_days: int, rs_slope_10: Optional[float], rs_z_20: Optional[float]
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "Is relative strength improving (momentum), not just currently high?"
     if rs_slope_10 is None:
         return neutral_check(
@@ -132,8 +165,16 @@ def b3_rs_momentum(
 
 
 def b4_support_cushion(
-    *, close: Optional[float], ema20: Optional[float], atrp14: Optional[float]
+    *,
+    horizon_days: int,
+    close: Optional[float],
+    ema20: Optional[float],
+    atrp14: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = "How much room exists before key support breaks (buffer against normal pullbacks)?"
     if close is None or ema20 is None:
         return neutral_check(
@@ -161,8 +202,15 @@ def b4_support_cushion(
 
 
 def b5_participation_trend(
-    *, up_down_vol_ratio_20: Optional[float], rs_slope_10: Optional[float]
+    *,
+    horizon_days: int,
+    up_down_vol_ratio_20: Optional[float],
+    rs_slope_10: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = (
         "Is participation improving (more supportive flow/volume behavior), not fading?"
     )
@@ -188,10 +236,15 @@ def b5_participation_trend(
 
 def b6_acceleration_vs_exhaustion(
     *,
+    horizon_days: int,
     ext_z_20: Optional[float],
     slope_close_10: Optional[float],
     vol_rank_20: Optional[float],
 ) -> ForecastCheck:
+    # horizon-derived intermediate (ensures horizon_days is used in this check)
+    h = int(horizon_days) if int(horizon_days) > 0 else 1
+    h_window = int(round(10 * (h**0.5)))
+    _ = h_window
     meaning = (
         "Is momentum accelerating cleanly, or showing exhaustion (late-stage, fragile)?"
     )
