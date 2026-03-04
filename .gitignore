@@ -44,3 +44,4 @@ secrets/
 
 # local backups
 *.bak.*
+mh_diag_*.log
