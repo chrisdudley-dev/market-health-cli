@@ -136,7 +136,7 @@ def build_universe() -> Tuple[Dict[str, OHLCV], list[str]]:
     return universe, syms
 
 
-def generate_golden_fixtures_v1() -> Dict[str, Any]:
+def _generate_golden_fixtures_v1_impl() -> Dict[str, Any]:
     universe, syms = build_universe()
 
     # compute_forecast_universe returns: {SYM: {H: payload}}
@@ -249,3 +249,44 @@ def _force_horizon_fields_in_forecast_fixture(doc):
                     m["horizon_days"] = H
                     m["horizon_scale"] = float(H**0.5)
     return doc
+
+
+def _canonicalize_golden(obj):
+    """
+    Canonicalize golden fixture structures so they are stable across
+    Python versions / hash seeds.
+
+    Strategy:
+      - dict: canonicalize values; sort keys for stable output
+      - list:
+          * list[str] -> sort
+          * list[dict] -> sort by canonical JSON (stable across versions)
+          * otherwise preserve order
+    """
+    if isinstance(obj, dict):
+        return {k: _canonicalize_golden(obj[k]) for k in sorted(obj.keys())}
+
+    if isinstance(obj, list):
+        items = [_canonicalize_golden(x) for x in obj]
+
+        if all(isinstance(x, str) for x in items):
+            return sorted(items)
+
+        if all(isinstance(x, dict) for x in items):
+            import json as _json
+
+            return sorted(
+                items,
+                key=lambda d: _json.dumps(
+                    d, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+                ),
+            )
+
+        return items
+
+    return obj
+
+
+def generate_golden_fixtures_v1(*args, **kwargs):
+    out = _generate_golden_fixtures_v1_impl(*args, **kwargs)
+    return _canonicalize_golden(out)

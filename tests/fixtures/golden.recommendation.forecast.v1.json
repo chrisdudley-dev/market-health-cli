@@ -3,11 +3,11 @@
     "positions": [
       {
         "market_value": 1000.0,
-        "symbol": "XLK"
+        "symbol": "XLF"
       },
       {
         "market_value": 1000.0,
-        "symbol": "XLF"
+        "symbol": "XLK"
       }
     ],
     "schema": "positions.v1"
@@ -15,13 +15,13 @@
   "recommendation": {
     "action": "SWAP",
     "constraints_applied": [
-      "forecast_mode",
-      "robust_edge=min(edge(H))",
+      "cooldown",
       "disagreement_veto_edge",
       "diversity_constraints",
-      "cooldown",
+      "forecast_mode",
       "max_swaps_per_day",
-      "min_improvement_threshold"
+      "min_improvement_threshold",
+      "robust_edge=min(edge(H))"
     ],
     "constraints_triggered": [],
     "diagnostics": {

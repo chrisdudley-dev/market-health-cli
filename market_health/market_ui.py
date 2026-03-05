@@ -664,10 +664,6 @@ def main():
         render_once()
 
 
-if __name__ == "__main__":
-    main()
-
-
 def _recommendation_lines_from_contract(contract: dict) -> list[str]:
     """
     Render SWAP/NOOP recommendation summary from the UI contract.
@@ -765,3 +761,7 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
         val = diag.get("edge", diag.get("delta_utility"))
         lines.append(f"Edge ({dm}): {val}")
     return lines
+
+
+if __name__ == "__main__":
+    main()
