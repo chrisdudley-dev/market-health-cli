@@ -136,7 +136,7 @@ def build_universe() -> Tuple[Dict[str, OHLCV], list[str]]:
     return universe, syms
 
 
-def generate_golden_fixtures_v1() -> Dict[str, Any]:
+def _generate_golden_fixtures_v1_impl() -> Dict[str, Any]:
     universe, syms = build_universe()
 
     # compute_forecast_universe returns: {SYM: {H: payload}}
@@ -249,3 +249,35 @@ def _force_horizon_fields_in_forecast_fixture(doc):
                     m["horizon_days"] = H
                     m["horizon_scale"] = float(H**0.5)
     return doc
+
+
+def _canonicalize_golden(obj):
+    """
+    Canonicalize golden fixture structures so they are stable across
+    Python versions / hash seeds.
+
+    Strategy:
+      - dict: canonicalize values; sort keys for stable output
+      - list: canonicalize items; ONLY sort if it's clearly symbol-ish
+              (strings, or dicts with 'symbol'/'sym')
+    """
+    if isinstance(obj, dict):
+        return {k: _canonicalize_golden(obj[k]) for k in sorted(obj.keys())}
+
+    if isinstance(obj, list):
+        items = [_canonicalize_golden(x) for x in obj]
+        if all(isinstance(x, str) for x in items):
+            return sorted(items)
+        if all(isinstance(x, dict) for x in items):
+            if all("symbol" in x for x in items):
+                return sorted(items, key=lambda d: str(d.get("symbol", "")).upper())
+            if all("sym" in x for x in items):
+                return sorted(items, key=lambda d: str(d.get("sym", "")).upper())
+        return items
+
+    return obj
+
+
+def generate_golden_fixtures_v1(*args, **kwargs):
+    out = _generate_golden_fixtures_v1_impl(*args, **kwargs)
+    return _canonicalize_golden(out)
