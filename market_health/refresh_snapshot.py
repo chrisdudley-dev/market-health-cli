@@ -6,15 +6,21 @@ import datetime as dt
 from pathlib import Path
 from typing import List
 
-from market_health.engine import compute_scores, SECTORS_DEFAULT  # existing in your repo
+from market_health.engine import (
+    compute_scores,
+    SECTORS_DEFAULT,
+)  # existing in your repo
 
 CACHE_DIR = Path(os.path.expanduser("~/.cache/jerboa"))
 
-UI_PATH = Path(os.environ.get("JERBOA_UI_JSON", str(CACHE_DIR / "market_health.ui.v1.json"))).expanduser()
+UI_PATH = Path(
+    os.environ.get("JERBOA_UI_JSON", str(CACHE_DIR / "market_health.ui.v1.json"))
+).expanduser()
 POS_PATH = CACHE_DIR / "positions.v1.json"
 REC_PATH = CACHE_DIR / "recommendations.v1.json"
-FS_PATH  = CACHE_DIR / "forecast_scores.v1.json"
+FS_PATH = CACHE_DIR / "forecast_scores.v1.json"
 INV_PATH = CACHE_DIR / "inverse_universe.v1.json"
+
 
 def _read_json(p: Path) -> dict:
     try:
@@ -22,15 +28,18 @@ def _read_json(p: Path) -> dict:
     except Exception:
         return {}
 
+
 def _write_json_atomic(path: Path, obj: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(obj, indent=2, sort_keys=True), encoding="utf-8")
     os.replace(tmp, path)
 
+
 def _now_asof() -> str:
     # ISO8601 in UTC with offset
     return dt.datetime.now(dt.timezone.utc).isoformat()
+
 
 def _load_inverse_symbols() -> List[str]:
     inv = _read_json(INV_PATH)
@@ -78,6 +87,7 @@ def _load_inverse_symbols() -> List[str]:
             uniq.append(s)
     return uniq
 
+
 def build_snapshot(
     period: str = "6mo",
     interval: str = "1d",
@@ -105,7 +115,7 @@ def build_snapshot(
     # --- load cached supporting docs (positions, reco, forecast) ---
     pos_doc = _read_json(POS_PATH)
     rec_doc = _read_json(REC_PATH)
-    fs_doc  = _read_json(FS_PATH)
+    fs_doc = _read_json(FS_PATH)
 
     snap = {
         "schema": "market_health.ui.v1",
@@ -132,9 +142,13 @@ def build_snapshot(
     }
     return snap
 
+
 def main() -> int:
     import argparse
-    p = argparse.ArgumentParser(description="Build market_health.ui.v1.json snapshot (atomic).")
+
+    p = argparse.ArgumentParser(
+        description="Build market_health.ui.v1.json snapshot (atomic)."
+    )
     p.add_argument("--period", default=os.environ.get("MH_PERIOD", "6mo"))
     p.add_argument("--interval", default=os.environ.get("MH_INTERVAL", "1d"))
     p.add_argument("--ttl", type=int, default=int(os.environ.get("MH_TTL", "900")))
@@ -153,6 +167,7 @@ def main() -> int:
     print(f"[ok] wrote snapshot: {out_p}")
     print(f"[asof] {snap.get('asof')}")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
