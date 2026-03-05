@@ -18,6 +18,7 @@ from rich.table import Table
 from rich.text import Text
 
 from market_health.engine import SECTORS_DEFAULT, SECTOR_LEADERS, compute_scores
+from market_health.inverse_universe_v1 import load_inverse_pairs
 from market_health.ui_contract_meta import dimension_heading
 
 FORCE_COLOR = bool(
@@ -184,6 +185,22 @@ def load_live_dataset(
     )
     return [build_sector_from_json(obj) for obj in payload]
 
+def extend_universe_with_inverses(sectors: list[str], inverse_map_path: str) -> tuple[list[str], dict]:
+    pairs, status = load_inverse_pairs(inverse_map_path)
+    out = list(sectors)
+    added = 0
+    # include both the long + inverse side if present in map
+    for p in pairs:
+        for sym in (getattr(p, "long", None), getattr(p, "inverse", None)):
+            if isinstance(sym, str):
+                s = sym.strip().upper()
+                if s and s not in out:
+                    out.append(s)
+                    added += 1
+    meta = {"status": status, "pairs": len(pairs), "added": added}
+    return out, meta
+
+
 
 # ---------- rendering ----------
 def render_header(console: Console, mono: bool = False) -> None:
@@ -208,10 +225,8 @@ def render_header(console: Console, mono: bool = False) -> None:
 
 
 def render_overview(
-    console: Console, rows: List[SectorRow], mono: bool = False
-) -> None:
-    tbl = Table(
-        title="Overview (A–E totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
+    console: Console, rows: List[SectorRow], mono: bool = False, title: str = "Overview (A–E totals per sector)") -> None:
+    tbl = Table(title=title, box=box.SIMPLE_HEAVY, show_lines=False
     )
     tbl.add_column("Sector", justify="left", style="bold cyan")
     for key in "ABCDE":
@@ -298,21 +313,38 @@ def _sector_for_symbol(sym: str):
     return None
 
 
+def _rows_to_current_sectors_payload(rows: Optional[List[SectorRow]]) -> Optional[List[dict]]:
+    """Convert in-memory SectorRow list into the payload shape used by Tri-Score renderers."""
+    if not rows:
+        return None
+    out: List[dict] = []
+    for r in rows:
+        cats: Dict[str, dict] = {}
+        for k, cat in (r.categories or {}).items():
+            cats[str(k)] = {
+                "checks": [{"label": c.label, "score": int(c.score)} for c in (cat.checks or [])]
+            }
+        out.append({"symbol": r.symbol, "categories": cats})
+    return out
+
+
 def _render_positions_panel(
-    console, mono: bool = False, max_rows: int = 8, sector_style=None
+    console, mono: bool = False, max_rows: int = 8, sector_style=None, current_rows: Optional[List[SectorRow]] = None
 ) -> None:
     """Render 'My Positions' tri-score panel.
 
     Prefer ASCII prototype output (matches the 3-digit 0/1/2 cells),
     fallback to the Rich tri-score renderer.
     """
+    current_sectors = _rows_to_current_sectors_payload(current_rows)
+
     # 1) ASCII prototype (preferred)
     try:
         from .ui_triscore_ascii import render_positions_triscore_ascii  # type: ignore
 
         try:
             txt = render_positions_triscore_ascii(
-                mono=mono, max_rows=max_rows, sector_style=sector_style
+                mono=mono, max_rows=max_rows, sector_style=sector_style, current_sectors=current_sectors
             )
         except TypeError:
             try:
@@ -331,7 +363,7 @@ def _render_positions_panel(
 
         try:
             out = render_positions_triscore(
-                mono=mono, max_rows=max_rows, sector_style=sector_style
+                mono=mono, max_rows=max_rows, sector_style=sector_style, current_sectors=current_sectors
             )
         except TypeError:
             out = render_positions_triscore(mono=mono)
@@ -408,7 +440,7 @@ def render_pi_grid(
         r.symbol: pct_style((r.total / MAX_TOTAL) if MAX_TOTAL else 0.0, mono)
         for r in rows
     }
-    _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
+    _render_positions_panel(console, mono=mono, sector_style=style_by_sector, current_rows=rows)
 
 
 def _is_ui_contract(obj: object) -> bool:
@@ -423,23 +455,48 @@ def _is_ui_contract(obj: object) -> bool:
     return ("sectors" in d) and ("state" in d) and ("positions" in d)
 
 
-def _rows_from_ui_contract(contract: dict, sectors_filter: list[str] | None) -> list:
-    d = contract.get("data") or {}
-    sectors = d.get("sectors")
+def _rows_from_ui_contract(contract: dict, sectors_filter: list[str] | None) -> list[SectorRow]:
+    """Extract SectorRow list from a UI contract (market_health.ui.v1.json).
+
+    Supports:
+      - contract.data.sectors = [ {...}, ... ]
+      - contract.data.sectors.sectors = [ {...}, ... ]
+      - contract.data.sectors.rows = [ {...}, ... ]
+    """
+    data = contract.get("data") or {}
+    sectors = data.get("sectors")
+
+    # Unwrap common nested shapes
+    if isinstance(sectors, dict):
+        for k in ("sectors", "rows", "data"):
+            v = sectors.get(k)
+            if isinstance(v, list):
+                sectors = v
+                break
+
     if not isinstance(sectors, list):
         return []
-    rows = [build_sector_from_json(x) for x in sectors if isinstance(x, dict)]
+
     if sectors_filter:
-        keep = set(sectors_filter)
-        rows = [r for r in rows if getattr(r, "symbol", None) in keep]
-    rows.sort(key=lambda r: getattr(r, "total", 0), reverse=True)
-    return rows
+        want = {s.upper() for s in sectors_filter}
+        sectors = [x for x in sectors if isinstance(x, dict) and str(x.get("symbol","")).upper() in want]
 
-
+    return [build_sector_from_json(x) for x in sectors if isinstance(x, dict)]
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
     p.add_argument(
         "--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include"
+    )
+    p.add_argument(
+        "--inverse-map",
+        type=str,
+        default=os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json"),
+        help="Inverse ETF map used to extend the UI universe.",
+    )
+    p.add_argument(
+        "--no-inverses",
+        action="store_true",
+        help="Disable auto-including inverse ETFs in the UI.",
     )
     p.add_argument(
         "--topk", type=int, default=3, help="How many top sectors to expand in details"
@@ -493,7 +550,11 @@ def main():
 
     def load_rows() -> List[SectorRow]:
         if args.demo:
-            return build_demo_dataset(args.sectors, seed=42)
+            sectors = list(args.sectors)
+            if not getattr(args, 'no_inverses', False):
+                sectors, meta = extend_universe_with_inverses(sectors, getattr(args, 'inverse_map', ''))
+                args._inverse_meta = meta
+            return build_demo_dataset(sectors, seed=42)
         if args.json_path:
             try:
                 # If json_path is a UI contract (market_health.ui.v1.json), load rows from contract.data.sectors
@@ -510,7 +571,11 @@ def main():
                 return []
         # live from engine
         try:
-            return load_live_dataset(args.sectors, args.period, args.interval, args.ttl)
+            sectors = list(args.sectors)
+            if not getattr(args, 'no_inverses', False):
+                sectors, meta = extend_universe_with_inverses(sectors, getattr(args, 'inverse_map', ''))
+                args._inverse_meta = meta
+            return load_live_dataset(sectors, args.period, args.interval, args.ttl)
         except Exception as e:
             console.print(f"[red]Failed to compute live scores: {e}[/red]")
             return []
@@ -538,7 +603,10 @@ def main():
                 rec_lines = _recommendation_lines_from_contract(contract)
                 if rec_lines:
                     console.print(Panel("\n".join(rec_lines), title="Recommendations"))
-            render_overview(console, rows, mono=args.mono)
+            meta = getattr(args, '_inverse_meta', {})
+            inv_added = meta.get('added', 0) if isinstance(meta, dict) else 0
+            title=("Overview (A–E totals per sector; incl inverses)" if inv_added else "Overview (A–E totals per sector)")
+            render_overview(console, rows, mono=args.mono, title=title)
             render_details(console, rows, top_k=args.topk, mono=args.mono)
     else:
         if args.json_path:

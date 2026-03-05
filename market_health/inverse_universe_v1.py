@@ -1,0 +1,47 @@
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any
+
+# Deterministic default (used in CI/tests unless you explicitly override).
+DEFAULT_PAIRS: list[dict[str, Any]] = [
+    {"sector_id": "TECH",  "long": "XLK",  "inverse": "TECS", "inverse_leverage": -3},
+    {"sector_id": "FIN",   "long": "XLF",  "inverse": "FAZ",  "inverse_leverage": -3},
+    {"sector_id": "ENERGY","long": "XLE",  "inverse": "ERY",  "inverse_leverage": -2},
+    {"sector_id": "RE",    "long": "XLRE", "inverse": "DRV",  "inverse_leverage": -3},
+    {"sector_id": "IND",   "long": "XLI",  "inverse": "SIJ",  "inverse_leverage": -2},
+    {"sector_id": "MAT",   "long": "XLB",  "inverse": "SMN",  "inverse_leverage": -2},
+    {"sector_id": "UTIL",  "long": "XLU",  "inverse": "SDP",  "inverse_leverage": -2},
+    {"sector_id": "STAP",  "long": "XLP",  "inverse": "SZK",  "inverse_leverage": -2},
+    {"sector_id": "HC",    "long": "XLV",  "inverse": "RXD",  "inverse_leverage": -2},
+    {"sector_id": "DISC",  "long": "XLY",  "inverse": "SCC",  "inverse_leverage": -2},
+]
+
+def _read_json(p: Path) -> Any:
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def load_inverse_pairs(path: str | os.PathLike[str] | None = None) -> list[dict[str, Any]]:
+    """
+    Load inverse pairs.
+
+    Priority:
+      1) explicit `path` argument
+      2) env override: JERBOA_INVERSE_UNIVERSE_JSON
+      3) deterministic DEFAULT_PAIRS (CI/test safe)
+    """
+    env_p = os.environ.get("JERBOA_INVERSE_UNIVERSE_JSON")
+    p = Path(path).expanduser() if path else (Path(env_p).expanduser() if env_p else None)
+
+    if p and p.exists():
+        doc = _read_json(p)
+        if isinstance(doc, dict) and isinstance(doc.get("pairs"), list):
+            return [x for x in doc["pairs"] if isinstance(x, dict)]
+        if isinstance(doc, list):
+            return [x for x in doc if isinstance(x, dict)]
+
+    return list(DEFAULT_PAIRS)

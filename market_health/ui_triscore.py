@@ -139,7 +139,8 @@ def _payload_from_forecast(
 
 
 def render_positions_triscore(
-    *, cache_dir: Optional[str] = None, mono: bool = False
+    *, cache_dir: Optional[str] = None, mono: bool = False, max_rows: int = 8, sector_style=None,
+    current_sectors: Optional[List[Dict[str, Any]]] = None
 ) -> str:
     """
     Read-only Tri-Score positions panel.
@@ -159,11 +160,15 @@ def render_positions_triscore(
 
     pos_doc = _load_json(pos_p)
     fs_doc = _load_json(fs_p)
-    cur_doc = _load_json(ui_p) or _load_json(sect_p)
+    cur_doc = ({"sectors": current_sectors} if current_sectors is not None else (_load_json(ui_p) or _load_json(sect_p)))
 
     held: List[str] = []
     unmapped: List[str] = []
-    for row in pos_doc.get("positions") or []:
+    pos_rows = pos_doc.get("positions") or []
+    if isinstance(pos_rows, dict):
+        pos_rows = pos_rows.get("positions") or []
+
+    for row in pos_rows:
         if isinstance(row, dict) and isinstance(row.get("symbol"), str):
             sym = row["symbol"].strip().upper()
             if sym.startswith("XL") and len(sym) <= 5:
@@ -171,6 +176,8 @@ def render_positions_triscore(
             else:
                 unmapped.append(sym)
     held = sorted(set(held))
+    if isinstance(max_rows, int) and max_rows > 0:
+        held = held[:max_rows]
 
     if not held:
         msg = "No positions detected yet (or no sector ETF positions mapped)."

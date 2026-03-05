@@ -161,31 +161,40 @@ def sum_payload(payload: Optional[Dict[str, Any]]) -> Optional[int]:
 
 
 def extract_held_symbols(pos_doc: Dict[str, Any]) -> List[str]:
-    # best-effort: find all .symbol fields anywhere
+    # best-effort: extract symbol-like fields anywhere (Schwab/TOS schemas vary)
     out: List[str] = []
+    KEYS = {"symbol","ticker","sym","underlying","underlyingSymbol","tickerSymbol","rootSymbol"}
+
+    def maybe_add(v: Any) -> None:
+        if isinstance(v, str):
+            t = v.strip().upper()
+            if 1 <= len(t) <= 10 and t.replace("-", "").replace(".", "").isalnum():
+                out.append(t)
 
     def walk(x: Any) -> None:
         if isinstance(x, dict):
-            s = x.get("symbol")
-            if isinstance(s, str) and s.strip():
-                out.append(s.strip().upper())
-            for v in x.values():
-                walk(v)
+            for k, v in x.items():
+                if k in KEYS:
+                    maybe_add(v)
+                # common nested instrument shapes
+                if k.lower() in ("instrument","security","asset","position","holding") and isinstance(v, (dict, list)):
+                    walk(v)
+                if isinstance(v, (dict, list)):
+                    walk(v)
         elif isinstance(x, list):
             for v in x:
                 walk(v)
 
     walk(pos_doc)
+
     # stable unique
     seen = set()
-    uniq = []
-    for s in out:
-        if s not in seen:
-            seen.add(s)
-            uniq.append(s)
+    uniq: List[str] = []
+    for sym in out:
+        if sym not in seen:
+            seen.add(sym)
+            uniq.append(sym)
     return uniq
-
-
 def extract_sector_universe(ui_doc: Dict[str, Any]) -> List[str]:
     # heuristic: find largest list of dict rows that contain "symbol"/"sec"/"ticker"
     candidates: List[List[Dict[str, Any]]] = []
@@ -242,11 +251,11 @@ def get_horizons(fs_doc: Dict[str, Any]) -> Tuple[int, int]:
 def current_payload(
     sym: str, sect_doc: Dict[str, Any], ui_doc: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
-    # try sectors doc first (usually richer), then UI doc
-    got = find_payload_for_symbol(sect_doc, sym)
+    # Snapshot-first: prefer UI contract so C matches Overview/Grid snapshot.
+    got = find_payload_for_symbol(ui_doc, sym)
     if got:
         return got
-    got = find_payload_for_symbol(ui_doc, sym)
+    got = find_payload_for_symbol(sect_doc, sym)
     if got:
         return got
     return None
@@ -269,11 +278,32 @@ def forecast_payload(
     return find_any_payload(raw)
 
 
-def render_positions_triscore_ascii() -> str:
-    pos_doc = load(POS_P)
-    ui_doc = load(UI_P)
-    sect_doc = load(SECT_P)
-    fs_doc = load(FS_P)
+def render_positions_triscore_ascii(*, cache_dir: Optional[str] = None, mono: bool = False,
+                                  max_rows: int = 8, sector_style=None,
+                                  current_sectors: Optional[List[Dict[str, Any]]] = None) -> str:
+    cd = Path(cache_dir) if cache_dir else CACHE
+    pos_doc = load(cd / "positions.v1.json")
+    fs_doc = load(cd / "forecast_scores.v1.json")
+
+    # Snapshot-first: if ui_doc is a UI contract, prefer embedded positions/forecast
+    # so every widget uses the same payload (no mixed timers).
+    try:
+        _ui = load(cd / "market_health.ui.v1.json")
+        data = _ui.get("data") if isinstance(_ui, dict) else None
+        if isinstance(data, dict):
+            if "positions" in data:
+                pos_doc = data.get("positions") or pos_doc
+            if "forecast_scores" in data:
+                fs_doc = data.get("forecast_scores") or fs_doc
+            # if sectors.json is older, we still prefer ui_doc first (current_payload handles this)
+    except Exception:
+        pass
+    if current_sectors is not None:
+        ui_doc: Dict[str, Any] = {"sectors": current_sectors}
+        sect_doc: Dict[str, Any] = {"sectors": current_sectors}
+    else:
+        ui_doc = load(cd / "market_health.ui.v1.json")
+        sect_doc = load(cd / "market_health.sectors.json")
 
     held = extract_held_symbols(pos_doc)
     sector_universe = set(extract_sector_universe(ui_doc))
@@ -286,12 +316,15 @@ def render_positions_triscore_ascii() -> str:
         sector_held = [s for s in sector_held if s == sym_filter]
         unmapped = [s for s in unmapped if s == sym_filter]
 
+    if isinstance(max_rows, int) and max_rows > 0:
+        sector_held = sector_held[:max_rows]
+
     h1, h5 = get_horizons(fs_doc)
 
     lines: List[str] = []
     lines.append("My Positions — Tri-Score Prototype (read-only)")
     lines.append("Each cell shows C/H1/H5 (digits 0=red, 1=yellow, 2=green).")
-    lines.append(f"cache={CACHE}")
+    lines.append(f"cache={cd}")
     lines.append(f"horizons: H1={h1}  H5={h5}")
     lines.append("")
 
