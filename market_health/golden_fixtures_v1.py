@@ -258,21 +258,30 @@ def _canonicalize_golden(obj):
 
     Strategy:
       - dict: canonicalize values; sort keys for stable output
-      - list: canonicalize items; ONLY sort if it's clearly symbol-ish
-              (strings, or dicts with 'symbol'/'sym')
+      - list:
+          * list[str] -> sort
+          * list[dict] -> sort by canonical JSON (stable across versions)
+          * otherwise preserve order
     """
     if isinstance(obj, dict):
         return {k: _canonicalize_golden(obj[k]) for k in sorted(obj.keys())}
 
     if isinstance(obj, list):
         items = [_canonicalize_golden(x) for x in obj]
+
         if all(isinstance(x, str) for x in items):
             return sorted(items)
+
         if all(isinstance(x, dict) for x in items):
-            if all("symbol" in x for x in items):
-                return sorted(items, key=lambda d: str(d.get("symbol", "")).upper())
-            if all("sym" in x for x in items):
-                return sorted(items, key=lambda d: str(d.get("sym", "")).upper())
+            import json as _json
+
+            return sorted(
+                items,
+                key=lambda d: _json.dumps(
+                    d, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+                ),
+            )
+
         return items
 
     return obj
