@@ -139,8 +139,12 @@ def _payload_from_forecast(
 
 
 def render_positions_triscore(
-    *, cache_dir: Optional[str] = None, mono: bool = False, max_rows: int = 8, sector_style=None,
-    current_sectors: Optional[List[Dict[str, Any]]] = None
+    *,
+    cache_dir: Optional[str] = None,
+    mono: bool = False,
+    max_rows: int = 8,
+    sector_style=None,
+    current_sectors: Optional[List[Dict[str, Any]]] = None,
 ) -> str:
     """
     Read-only Tri-Score positions panel.
@@ -160,7 +164,11 @@ def render_positions_triscore(
 
     pos_doc = _load_json(pos_p)
     fs_doc = _load_json(fs_p)
-    cur_doc = ({"sectors": current_sectors} if current_sectors is not None else (_load_json(ui_p) or _load_json(sect_p)))
+    cur_doc = (
+        {"sectors": current_sectors}
+        if current_sectors is not None
+        else (_load_json(ui_p) or _load_json(sect_p))
+    )
 
     held: List[str] = []
     unmapped: List[str] = []

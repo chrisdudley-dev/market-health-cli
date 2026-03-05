@@ -81,7 +81,12 @@ def _load_telegram_cfg() -> tuple[str, str] | None:
     cfg = _read_json(_cfg_path())
     token = cfg.get("bot_token")
     chat_id = cfg.get("chat_id")
-    if isinstance(token, str) and token.strip() and isinstance(chat_id, str) and chat_id.strip():
+    if (
+        isinstance(token, str)
+        and token.strip()
+        and isinstance(chat_id, str)
+        and chat_id.strip()
+    ):
         return token.strip(), chat_id.strip()
     return None
 

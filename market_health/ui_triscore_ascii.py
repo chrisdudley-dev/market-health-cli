@@ -163,7 +163,15 @@ def sum_payload(payload: Optional[Dict[str, Any]]) -> Optional[int]:
 def extract_held_symbols(pos_doc: Dict[str, Any]) -> List[str]:
     # best-effort: extract symbol-like fields anywhere (Schwab/TOS schemas vary)
     out: List[str] = []
-    KEYS = {"symbol","ticker","sym","underlying","underlyingSymbol","tickerSymbol","rootSymbol"}
+    KEYS = {
+        "symbol",
+        "ticker",
+        "sym",
+        "underlying",
+        "underlyingSymbol",
+        "tickerSymbol",
+        "rootSymbol",
+    }
 
     def maybe_add(v: Any) -> None:
         if isinstance(v, str):
@@ -177,7 +185,13 @@ def extract_held_symbols(pos_doc: Dict[str, Any]) -> List[str]:
                 if k in KEYS:
                     maybe_add(v)
                 # common nested instrument shapes
-                if k.lower() in ("instrument","security","asset","position","holding") and isinstance(v, (dict, list)):
+                if k.lower() in (
+                    "instrument",
+                    "security",
+                    "asset",
+                    "position",
+                    "holding",
+                ) and isinstance(v, (dict, list)):
                     walk(v)
                 if isinstance(v, (dict, list)):
                     walk(v)
@@ -195,6 +209,8 @@ def extract_held_symbols(pos_doc: Dict[str, Any]) -> List[str]:
             seen.add(sym)
             uniq.append(sym)
     return uniq
+
+
 def extract_sector_universe(ui_doc: Dict[str, Any]) -> List[str]:
     # heuristic: find largest list of dict rows that contain "symbol"/"sec"/"ticker"
     candidates: List[List[Dict[str, Any]]] = []
@@ -278,9 +294,14 @@ def forecast_payload(
     return find_any_payload(raw)
 
 
-def render_positions_triscore_ascii(*, cache_dir: Optional[str] = None, mono: bool = False,
-                                  max_rows: int = 8, sector_style=None,
-                                  current_sectors: Optional[List[Dict[str, Any]]] = None) -> str:
+def render_positions_triscore_ascii(
+    *,
+    cache_dir: Optional[str] = None,
+    mono: bool = False,
+    max_rows: int = 8,
+    sector_style=None,
+    current_sectors: Optional[List[Dict[str, Any]]] = None,
+) -> str:
     cd = Path(cache_dir) if cache_dir else CACHE
     pos_doc = load(cd / "positions.v1.json")
     fs_doc = load(cd / "forecast_scores.v1.json")
