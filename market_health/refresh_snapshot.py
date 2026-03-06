@@ -114,14 +114,15 @@ def build_snapshot(
     # Append inverse tickers from ~/.cache/jerboa/inverse_universe.v1.json
     try:
         from pathlib import Path
-        inv_path = Path(os.path.expanduser('~/.cache/jerboa/inverse_universe.v1.json'))
+
+        inv_path = Path(os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json"))
         if inv_path.exists():
-            doc = json.loads(inv_path.read_text(encoding='utf-8'))
-            pairs = doc.get('pairs') if isinstance(doc, dict) else None
+            doc = json.loads(inv_path.read_text(encoding="utf-8"))
+            pairs = doc.get("pairs") if isinstance(doc, dict) else None
             if isinstance(pairs, list):
                 for it in pairs:
-                    if isinstance(it, dict) and isinstance(it.get('inverse'), str):
-                        sym = it['inverse'].strip().upper()
+                    if isinstance(it, dict) and isinstance(it.get("inverse"), str):
+                        sym = it["inverse"].strip().upper()
                         if sym and sym not in sectors:
                             sectors.append(sym)
     except Exception:

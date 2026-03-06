@@ -17,7 +17,6 @@ def _unpack_scores(res):
     return res, None
 
 
-
 ANSI_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 DETAIL_HDR_RE = re.compile(r"^\s*[─-]*\s*Details\s+[–-]\s+([A-Z0-9]+)\s*[─-]*\s*$")
 
@@ -39,11 +38,14 @@ YELLOW = "\033[33m"
 CYAN = "\033[36m"
 MAGENTA = "\033[35m"
 
+
 def c(s: str, color: str) -> str:
     return f"{color}{s}{RST}"
 
+
 def strip_ansi(s: str) -> str:
     return ANSI_RE.sub("", s)
+
 
 def read_json(p: Path) -> dict[str, Any]:
     try:
@@ -52,6 +54,7 @@ def read_json(p: Path) -> dict[str, Any]:
     except Exception:
         pass
     return {}
+
 
 def sanitize_args(argv: list[str]) -> list[str]:
     # Never allow caller to override our --topk (we need all details, then we choose)
@@ -65,6 +68,7 @@ def sanitize_args(argv: list[str]) -> list[str]:
         i += 1
     return out
 
+
 def run_core_ui(user_args: list[str]) -> str:
     env = dict(os.environ)
     env.setdefault("FORCE_COLOR", "1")
@@ -73,8 +77,11 @@ def run_core_ui(user_args: list[str]) -> str:
 
     args = sanitize_args(user_args)
     cmd = [sys.executable, "-m", "market_health.market_ui", "--topk", "99", *args]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
     return proc.stdout if proc.stdout.strip() else proc.stderr
+
 
 def split_core_output(core_text: str) -> tuple[str, dict[str, str], list[str]]:
     """
@@ -106,6 +113,7 @@ def split_core_output(core_text: str) -> tuple[str, dict[str, str], list[str]]:
 
     return prefix, blocks, order
 
+
 def strip_core_overview(prefix_text: str) -> str:
     # Remove the core sector-only overview table so we can replace it with expanded A–E.
     lines = prefix_text.splitlines(True)
@@ -113,17 +121,18 @@ def strip_core_overview(prefix_text: str) -> str:
     skipping = False
     for ln in lines:
         plain = strip_ansi(ln)
-        if 'Overview (A–E totals per sector)' in plain:
+        if "Overview (A–E totals per sector)" in plain:
             skipping = True
             continue
         if skipping:
             # stop skipping when we hit the Pi Grid header
-            if 'Market Health – Pi Grid' in plain:
+            if "Market Health – Pi Grid" in plain:
                 skipping = False
                 out.append(ln)
             continue
         out.append(ln)
-    return ''.join(out)
+    return "".join(out)
+
 
 def parse_overview_totals(prefix_text: str) -> tuple[list[str], dict[str, float]]:
     """
@@ -154,6 +163,7 @@ def parse_overview_totals(prefix_text: str) -> tuple[list[str], dict[str, float]
                 order.append(sym)
     return order, util
 
+
 def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
     syms: list[str] = []
 
@@ -179,6 +189,7 @@ def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
             out.append(s)
     return out
 
+
 def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> list[str]:
     # 1) real positions cache (if it exists)
     for p in POS_CANDIDATES:
@@ -195,7 +206,19 @@ def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> li
         rec = rec_doc.get("recommendation")
         if not isinstance(rec, dict):
             # Accept flat v1 cache schema (keys live at top-level)
-            if any(k in rec_doc for k in ("action","why","swap_candidates","threshold","best","weakest","held_syms","status")):
+            if any(
+                k in rec_doc
+                for k in (
+                    "action",
+                    "why",
+                    "swap_candidates",
+                    "threshold",
+                    "best",
+                    "weakest",
+                    "held_syms",
+                    "status",
+                )
+            ):
                 rec = rec_doc
 
     diag = rec.get("diagnostics") if isinstance(rec, dict) else None
@@ -207,12 +230,14 @@ def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> li
 
     return []
 
+
 def grade_letter(pct: int) -> tuple[str, str]:
     if pct >= 60:
         return "B", GREEN
     if pct >= 45:
         return "H", YELLOW
     return "S", RED
+
 
 def _snapshot_order_util(doc: dict) -> tuple[list[str], dict[str, float]]:
     data = doc.get("data") or {}
@@ -234,7 +259,7 @@ def _snapshot_order_util(doc: dict) -> tuple[list[str], dict[str, float]]:
             continue
         total = 0
         maxp = 0
-        for cat in ("A","B","C","D","E"):
+        for cat in ("A", "B", "C", "D", "E"):
             node = cats.get(cat)
             if not isinstance(node, dict):
                 continue
@@ -254,6 +279,7 @@ def _snapshot_order_util(doc: dict) -> tuple[list[str], dict[str, float]]:
             order2.append(x)
     return order2, util
 
+
 def render_pi_grid(order: list[str], util: dict[str, float]) -> str:
     if not order:
         return ""
@@ -270,7 +296,12 @@ def render_pi_grid(order: list[str], util: dict[str, float]) -> str:
         ]
 
     lines: list[str] = []
-    lines.append(c("────────────────────────────── Market Health – Pi Grid ──────────────────────────────", MAGENTA))
+    lines.append(
+        c(
+            "────────────────────────────── Market Health – Pi Grid ──────────────────────────────",
+            MAGENTA,
+        )
+    )
     row: list[list[str]] = []
     for i, sym in enumerate(order):
         pct = int(round(util.get(sym, 0.0) * 100))
@@ -284,18 +315,37 @@ def render_pi_grid(order: list[str], util: dict[str, float]) -> str:
             lines.append("  ".join(cell[r] for cell in row))
     return "\n".join(lines) + "\n"
 
+
 def fmt_u(u: float | None) -> str:
     if u is None:
         return "-"
-    return f"{u:.3f} / {u*100:.1f}%"
+    return f"{u:.3f} / {u * 100:.1f}%"
 
-def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any], held_syms: list[str]) -> str:
+
+def render_reco(
+    order: list[str],
+    util: dict[str, float],
+    rec_doc: dict[str, Any],
+    held_syms: list[str],
+) -> str:
     rec = None
     if isinstance(rec_doc, dict):
         rec = rec_doc.get("recommendation")
         if not isinstance(rec, dict):
             # Accept flat v1 cache schema (keys live at top-level)
-            if any(k in rec_doc for k in ("action","why","swap_candidates","threshold","best","weakest","held_syms","status")):
+            if any(
+                k in rec_doc
+                for k in (
+                    "action",
+                    "why",
+                    "swap_candidates",
+                    "threshold",
+                    "best",
+                    "weakest",
+                    "held_syms",
+                    "status",
+                )
+            ):
                 rec = rec_doc
 
     if not isinstance(rec, dict):
@@ -303,10 +353,12 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
 
         return c(f"No recommendations cache found at {rec_path}\n", RED)
 
-    asof = (rec.get("asof") if isinstance(rec, dict) else None) or (rec_doc.get("asof") if isinstance(rec_doc, dict) else None)
+    asof = (rec.get("asof") if isinstance(rec, dict) else None) or (
+        rec_doc.get("asof") if isinstance(rec_doc, dict) else None
+    )
 
     action = rec.get("action")
-    reason = (rec.get("why") or rec.get("reason") or rec.get("because") or "")
+    reason = rec.get("why") or rec.get("reason") or rec.get("because") or ""
 
     from_sym = rec.get("from_symbol")
     to_sym = rec.get("to_symbol")
@@ -340,22 +392,36 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
         lines.append(f"{'threshold':<14}: {thr:.3f}")
         if isinstance(delta, (int, float)):
             short = thr - float(delta)
-            lines.append(f"{'shortfall':<14}: {short:.3f}" if short > 0 else f"{'shortfall':<14}: 0.000")
+            lines.append(
+                f"{'shortfall':<14}: {short:.3f}"
+                if short > 0
+                else f"{'shortfall':<14}: 0.000"
+            )
 
     # READY/BLOCKED table (the “denied/ready” concept)
     lines.append("")
     lines.append(c("Swap candidates vs weakest held", CYAN))
     inputs = rec_doc.get("inputs") if isinstance(rec_doc.get("inputs"), dict) else {}
-    use_forecast = bool(inputs.get("forecast_mode")) or (diag.get("decision_metric") == "robust_edge") or (diag.get("mode") == "forecast")
+    use_forecast = (
+        bool(inputs.get("forecast_mode"))
+        or (diag.get("decision_metric") == "robust_edge")
+        or (diag.get("mode") == "forecast")
+    )
 
     if use_forecast:
-        lines.append(f"{'sym':<6}{'health':>10}  {'edge':>7}  {'thr':>7}  {'status':>8}")
-        lines.append('-' * 52)
-        fs_doc = read_json(CACHE_DIR / 'forecast_scores.v1.json')
-        scores = fs_doc.get('scores') if isinstance(fs_doc, dict) else None
-        horizons = fs_doc.get('horizons_trading_days') if isinstance(fs_doc, dict) else None
+        lines.append(
+            f"{'sym':<6}{'health':>10}  {'edge':>7}  {'thr':>7}  {'status':>8}"
+        )
+        lines.append("-" * 52)
+        fs_doc = read_json(CACHE_DIR / "forecast_scores.v1.json")
+        scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else None
+        horizons = (
+            fs_doc.get("horizons_trading_days") if isinstance(fs_doc, dict) else None
+        )
         if not isinstance(scores, dict) or not scores or not isinstance(weakest, str):
-            lines.append(c('forecast scores unavailable (cannot compute robust edges)', YELLOW))
+            lines.append(
+                c("forecast scores unavailable (cannot compute robust edges)", YELLOW)
+            )
         else:
             hs: list[int] = []
             if isinstance(horizons, list):
@@ -368,7 +434,7 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
 
             def iter_checks(node):
                 if isinstance(node, dict):
-                    if isinstance(node.get('label'), str) and 'score' in node:
+                    if isinstance(node.get("label"), str) and "score" in node:
                         yield node
                     for v in node.values():
                         yield from iter_checks(v)
@@ -389,7 +455,7 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
                 s = 0.0
                 for c_ in chks:
                     try:
-                        s += float(c_.get('score', 0.0))
+                        s += float(c_.get("score", 0.0))
                     except Exception:
                         pass
                 m_ = 2.0 * len(chks)
@@ -408,7 +474,11 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
             held_set = set(held_syms)
             # Candidate symbols = union of overview sectors and forecast score keys, minus held and outsym
             cand_syms = sorted(set(order) | set(scores.keys()))
-            cand_syms = [s for s in cand_syms if isinstance(s, str) and s and s not in held_set and s != weakest]
+            cand_syms = [
+                s
+                for s in cand_syms
+                if isinstance(s, str) and s and s not in held_set and s != weakest
+            ]
 
             rows = []
             for sym in cand_syms:
@@ -420,21 +490,21 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
             rows = rows[:6]
 
             for sym, hu, e in rows:
-                status = 'BLOCKED'
+                status = "BLOCKED"
                 col = YELLOW
                 if thr is not None and e >= thr:
-                    status = 'READY'
+                    status = "READY"
                     col = GREEN
                 elif thr is None:
-                    status = '?'
+                    status = "?"
                     col = YELLOW
-                hu_s = f"{hu:>10.3f}" if isinstance(hu, float) else (' ' * 10)
-                thr_s = '' if thr is None else f"{thr:>7.3f}"
+                hu_s = f"{hu:>10.3f}" if isinstance(hu, float) else (" " * 10)
+                thr_s = "" if thr is None else f"{thr:>7.3f}"
                 lines.append(f"{sym:<6}{hu_s}  {e:>7.3f}  {thr_s:>7}  {c(status, col)}")
 
     else:
         lines.append(f"{'sym':<6}{'utility':>10}  {'Δ':>7}  {'thr':>7}  {'status':>8}")
-        lines.append('-' * 44)
+        lines.append("-" * 44)
         held_set = set(held_syms)
         candidates = [(s, util.get(s)) for s in util.keys() if s not in held_set]
         candidates = [(s, u) for s, u in candidates if isinstance(u, float)]
@@ -442,18 +512,23 @@ def render_reco(order: list[str], util: dict[str, float], rec_doc: dict[str, Any
 
         for sym, u in candidates:
             d = (u - weak_u) if (weak_u is not None) else None
-            status = 'BLOCKED'
+            status = "BLOCKED"
             col = YELLOW
             if d is not None and thr is not None and d >= thr:
-                status = 'READY'
+                status = "READY"
                 col = GREEN
             elif d is None or thr is None:
-                status = '?'
+                status = "?"
                 col = YELLOW
-            lines.append(f"{sym:<6}{u:>10.3f}  {'' if d is None else f'{d:>7.3f}'}  {'' if thr is None else f'{thr:>7.3f}'}  {c(status, col)}")
+            lines.append(
+                f"{sym:<6}{u:>10.3f}  {'' if d is None else f'{d:>7.3f}'}  {'' if thr is None else f'{thr:>7.3f}'}  {c(status, col)}"
+            )
 
-    lines.append(f"{'held_syms':<14}: {', '.join(held_syms) if held_syms else '(none found)'}")
+    lines.append(
+        f"{'held_syms':<14}: {', '.join(held_syms) if held_syms else '(none found)'}"
+    )
     return "\n".join(lines) + "\n"
+
 
 def main() -> int:
     user_args = sys.argv[1:]
@@ -466,37 +541,37 @@ def main() -> int:
 
     inv_syms = []
     # --- Inverse ETF augmentation (map-only; no score overrides) ---
-#     try:
-#         if inv_syms:
-#             rec_doc_local = read_json(REC_PATH)
-#             inputs = rec_doc_local.get("inputs") if isinstance(rec_doc_local, dict) else None
-#             period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
-#             interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
-# 
-#             inv_rows = compute_scores(sectors=inv_syms, period=period, interval=interval)
-# 
-#             def _row_util(row):
-#                 total = 0
-#                 maxp = 0
-#                 cats = row.get("categories", {})
-#                 if isinstance(cats, dict):
-#                     for cat in cats.values():
-#                         checks = cat.get("checks") if isinstance(cat, dict) else None
-#                         if isinstance(checks, list):
-#                             for chk in checks:
-#                                 sc = chk.get("score") if isinstance(chk, dict) else None
-#                                 if isinstance(sc, int):
-#                                     total += sc
-#                                     maxp += 2
-#                 return (total / maxp) if maxp else None
-# 
-#             for r in inv_rows:
-#                 sym = str(r.get("symbol") or "").upper().strip()
-#                 u = _row_util(r)
-#                 if sym and (u is not None):
-#                     util[sym] = float(u)
-#     except Exception:
-#         pass
+    #     try:
+    #         if inv_syms:
+    #             rec_doc_local = read_json(REC_PATH)
+    #             inputs = rec_doc_local.get("inputs") if isinstance(rec_doc_local, dict) else None
+    #             period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
+    #             interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
+    #
+    #             inv_rows = compute_scores(sectors=inv_syms, period=period, interval=interval)
+    #
+    #             def _row_util(row):
+    #                 total = 0
+    #                 maxp = 0
+    #                 cats = row.get("categories", {})
+    #                 if isinstance(cats, dict):
+    #                     for cat in cats.values():
+    #                         checks = cat.get("checks") if isinstance(cat, dict) else None
+    #                         if isinstance(checks, list):
+    #                             for chk in checks:
+    #                                 sc = chk.get("score") if isinstance(chk, dict) else None
+    #                                 if isinstance(sc, int):
+    #                                     total += sc
+    #                                     maxp += 2
+    #                 return (total / maxp) if maxp else None
+    #
+    #             for r in inv_rows:
+    #                 sym = str(r.get("symbol") or "").upper().strip()
+    #                 u = _row_util(r)
+    #                 if sym and (u is not None):
+    #                     util[sym] = float(u)
+    #     except Exception:
+    #         pass
     # --- end inverse augmentation ---
 
     # Expanded universe order (cache-first): prefer UI snapshot sectors (includes inverses)
@@ -504,42 +579,51 @@ def main() -> int:
     order_all = list(order)
 
     try:
-
-        ui_path = Path(os.path.expanduser(os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"))).expanduser()
+        ui_path = Path(
+            os.path.expanduser(
+                os.environ.get(
+                    "JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"
+                )
+            )
+        ).expanduser()
 
         snap = read_json(ui_path)
 
-        if isinstance(snap, dict) and isinstance(snap.get("data"), dict) and isinstance(snap["data"].get("sectors"), list):
-
+        if (
+            isinstance(snap, dict)
+            and isinstance(snap.get("data"), dict)
+            and isinstance(snap["data"].get("sectors"), list)
+        ):
             order_all, util = _snapshot_order_util(snap)
 
             # keep inv_syms consistent for downstream sections that gate on it
 
-            inv_syms = [x for x in order_all if isinstance(x, str) and not x.startswith("XL")]
+            inv_syms = [
+                x for x in order_all if isinstance(x, str) and not x.startswith("XL")
+            ]
 
         else:
-
             for x in inv_syms:
-
                 if x not in order_all:
-
                     order_all.append(x)
 
     except Exception:
-
         for x in inv_syms:
-
             if x not in order_all:
-
                 order_all.append(x)
-
 
     held_syms = pick_positions(detail_blocks, rec_doc)
     # Snapshot-first fallback (cache-only, consistent payload):
     # If held_syms is empty, derive sector ETF holdings from the cached UI contract snapshot.
     if not held_syms:
         try:
-            ui_path = Path(os.path.expanduser(os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"))).expanduser()
+            ui_path = Path(
+                os.path.expanduser(
+                    os.environ.get(
+                        "JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"
+                    )
+                )
+            ).expanduser()
             snap = read_json(ui_path)
             data = snap.get("data") or {}
             pos = data.get("positions")
@@ -559,46 +643,46 @@ def main() -> int:
     # 1b) Overview (A–E totals per universe) — sectors + inverses
     if inv_syms:
         pass
-#         try:
-#             inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
-#             period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
-#             interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
-# 
-#             rows = compute_scores(sectors=order_all, period=period, interval=interval)
-#             by = {str(r.get("symbol") or "").upper(): r for r in rows if isinstance(r, dict)}
-# 
-#             def cat_sum(r, cat):
-#                 cats = r.get("categories", {})
-#                 if not isinstance(cats, dict):
-#                     return 0
-#                 node = cats.get(cat)
-#                 if not isinstance(node, dict):
-#                     return 0
-#                 checks = node.get("checks")
-#                 if not isinstance(checks, list):
-#                     return 0
-#                 s = 0
-#                 for chk in checks:
-#                     if isinstance(chk, dict) and isinstance(chk.get("score"), int):
-#                         s += int(chk["score"])
-#                 return s
-# 
-#             lines2 = []
-#             lines2.append("                        Overview (A–E totals per universe)")
-#             lines2.append("")
-#             lines2.append(f"  {'Sym':<6}  {'A':>6}  {'B':>6}  {'C':>6}  {'D':>6}  {'E':>6}  {'Total':>8}")
-#             lines2.append("  " + "─" * 62)
-#             for sym in order_all:
-#                 r = by.get(sym)
-#                 if not r:
-#                     continue
-#                 a = cat_sum(r, 'A'); b = cat_sum(r, 'B'); cc = cat_sum(r, 'C'); d = cat_sum(r, 'D'); e = cat_sum(r, 'E')
-#                 total = a + b + cc + d + e
-#                 lines2.append(f"  {sym:<6}  {a:>2}/12  {b:>2}/12  {cc:>2}/12  {d:>2}/12  {e:>2}/12  {total:>2}/60")
-#             sys.stdout.write("\n".join(lines2) + "\n\n")
-#         except Exception:
-#             pass
-# 
+    #         try:
+    #             inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
+    #             period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
+    #             interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
+    #
+    #             rows = compute_scores(sectors=order_all, period=period, interval=interval)
+    #             by = {str(r.get("symbol") or "").upper(): r for r in rows if isinstance(r, dict)}
+    #
+    #             def cat_sum(r, cat):
+    #                 cats = r.get("categories", {})
+    #                 if not isinstance(cats, dict):
+    #                     return 0
+    #                 node = cats.get(cat)
+    #                 if not isinstance(node, dict):
+    #                     return 0
+    #                 checks = node.get("checks")
+    #                 if not isinstance(checks, list):
+    #                     return 0
+    #                 s = 0
+    #                 for chk in checks:
+    #                     if isinstance(chk, dict) and isinstance(chk.get("score"), int):
+    #                         s += int(chk["score"])
+    #                 return s
+    #
+    #             lines2 = []
+    #             lines2.append("                        Overview (A–E totals per universe)")
+    #             lines2.append("")
+    #             lines2.append(f"  {'Sym':<6}  {'A':>6}  {'B':>6}  {'C':>6}  {'D':>6}  {'E':>6}  {'Total':>8}")
+    #             lines2.append("  " + "─" * 62)
+    #             for sym in order_all:
+    #                 r = by.get(sym)
+    #                 if not r:
+    #                     continue
+    #                 a = cat_sum(r, 'A'); b = cat_sum(r, 'B'); cc = cat_sum(r, 'C'); d = cat_sum(r, 'D'); e = cat_sum(r, 'E')
+    #                 total = a + b + cc + d + e
+    #                 lines2.append(f"  {sym:<6}  {a:>2}/12  {b:>2}/12  {cc:>2}/12  {d:>2}/12  {e:>2}/12  {total:>2}/60")
+    #             sys.stdout.write("\n".join(lines2) + "\n\n")
+    #         except Exception:
+    #             pass
+    #
     # 1b) Overview (expanded universe, totals-only)
     if inv_syms:
         try:
@@ -617,7 +701,6 @@ def main() -> int:
         except Exception:
             pass
 
-
     # 2) Pi Grid
     # OVERVIEW_AE_FROM_SNAPSHOT_V2
     # Rich bordered + colorized A–E totals table from the UI snapshot (cache-only; includes inverses)
@@ -626,8 +709,14 @@ def main() -> int:
         from rich.table import Table
         from rich.text import Text
         from rich import box
-    
-        ui_path2 = Path(os.path.expanduser(os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"))).expanduser()
+
+        ui_path2 = Path(
+            os.path.expanduser(
+                os.environ.get(
+                    "JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"
+                )
+            )
+        ).expanduser()
         snap2 = read_json(ui_path2)
         data2 = snap2.get("data") if isinstance(snap2, dict) else None
         sec2 = data2.get("sectors") if isinstance(data2, dict) else None
@@ -638,7 +727,7 @@ def main() -> int:
                     sym = str(it.get("symbol") or "").strip().upper()
                     if sym:
                         by2[sym] = it
-    
+
             def _cat_sum(row, cat):
                 cats = row.get("categories", {})
                 if not isinstance(cats, dict):
@@ -658,7 +747,7 @@ def main() -> int:
                         except Exception:
                             pass
                 return total
-    
+
             def _style(val, denom):
                 # Traffic-light thresholds:
                 # /12: <4 red, <8 yellow, else green
@@ -676,19 +765,23 @@ def main() -> int:
                         return "bold yellow"
                     return "bold red"
                 return "bold"
-    
+
             def _cell(val, denom):
                 t = Text(f"{val}/{denom}")
                 t.stylize(_style(val, denom))
                 return t
-    
+
             console2 = Console()
-            t = Table(title="Overview (A–E totals per universe)", box=box.HEAVY_HEAD, header_style="bold cyan")
+            t = Table(
+                title="Overview (A–E totals per universe)",
+                box=box.HEAVY_HEAD,
+                header_style="bold cyan",
+            )
             t.add_column("Sym", style="bold cyan", no_wrap=True)
             for k in ("A", "B", "C", "D", "E"):
                 t.add_column(k, justify="right")
             t.add_column("Total", justify="right")
-    
+
             for sym in order_all:
                 r = by2.get(sym)
                 if not r:
@@ -708,7 +801,7 @@ def main() -> int:
                     _cell(e, 12),
                     _cell(total, 60),
                 )
-    
+
             console2.print(t)
             console2.print()
     except Exception:
@@ -718,64 +811,71 @@ def main() -> int:
 
     # 3) Details for positions (TRI-SCORE ASCII prototype)
 
-#             # --- Snapshot widgets (cache-only) ---
-#     try:
-#         ui_path = Path(os.path.expanduser(os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"))).expanduser()
-#         snap = read_json(ui_path)
-#         if isinstance(snap, dict) and isinstance(snap.get("data"), dict) and isinstance(snap["data"].get("sectors"), list):
-#             snap_order, snap_util = _snapshot_order_util(snap)
+    #             # --- Snapshot widgets (cache-only) ---
+    #     try:
+    #         ui_path = Path(os.path.expanduser(os.environ.get("JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"))).expanduser()
+    #         snap = read_json(ui_path)
+    #         if isinstance(snap, dict) and isinstance(snap.get("data"), dict) and isinstance(snap["data"].get("sectors"), list):
+    #             snap_order, snap_util = _snapshot_order_util(snap)
 
-#             lines2 = []
-#             lines2.append(c("Overview (totals-only from snapshot)", CYAN))
-#             lines2.append(f"{'Sym':<6}  {'Total':>12}")
-#             lines2.append("-" * 22)
-#             for sym in snap_order:
-#                 u = snap_util.get(sym)
-#                 if not isinstance(u, float):
-#                     continue
-#                 pct = int(round(u * 100))
-#                 letter, col = grade_letter(pct)
-#                 lines2.append(f"{sym:<6}  {pct:>3}% {c(letter, col)}")
-#             sys.stdout.write("\n".join(lines2) + "\n\n")
+    #             lines2 = []
+    #             lines2.append(c("Overview (totals-only from snapshot)", CYAN))
+    #             lines2.append(f"{'Sym':<6}  {'Total':>12}")
+    #             lines2.append("-" * 22)
+    #             for sym in snap_order:
+    #                 u = snap_util.get(sym)
+    #                 if not isinstance(u, float):
+    #                     continue
+    #                 pct = int(round(u * 100))
+    #                 letter, col = grade_letter(pct)
+    #                 lines2.append(f"{sym:<6}  {pct:>3}% {c(letter, col)}")
+    #             sys.stdout.write("\n".join(lines2) + "\n\n")
 
-#             sys.stdout.write(render_pi_grid(snap_order, snap_util) + "\n")
-#     except Exception:
-#         pass
-#     # --- end snapshot widgets ---
+    #             sys.stdout.write(render_pi_grid(snap_order, snap_util) + "\n")
+    #     except Exception:
+    #         pass
+    #     # --- end snapshot widgets ---
 
-
-    sys.stdout.write(c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10))
+    sys.stdout.write(
+        c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10)
+    )
 
     if not held_syms:
+        sys.stdout.write(
+            c(
+                "No positions detected yet (no positions cache; fallback held_scored also missing)."
+                + chr(10),
+                YELLOW,
+            )
+        )
 
-        sys.stdout.write(c("No positions detected yet (no positions cache; fallback held_scored also missing)." + chr(10), YELLOW))
-
-        sys.stdout.write("If you expect Schwab/TOS positions here, ensure positions refresh actually produces a positions cache file." + chr(10) + chr(10))
+        sys.stdout.write(
+            "If you expect Schwab/TOS positions here, ensure positions refresh actually produces a positions cache file."
+            + chr(10)
+            + chr(10)
+        )
 
     else:
-
         try:
-
             from market_health.ui_triscore_ascii import render_positions_triscore_ascii
 
             sys.stdout.write(render_positions_triscore_ascii() + chr(10))
 
         except Exception as e:
-
-            sys.stdout.write(c("Tri-Score ASCII unavailable: %s" % (e,) + chr(10) + chr(10), YELLOW))
+            sys.stdout.write(
+                c("Tri-Score ASCII unavailable: %s" % (e,) + chr(10) + chr(10), YELLOW)
+            )
 
             for sym in held_syms:
-
                 blk = detail_blocks.get(sym)
 
                 if blk:
-
                     sys.stdout.write(blk.rstrip() + chr(10) + chr(10))
-
 
     # 4) Recommendation + READY/BLOCKED table
     sys.stdout.write(render_reco(order, util, rec_doc, held_syms))
     return 0
+
 
 if __name__ == "__main__":
     import argparse
@@ -783,7 +883,12 @@ if __name__ == "__main__":
     import time
 
     ap = argparse.ArgumentParser(add_help=True)
-    ap.add_argument("--watch", type=int, default=0, help="Auto-refresh every N seconds (e.g., 900 for 15 minutes)")
+    ap.add_argument(
+        "--watch",
+        type=int,
+        default=0,
+        help="Auto-refresh every N seconds (e.g., 900 for 15 minutes)",
+    )
     args, rest = ap.parse_known_args()
     sys.argv = [sys.argv[0]] + rest
 
