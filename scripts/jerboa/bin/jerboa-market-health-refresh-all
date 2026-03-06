@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+PY="/root/market-health-cli/.venv/bin/python"
 set -Eeuo pipefail
 
 FORCE=0
@@ -120,7 +121,7 @@ with open(p, "w", encoding="utf-8") as f:
   json.dump(state, f, indent=2, sort_keys=True); f.write("\n")
 PY
 
-# Journald: one line max, only when meaningful
+# Journald: one line max
 
 # JERBOA_UI_EXPORT_V1
 # Update UI contract (React/web reads this single file)
@@ -131,6 +132,7 @@ PY
   else
     rec_rc=127
   fi
+
 
   # Forecast scores (fail-soft)
   if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
@@ -154,3 +156,21 @@ if [ "$status" = "error" ]; then
   exit 1
 fi
 exit 0
+# JERBOA_REC_ASOF_SYNC_V1
+# Keep recommendations "asof" coherent with the UI snapshot "asof".
+# This does NOT hit Schwab; it only edits the local JSON file.
+UI_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
+if [ -s "$UI_JSON" ] && [ -s "$REC_JSON" ]; then
+  ui_asof="$("$PY" - <<'PYASOF'
+import json
+from pathlib import Path
+d=json.loads(Path("/root/.cache/jerboa/market_health.ui.v1.json").read_text())
+print(d.get("asof",""))
+PYASOF
+  )"
+  if [ -n "$ui_asof" ]; then
+    REC_JSON="$REC_JSON" UI_ASOF="$ui_asof" "$PY" -c 'import os,json; from pathlib import Path; ui=os.environ.get("UI_ASOF",""); rp=Path(os.environ["REC_JSON"]); d=json.loads(rp.read_text(encoding="utf-8")); d["asof"]=ui; rec=d.get("recommendation"); (isinstance(rec,dict) and rec.__setitem__("asof",ui)); ("generated_at" in d and d.__setitem__("generated_at",ui)); rp.write_text(json.dumps(d, indent=2, sort_keys=True)+chr(10), encoding="utf-8")+chr(10), encoding="utf-8")'
+  fi
+fi
+# --- end JERBOA_REC_ASOF_SYNC_V1 ---
+
