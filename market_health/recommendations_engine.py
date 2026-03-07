@@ -94,6 +94,101 @@ def score_row_points(row: Dict[str, Any]) -> Tuple[int, int]:
     return (points, 2 * checks_n)
 
 
+def _normalize_utility_weights(raw: Any) -> Dict[str, float]:
+    base = {"c": 0.50, "h1": 0.25, "h5": 0.25}
+    if not isinstance(raw, dict):
+        return dict(base)
+
+    vals: Dict[str, float] = {}
+    for key in ("c", "h1", "h5"):
+        v = raw.get(key)
+        if isinstance(v, (int, float)) and float(v) >= 0:
+            vals[key] = float(v)
+        else:
+            vals[key] = base[key]
+
+    total = sum(vals.values())
+    if total <= 0:
+        return dict(base)
+    return {k: (v / total) for k, v in vals.items()}
+
+
+def _forecast_payload_for(
+    forecast_scores: Any, sym: str, horizon_trading_days: int
+) -> Optional[Dict[str, Any]]:
+    if not isinstance(forecast_scores, dict):
+        return None
+    by_h = forecast_scores.get(sym)
+    if not isinstance(by_h, dict):
+        return None
+    raw = by_h.get(str(horizon_trading_days), by_h.get(horizon_trading_days))
+    return raw if isinstance(raw, dict) else None
+
+
+def _forecast_utility(payload: Any) -> Optional[float]:
+    if not isinstance(payload, dict):
+        return None
+
+    fs = payload.get("forecast_score")
+    if isinstance(fs, (int, float)):
+        val = float(fs)
+        return (val / 100.0) if val > 1.5 else val
+
+    pts = payload.get("points")
+    mx = payload.get("max_points")
+    if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
+        return float(pts) / float(mx)
+
+    return None
+
+
+def blended_utility_from_scores(
+    rows: Iterable[Dict[str, Any]],
+    *,
+    forecast_scores: Any = None,
+    utility_weights: Any = None,
+    forecast_horizons: Any = (1, 5),
+) -> Dict[str, Dict[str, Any]]:
+    out = utility_from_scores(rows)
+    weights = _normalize_utility_weights(utility_weights)
+
+    horizons: List[int] = []
+    if isinstance(forecast_horizons, (list, tuple)):
+        for h in forecast_horizons:
+            try:
+                horizons.append(int(h))
+            except Exception:
+                continue
+    if len(horizons) < 2:
+        horizons = [1, 5]
+    h1, h5 = horizons[0], horizons[1]
+
+    for sym, meta in out.items():
+        c_util = float(meta.get("utility", 0.0))
+        h1_util = _forecast_utility(_forecast_payload_for(forecast_scores, sym, h1))
+        h5_util = _forecast_utility(_forecast_payload_for(forecast_scores, sym, h5))
+
+        parts = {"c": c_util, "h1": h1_util, "h5": h5_util}
+        present = {k: v for k, v in parts.items() if isinstance(v, (int, float))}
+        denom = sum(weights[k] for k in present.keys())
+        blended = (
+            sum(weights[k] * float(v) for k, v in present.items()) / denom
+            if denom > 0
+            else c_util
+        )
+
+        meta.update(
+            {
+                "utility": blended,
+                "current_utility": c_util,
+                "h1_utility": h1_util,
+                "h5_utility": h5_util,
+                "utility_weights": dict(weights),
+            }
+        )
+    return out
+
+
 def utility_from_scores(rows: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     out: Dict[str, Dict[str, Any]] = {}
     for row in rows:
@@ -122,14 +217,6 @@ def recommend(
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
     thr = float(constraints.get("min_improvement_threshold", 0.12))
 
-    # Forecast-mode path (Issue #113)
-    fs = constraints.get("forecast_scores")
-    if isinstance(fs, dict) and fs:
-        held_syms = extract_held_symbols(positions)
-        if any(str(h).upper() in fs for h in held_syms):
-            from market_health.forecast_recommendations import recommend_forecast_mode
-
-            return recommend_forecast_mode(positions=positions, constraints=constraints)
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
 
@@ -162,7 +249,12 @@ def recommend(
             diagnostics={"threshold": thr, "horizon_trading_days": horizon},
         )
 
-    util = utility_from_scores(scores)
+    util = blended_utility_from_scores(
+        scores,
+        forecast_scores=constraints.get("forecast_scores"),
+        utility_weights=constraints.get("utility_weights"),
+        forecast_horizons=constraints.get("forecast_horizons") or (1, 5),
+    )
 
     held_present = [h for h in held if h in util]
     if not held_present:
@@ -210,26 +302,76 @@ def recommend(
         util[weakest].get("utility", 0.0)
     )
 
+
+    # BLENDED_CANDIDATE_ROWS_V1
+    candidate_rows = []
+    weakest_blended = float(util[weakest].get("utility", 0.0))
+    weakest_current = util[weakest].get("current_utility")
+    weakest_h1 = util[weakest].get("h1_utility")
+    weakest_h5 = util[weakest].get("h5_utility")
+
+    for sym, meta in sorted(
+        ((s, util[s]) for s in candidates),
+        key=lambda kv: float(kv[1].get("utility", 0.0)),
+        reverse=True,
+    ):
+        blended = float(meta.get("utility", 0.0))
+        c_util = meta.get("current_utility")
+        h1_util = meta.get("h1_utility")
+        h5_util = meta.get("h5_utility")
+        candidate_rows.append(
+            {
+                "sym": sym,
+                "blended": blended,
+                "c": c_util,
+                "h1": h1_util,
+                "h5": h5_util,
+                "delta_blended": blended - weakest_blended,
+                "threshold": thr,
+                "status": "READY" if (blended - weakest_blended) >= thr else "BLOCKED",
+            }
+        )
+
     diagnostics = {
         "threshold": thr,
         "horizon_trading_days": horizon,
         "weakest_held": weakest,
         "best_candidate": best,
+        "utility_weights": dict(util[best].get("utility_weights", {})),
         "delta_utility": delta,
-        "decision_metric": "delta_utility",
+        "decision_metric": "blended_utility",
         "edge": delta,
         "health_score_from": float(util[weakest].get("utility", 0.0)),
         "health_score_to": float(util[best].get("utility", 0.0)),
         "held_scored": held_present,
         "held_utilities": {h: float(util[h].get("utility", 0.0)) for h in held_present},
+        "held_components": {
+            h: {
+                "c": util[h].get("current_utility"),
+                "h1": util[h].get("h1_utility"),
+                "h5": util[h].get("h5_utility"),
+                "blended": util[h].get("utility"),
+            }
+            for h in held_present
+        },
         "candidate_utility": float(util[best].get("utility", 0.0)),
+        "candidate_components": {
+            "c": util[best].get("current_utility"),
+            "h1": util[best].get("h1_utility"),
+            "h5": util[best].get("h5_utility"),
+            "blended": util[best].get("utility"),
+        },
+        "candidate_rows": candidate_rows,
     }
 
     # base threshold gate
     if not (delta >= thr and best != weakest):
         return Recommendation(
             action="NOOP",
-            reason=f"No candidate clears min improvement threshold (best Δ={delta:.3f} < {thr:.3f}); hold.",
+            reason=(
+                f"No candidate clears min improvement threshold "
+                f"(best blended Δ={delta:.3f} < {thr:.3f}); hold."
+            ),
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
