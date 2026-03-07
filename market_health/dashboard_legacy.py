@@ -1,5 +1,11 @@
 from __future__ import annotations
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
+import io
 import json
 import os
 import re
@@ -8,8 +14,6 @@ import sys
 from pathlib import Path
 from typing import Any
 import argparse
-
-
 def _unpack_scores(res):
     """Compat: allow compute_scores to return either rows or (rows, meta)."""
     if isinstance(res, tuple) and len(res) == 2:
@@ -322,213 +326,305 @@ def fmt_u(u: float | None) -> str:
     return f"{u:.3f} / {u * 100:.1f}%"
 
 
-def render_reco(
-    order: list[str],
-    util: dict[str, float],
-    rec_doc: dict[str, Any],
-    held_syms: list[str],
-) -> str:
-    rec = None
-    if isinstance(rec_doc, dict):
-        rec = rec_doc.get("recommendation")
-        if not isinstance(rec, dict):
-            # Accept flat v1 cache schema (keys live at top-level)
-            if any(
-                k in rec_doc
-                for k in (
-                    "action",
-                    "why",
-                    "swap_candidates",
-                    "threshold",
-                    "best",
-                    "weakest",
-                    "held_syms",
-                    "status",
-                )
-            ):
-                rec = rec_doc
 
-    if not isinstance(rec, dict):
-        rec_path = os.path.expanduser("~/.cache/jerboa/recommendations.v1.json")
 
-        return c(f"No recommendations cache found at {rec_path}\n", RED)
+# COMPACT_TRISCORE_OVERVIEW_V1
+def render_overview_triscore(order, held_syms):
+    NL = chr(10)
+    cache = Path.home() / ".cache" / "jerboa"
+    ui_p = cache / "market_health.ui.v1.json"
+    fs_p = cache / "forecast_scores.v1.json"
 
-    asof = (rec.get("asof") if isinstance(rec, dict) else None) or (
-        rec_doc.get("asof") if isinstance(rec_doc, dict) else None
-    )
+    def _jload(path):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
 
-    action = rec.get("action")
-    reason = rec.get("why") or rec.get("reason") or rec.get("because") or ""
-
-    from_sym = rec.get("from_symbol")
-    to_sym = rec.get("to_symbol")
-
-    diag = rec.get("diagnostics") if isinstance(rec.get("diagnostics"), dict) else {}
-    best = diag.get("best_candidate")
-    weakest = diag.get("weakest_held")
-    threshold = diag.get("threshold")
-    delta = diag.get("delta_utility")
-
-    weak_u = util.get(weakest) if isinstance(weakest, str) else None
-    thr = float(threshold) if isinstance(threshold, (int, float)) else None
-
-    lines: list[str] = []
-    lines.append(c("=" * 28 + " Recommendation (cached) " + "=" * 28, MAGENTA))
-    lines.append(f"{'asof':<14}: {asof}")
-    lines.append(f"{'action':<14}: {action}")
-    if action == "SWAP":
-        fs = from_sym or weakest or "-"
-        ts = to_sym or best or "-"
-        lines.append(c(f"{'swap':<14}: {fs} -> {ts}", GREEN))
-    lines.append(f"{'why':<14}: {reason}")
-
-    if isinstance(best, str):
-        lines.append(f"{'best':<14}: {best} ({fmt_u(util.get(best))})")
-    if isinstance(weakest, str):
-        lines.append(f"{'weakest':<14}: {weakest} ({fmt_u(weak_u)})")
-    if isinstance(delta, (int, float)):
-        lines.append(f"{'delta':<14}: {float(delta):.3f}")
-    if thr is not None:
-        lines.append(f"{'threshold':<14}: {thr:.3f}")
-        if isinstance(delta, (int, float)):
-            short = thr - float(delta)
-            lines.append(
-                f"{'shortfall':<14}: {short:.3f}"
-                if short > 0
-                else f"{'shortfall':<14}: 0.000"
-            )
-
-    # READY/BLOCKED table (the “denied/ready” concept)
-    lines.append("")
-    lines.append(c("Swap candidates vs weakest held", CYAN))
-    inputs = rec_doc.get("inputs") if isinstance(rec_doc.get("inputs"), dict) else {}
-    use_forecast = (
-        bool(inputs.get("forecast_mode"))
-        or (diag.get("decision_metric") == "robust_edge")
-        or (diag.get("mode") == "forecast")
-    )
-
-    if use_forecast:
-        lines.append(
-            f"{'sym':<6}{'health':>10}  {'edge':>7}  {'thr':>7}  {'status':>8}"
-        )
-        lines.append("-" * 52)
-        fs_doc = read_json(CACHE_DIR / "forecast_scores.v1.json")
-        scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else None
-        horizons = (
-            fs_doc.get("horizons_trading_days") if isinstance(fs_doc, dict) else None
-        )
-        if not isinstance(scores, dict) or not scores or not isinstance(weakest, str):
-            lines.append(
-                c("forecast scores unavailable (cannot compute robust edges)", YELLOW)
-            )
-        else:
-            hs: list[int] = []
-            if isinstance(horizons, list):
-                for h in horizons:
-                    try:
-                        hs.append(int(h))
-                    except Exception:
-                        pass
-            hs = sorted(set(hs)) or [1, 5]
-
-            def iter_checks(node):
-                if isinstance(node, dict):
-                    if isinstance(node.get("label"), str) and "score" in node:
-                        yield node
-                    for v in node.values():
-                        yield from iter_checks(v)
-                elif isinstance(node, list):
-                    for v in node:
-                        yield from iter_checks(v)
-
-            def f_util(sym: str, H: int):
-                by_h = scores.get(sym)
-                if not isinstance(by_h, dict):
-                    return None
-                payload = by_h.get(str(H), by_h.get(H))
-                if payload is None:
-                    return None
-                chks = list(iter_checks(payload))
-                if not chks:
-                    return None
-                s = 0.0
-                for c_ in chks:
-                    try:
-                        s += float(c_.get("score", 0.0))
-                    except Exception:
-                        pass
-                m_ = 2.0 * len(chks)
-                return (s / m_) if m_ else None
-
-            def robust_edge(out_sym: str, to_sym: str):
-                edges = []
-                for H in hs:
-                    uo = f_util(out_sym, H)
-                    ut = f_util(to_sym, H)
-                    if uo is None or ut is None:
-                        return None
-                    edges.append(ut - uo)
-                return min(edges) if edges else None
-
-            held_set = set(held_syms)
-            # Candidate symbols = union of overview sectors and forecast score keys, minus held and outsym
-            cand_syms = sorted(set(order) | set(scores.keys()))
-            cand_syms = [
-                s
-                for s in cand_syms
-                if isinstance(s, str) and s and s not in held_set and s != weakest
-            ]
-
-            rows = []
-            for sym in cand_syms:
-                e = robust_edge(weakest, sym)
-                if e is None:
+    def _sum_cat_pct(row):
+        cats = (row or {}).get("categories", {})
+        if not isinstance(cats, dict):
+            return None
+        pts = 0
+        mx = 0
+        for cat in cats.values():
+            if not isinstance(cat, dict):
+                continue
+            checks = cat.get("checks")
+            if not isinstance(checks, list):
+                continue
+            for chk in checks:
+                if not isinstance(chk, dict):
                     continue
-                rows.append((sym, util.get(sym), e))
-            rows.sort(key=lambda t: (-t[2], t[0]))
-            rows = rows[:6]
+                sc = chk.get("score")
+                if isinstance(sc, (int, float)):
+                    pts += int(sc)
+                    mx += 2
+        return int(round((pts / mx) * 100)) if mx else None
 
-            for sym, hu, e in rows:
-                status = "BLOCKED"
-                col = YELLOW
-                if thr is not None and e >= thr:
-                    status = "READY"
-                    col = GREEN
-                elif thr is None:
-                    status = "?"
-                    col = YELLOW
-                hu_s = f"{hu:>10.3f}" if isinstance(hu, float) else (" " * 10)
-                thr_s = "" if thr is None else f"{thr:>7.3f}"
-                lines.append(f"{sym:<6}{hu_s}  {e:>7.3f}  {thr_s:>7}  {c(status, col)}")
+    def _forecast_pct(scores, sym, horizon):
+        if not isinstance(scores, dict):
+            return None
+        by_h = scores.get(sym)
+        if not isinstance(by_h, dict):
+            return None
+        node = by_h.get(str(horizon), by_h.get(horizon))
+        if not isinstance(node, dict):
+            return None
 
-    else:
-        lines.append(f"{'sym':<6}{'utility':>10}  {'Δ':>7}  {'thr':>7}  {'status':>8}")
-        lines.append("-" * 44)
-        held_set = set(held_syms)
-        candidates = [(s, util.get(s)) for s in util.keys() if s not in held_set]
-        candidates = [(s, u) for s, u in candidates if isinstance(u, float)]
-        candidates.sort(key=lambda x: (-x[1], x[0]))
+        fs = node.get("forecast_score")
+        if isinstance(fs, (int, float)):
+            val = float(fs)
+            return int(round(val * 100)) if val <= 1.5 else int(round(val))
 
-        for sym, u in candidates:
-            d = (u - weak_u) if (weak_u is not None) else None
-            status = "BLOCKED"
-            col = YELLOW
-            if d is not None and thr is not None and d >= thr:
-                status = "READY"
-                col = GREEN
-            elif d is None or thr is None:
-                status = "?"
-                col = YELLOW
-            lines.append(
-                f"{sym:<6}{u:>10.3f}  {'' if d is None else f'{d:>7.3f}'}  {'' if thr is None else f'{thr:>7.3f}'}  {c(status, col)}"
+        pts = node.get("points")
+        mx = node.get("max_points")
+        if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
+            return int(round((float(pts) / float(mx)) * 100))
+        return None
+
+    def _fmt_pct(v):
+        if isinstance(v, (int, float)):
+            return f"{int(v):>3d}%"
+        return "  - "
+
+    def _fmt_delta(v):
+        if isinstance(v, (int, float)):
+            return f"{int(v):+4d}"
+        return "   -"
+
+    ui = _jload(ui_p)
+    fs = _jload(fs_p)
+
+    raw_sectors = ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
+    sector_map = {}
+    if isinstance(raw_sectors, dict):
+        for k, v in raw_sectors.items():
+            sym = str(k).strip().upper()
+            if sym and isinstance(v, dict):
+                sector_map[sym] = v
+    elif isinstance(raw_sectors, list):
+        for row in raw_sectors:
+            if not isinstance(row, dict):
+                continue
+            sym = str(row.get("symbol", "")).strip().upper()
+            if sym:
+                sector_map[sym] = row
+
+    raw_scores = (fs.get("scores") or {}) if isinstance(fs, dict) else {}
+    scores = raw_scores if isinstance(raw_scores, dict) else {}
+    held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
+
+    syms = []
+    for s in (order or []):
+        sym = str(s).strip().upper()
+        if sym and sym not in syms:
+            syms.append(sym)
+    if not syms and isinstance(sector_map, dict):
+        syms = sorted(sector_map.keys())
+
+    lines = []
+    lines.append(c("Overview (expanded universe, compact tri-score)", CYAN))
+    lines.append(f"{'Sym':<6} {'Held':<4} {'C':>5} {'H1':>5} {'H5':>5} {'Δ1':>5} {'Δ5':>5}")
+    lines.append("-" * 44)
+
+    for sym in syms:
+        row = sector_map.get(sym)
+        if not isinstance(row, dict):
+            continue
+
+        c_pct = _sum_cat_pct(row)
+        h1_pct = _forecast_pct(scores, sym, 1)
+        h5_pct = _forecast_pct(scores, sym, 5)
+
+        d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
+        d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
+
+        held_flag = "Y" if sym in held_set else ""
+        lines.append(
+            f"{sym:<6} {held_flag:<4} "
+            f"{_fmt_pct(c_pct):>5} {_fmt_pct(h1_pct):>5} {_fmt_pct(h5_pct):>5} "
+            f"{_fmt_delta(d1):>5} {_fmt_delta(d5):>5}"
+        )
+
+    return NL.join(lines) + NL
+
+def render_reco(order, util, rec_doc, held_syms):
+    NL = chr(10)
+    console = Console(record=True, force_terminal=True, color_system="truecolor", width=118, file=io.StringIO())
+
+    def _num(v):
+        return float(v) if isinstance(v, (int, float)) else None
+
+    def _fmt(v):
+        n = _num(v)
+        return "-" if n is None else f"{n:.2f}"
+
+    def _fmt_pct_weights(w):
+        if not isinstance(w, dict):
+            return "-"
+        c_w = float(w.get("c", 0.0) or 0.0)
+        h1_w = float(w.get("h1", 0.0) or 0.0)
+        h5_w = float(w.get("h5", 0.0) or 0.0)
+        return f"C {c_w:.0%}  H1 {h1_w:.0%}  H5 {h5_w:.0%}"
+
+    def _score_style(v):
+        n = _num(v)
+        if n is None:
+            return "dim"
+        if n >= 0.60:
+            return "bold green"
+        if n >= 0.45:
+            return "bold yellow"
+        return "bold red"
+
+    def _delta_style(v, thr=None):
+        n = _num(v)
+        t = _num(thr)
+        if n is None:
+            return "dim"
+        if t is not None and n >= t:
+            return "bold green"
+        if n > 0:
+            return "yellow"
+        if n < 0:
+            return "red"
+        return "dim"
+
+    def _status_style(s):
+        s = str(s or "").upper()
+        if s == "READY":
+            return "bold green"
+        if s == "BLOCKED":
+            return "bold red"
+        return "bold yellow"
+
+    def _comp_line(sym, comp):
+        if not isinstance(sym, str) or not sym:
+            return "-"
+        if not isinstance(comp, dict):
+            return sym
+        return (
+            f"{sym}  "
+            f"(blend {_fmt(comp.get('blended'))} | "
+            f"C {_fmt(comp.get('c'))} | "
+            f"H1 {_fmt(comp.get('h1'))} | "
+            f"H5 {_fmt(comp.get('h5'))})"
+        )
+
+    if not isinstance(rec_doc, dict):
+        console.print(
+            Panel(
+                Text("recommendation cache unavailable", style="yellow"),
+                title="Recommendation",
+                border_style="yellow",
+                box=box.ROUNDED,
+            )
+        )
+        return console.export_text(styles=True) + NL
+
+    rec = rec_doc.get("recommendation")
+    if not isinstance(rec, dict):
+        rec = rec_doc if isinstance(rec_doc, dict) else {}
+
+    d = rec.get("diagnostics") if isinstance(rec.get("diagnostics"), dict) else {}
+    if not isinstance(d, dict):
+        d = {}
+
+    asof = rec_doc.get("asof") or rec_doc.get("generated_at") or "?"
+    action = str(rec.get("action") or "?").upper()
+    reason = rec.get("reason") or "-"
+    metric = d.get("decision_metric") or "-"
+    weights = _fmt_pct_weights(d.get("utility_weights"))
+    best = d.get("best_candidate")
+    weakest = d.get("weakest_held")
+    held_components = d.get("held_components") or {}
+    candidate_components = d.get("candidate_components") or {}
+    weakest_components = held_components.get(weakest) if isinstance(held_components, dict) else None
+
+    delta = _num(d.get("delta_utility"))
+    thr = _num(d.get("threshold"))
+    shortfall = (thr - delta) if (delta is not None and thr is not None) else None
+
+    summary = Table.grid(padding=(0, 2))
+    summary.add_column(style="bold cyan", no_wrap=True)
+    summary.add_column(no_wrap=False)
+
+    action_style = "bold green" if action == "SWAP" else ("bold yellow" if action == "NOOP" else "bold white")
+    summary.add_row("asof", str(asof))
+    summary.add_row("action", Text(action, style=action_style))
+    summary.add_row("metric", str(metric))
+    summary.add_row("weights", str(weights))
+    summary.add_row("why", str(reason))
+    summary.add_row("best", Text(_comp_line(best, candidate_components), style="bold green"))
+    summary.add_row("weakest", Text(_comp_line(weakest, weakest_components), style="bold yellow"))
+    summary.add_row("delta", Text(_fmt(delta), style=_delta_style(delta, thr)))
+    summary.add_row("threshold", Text(_fmt(thr), style="cyan"))
+    if shortfall is not None:
+        summary.add_row("shortfall", Text(_fmt(shortfall), style="yellow"))
+
+    console.print(
+        Panel(
+            summary,
+            title="Recommendation (cached)",
+            border_style="cyan",
+            box=box.ROUNDED,
+        )
+    )
+
+    rows = d.get("candidate_rows") or []
+    if isinstance(rows, list) and rows:
+        tbl = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="bold cyan", expand=False)
+        tbl.add_column("Sym", justify="left", no_wrap=True)
+        tbl.add_column("Blend", justify="right", no_wrap=True)
+        tbl.add_column("C", justify="right", no_wrap=True)
+        tbl.add_column("H1", justify="right", no_wrap=True)
+        tbl.add_column("H5", justify="right", no_wrap=True)
+        tbl.add_column("ΔBlend", justify="right", no_wrap=True)
+        tbl.add_column("Thr", justify="right", no_wrap=True)
+        tbl.add_column("Status", justify="left", no_wrap=True)
+
+        def _sort_key(r):
+            status_rank = 0 if str(r.get("status", "")).upper() == "READY" else 1
+            delta_rank = -(_num(r.get("delta_blended")) or -999.0)
+            blend_rank = -(_num(r.get("blended")) or -999.0)
+            return (status_rank, delta_rank, blend_rank, str(r.get("sym", "")))
+
+        for row in sorted(rows, key=_sort_key):
+            sym = str(row.get("sym") or "")
+            is_best = sym == best
+            sym_text = Text(sym + (" ★" if is_best else ""), style="bold cyan" if is_best else "white")
+
+            blend = row.get("blended")
+            c_val = row.get("c")
+            h1_val = row.get("h1")
+            h5_val = row.get("h5")
+            dblend = row.get("delta_blended")
+            thr_v = row.get("threshold")
+            status = str(row.get("status") or "").upper()
+
+            tbl.add_row(
+                sym_text,
+                Text(_fmt(blend), style=_score_style(blend)),
+                Text(_fmt(c_val), style=_score_style(c_val)),
+                Text(_fmt(h1_val), style=_score_style(h1_val)),
+                Text(_fmt(h5_val), style=_score_style(h5_val)),
+                Text(_fmt(dblend), style=_delta_style(dblend, thr_v)),
+                Text(_fmt(thr_v), style="cyan"),
+                Text(status, style=_status_style(status)),
             )
 
-    lines.append(
-        f"{'held_syms':<14}: {', '.join(held_syms) if held_syms else '(none found)'}"
-    )
-    return "\n".join(lines) + "\n"
+        console.print(
+            Panel(
+                tbl,
+                title="Swap candidates vs weakest held",
+                border_style="blue",
+                box=box.ROUNDED,
+            )
+        )
 
+
+    return console.export_text(styles=True) + NL
 
 def main() -> int:
     user_args = sys.argv[1:]
@@ -835,6 +931,10 @@ def main() -> int:
     #     except Exception:
     #         pass
     #     # --- end snapshot widgets ---
+    tri_overview = render_overview_triscore(order, held_syms)
+    if tri_overview:
+        sys.stdout.write(tri_overview + chr(10))
+
 
     sys.stdout.write(
         c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10)
