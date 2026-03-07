@@ -12,9 +12,9 @@ OUT="${HOME}/.cache/jerboa/recommendations.v1.json"
 
 rc=0
 if [ "$QUIET" -eq 1 ]; then
-  python3 "$ROOT/scripts/export_recommendations_v1.py" --quiet || rc=$?
+  python3 "$ROOT/scripts/export_recommendations_v1.py" --forecast --quiet || rc=$?
 else
-  python3 "$ROOT/scripts/export_recommendations_v1.py" || rc=$?
+  python3 "$ROOT/scripts/export_recommendations_v1.py" --forecast || rc=$?
 fi
 
 # Validate if exporter succeeded and output exists
