@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from market_health.universe import get_asset_meta
+from market_health.universe import get_asset_meta, get_default_scoring_symbols
 
 import threading
 
@@ -176,18 +176,7 @@ CHECK_LABELS: Dict[str, List[str]] = {
     "D": ["ATR%", "IV%", "Correlation", "Event Risk", "Gap Plan", "Sizing/RR"],
     "E": ["SPY Trend", "Sector Rank", "Breadth", "VIX Regime", "3-Day RS", "Drivers"],
 }
-SECTORS_DEFAULT = [
-    "XLC",
-    "XLF",
-    "XLI",
-    "XLB",
-    "XLRE",
-    "XLU",
-    "XLP",
-    "XLY",
-    "XLK",
-    "XLE",
-]
+SECTORS_DEFAULT = get_default_scoring_symbols()
 
 # Curated leaders per sector for the Leaders%>20D proxy
 SECTOR_LEADERS: Dict[str, List[str]] = {

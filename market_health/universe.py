@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
+import os
+
 
 @dataclass(frozen=True)
 class AssetMeta:
@@ -25,6 +27,25 @@ PRECIOUS_SYMBOLS = [
 PARKING_SYMBOLS = [
     "SGOV",
 ]
+
+
+def _flag(name: str, default: str = "0") -> bool:
+    v = os.environ.get(name, default)
+    return str(v).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def precious_metals_enabled() -> bool:
+    return _flag("MH_ENABLE_PRECIOUS_METALS", "0")
+
+
+def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list[str]:
+    if include_precious is None:
+        include_precious = precious_metals_enabled()
+
+    symbols = list(SECTOR_SYMBOLS)
+    if include_precious:
+        symbols.extend(PRECIOUS_SYMBOLS)
+    return symbols
 
 
 def get_asset_meta(symbol: str) -> AssetMeta:
