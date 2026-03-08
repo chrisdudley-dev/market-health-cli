@@ -48,24 +48,48 @@ def _assert_shape(row):
 
 
 def test_shape_sector():
-    row = compute_scores(sectors=["XLE"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)[0]
+    row = compute_scores(
+        sectors=["XLE"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )[0]
     assert row["asset_type"] == "sector"
     _assert_shape(row)
 
 
 def test_shape_inverse():
-    row = compute_scores(sectors=["TECS"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)[0]
+    row = compute_scores(
+        sectors=["TECS"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )[0]
     assert row["asset_type"] == "inverse"
     _assert_shape(row)
 
 
 def test_shape_precious():
-    row = compute_scores(sectors=["GLDM"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)[0]
+    row = compute_scores(
+        sectors=["GLDM"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )[0]
     assert row["asset_type"] == "precious"
     _assert_shape(row)
 
 
 def test_shape_parking():
-    row = compute_scores(sectors=["SGOV"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)[0]
+    row = compute_scores(
+        sectors=["SGOV"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )[0]
     assert row["asset_type"] == "parking"
     _assert_shape(row)

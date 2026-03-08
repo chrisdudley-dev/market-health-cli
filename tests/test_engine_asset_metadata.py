@@ -27,7 +27,13 @@ def fake_download(ticker, *args, **kwargs):
 
 
 def test_compute_scores_attaches_sector_metadata():
-    rows = compute_scores(sectors=["XLE"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)
+    rows = compute_scores(
+        sectors=["XLE"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
     row = rows[0]
     assert row["symbol"] == "XLE"
     assert row["asset_type"] == "sector"
@@ -38,7 +44,13 @@ def test_compute_scores_attaches_sector_metadata():
 
 
 def test_compute_scores_attaches_precious_metadata():
-    rows = compute_scores(sectors=["GLDM"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)
+    rows = compute_scores(
+        sectors=["GLDM"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
     row = rows[0]
     assert row["symbol"] == "GLDM"
     assert row["asset_type"] == "precious"
@@ -49,7 +61,13 @@ def test_compute_scores_attaches_precious_metadata():
 
 
 def test_compute_scores_attaches_parking_metadata():
-    rows = compute_scores(sectors=["SGOV"], period="6mo", interval="1d", ttl_sec=0, download_fn=fake_download)
+    rows = compute_scores(
+        sectors=["SGOV"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
     row = rows[0]
     assert row["symbol"] == "SGOV"
     assert row["asset_type"] == "parking"

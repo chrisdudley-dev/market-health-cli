@@ -87,7 +87,9 @@ def test_contract_empty_home_is_valid(tmp_path):
     assert contract["data"]["sectors"] is None
     assert contract["data"]["state"] is None
     assert contract["data"]["recommendations"] is None
-    assert contract["data"]["recommendation_summary"] is None or isinstance(contract["data"]["recommendation_summary"], dict)
+    assert contract["data"]["recommendation_summary"] is None or isinstance(
+        contract["data"]["recommendation_summary"], dict
+    )
     assert contract["summary"]["recommendations_status"] in {
         "ok",
         "missing",

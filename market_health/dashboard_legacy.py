@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Any
 import argparse
+
+
 def _unpack_scores(res):
     """Compat: allow compute_scores to return either rows or (rows, meta)."""
     if isinstance(res, tuple) and len(res) == 2:
@@ -339,7 +341,11 @@ def render_pi_grid(order: list[str], util: dict[str, float]) -> str:
         c_pct = float(util.get(sym, 0.0) * 100)
         h1_pct = _forecast_pct_from_cache(sym, 1)
         h5_pct = _forecast_pct_from_cache(sym, 5)
-        blend_pct = c_pct if h1_pct is None or h5_pct is None else ((0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct))
+        blend_pct = (
+            c_pct
+            if h1_pct is None or h5_pct is None
+            else ((0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct))
+        )
         pct = int(round(blend_pct))
         row.append(box(sym, pct))
         if (i + 1) % cols == 0:
@@ -356,8 +362,6 @@ def fmt_u(u: float | None) -> str:
     if u is None:
         return "-"
     return f"{u:.3f} / {u * 100:.1f}%"
-
-
 
 
 # COMPACT_TRISCORE_OVERVIEW_V1
@@ -428,7 +432,9 @@ def render_overview_triscore(order, held_syms):
     ui = _jload(ui_p)
     fs = _jload(fs_p)
 
-    raw_sectors = ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
+    raw_sectors = (
+        ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
+    )
     sector_map = {}
     if isinstance(raw_sectors, dict):
         for k, v in raw_sectors.items():
@@ -448,7 +454,7 @@ def render_overview_triscore(order, held_syms):
     held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
 
     syms = []
-    for s in (order or []):
+    for s in order or []:
         sym = str(s).strip().upper()
         if sym and sym not in syms:
             syms.append(sym)
@@ -579,9 +585,16 @@ def render_overview_triscore(order, held_syms):
     )
     return console.export_text(styles=True) + NL
 
+
 def render_reco(order, util, rec_doc, held_syms):
     NL = chr(10)
-    console = Console(record=True, force_terminal=True, color_system="truecolor", width=118, file=io.StringIO())
+    console = Console(
+        record=True,
+        force_terminal=True,
+        color_system="truecolor",
+        width=118,
+        file=io.StringIO(),
+    )
 
     def _num(v):
         return float(v) if isinstance(v, (int, float)) else None
@@ -670,7 +683,9 @@ def render_reco(order, util, rec_doc, held_syms):
     weakest = d.get("weakest_held")
     held_components = d.get("held_components") or {}
     candidate_components = d.get("candidate_components") or {}
-    weakest_components = held_components.get(weakest) if isinstance(held_components, dict) else None
+    weakest_components = (
+        held_components.get(weakest) if isinstance(held_components, dict) else None
+    )
 
     delta = _num(d.get("delta_utility"))
     thr = _num(d.get("threshold"))
@@ -680,14 +695,22 @@ def render_reco(order, util, rec_doc, held_syms):
     summary.add_column(style="bold cyan", no_wrap=True)
     summary.add_column(no_wrap=False)
 
-    action_style = "bold green" if action == "SWAP" else ("bold yellow" if action == "NOOP" else "bold white")
+    action_style = (
+        "bold green"
+        if action == "SWAP"
+        else ("bold yellow" if action == "NOOP" else "bold white")
+    )
     summary.add_row("asof", str(asof))
     summary.add_row("action", Text(action, style=action_style))
     summary.add_row("metric", str(metric))
     summary.add_row("weights", str(weights))
     summary.add_row("why", str(reason))
-    summary.add_row("best", Text(_comp_line(best, candidate_components), style="bold green"))
-    summary.add_row("weakest", Text(_comp_line(weakest, weakest_components), style="bold yellow"))
+    summary.add_row(
+        "best", Text(_comp_line(best, candidate_components), style="bold green")
+    )
+    summary.add_row(
+        "weakest", Text(_comp_line(weakest, weakest_components), style="bold yellow")
+    )
     summary.add_row("delta", Text(_fmt(delta), style=_delta_style(delta, thr)))
     summary.add_row("threshold", Text(_fmt(thr), style="cyan"))
     if shortfall is not None:
@@ -704,7 +727,12 @@ def render_reco(order, util, rec_doc, held_syms):
 
     rows = d.get("candidate_rows") or []
     if isinstance(rows, list) and rows:
-        tbl = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="bold cyan", expand=False)
+        tbl = Table(
+            box=box.SIMPLE_HEAVY,
+            show_header=True,
+            header_style="bold cyan",
+            expand=False,
+        )
         tbl.add_column("Sym", justify="left", no_wrap=True)
         tbl.add_column("Blend", justify="right", no_wrap=True)
         tbl.add_column("C", justify="right", no_wrap=True)
@@ -723,7 +751,10 @@ def render_reco(order, util, rec_doc, held_syms):
         for row in sorted(rows, key=_sort_key):
             sym = str(row.get("sym") or "")
             is_best = sym == best
-            sym_text = Text(sym + (" ★" if is_best else ""), style="bold cyan" if is_best else "white")
+            sym_text = Text(
+                sym + (" ★" if is_best else ""),
+                style="bold cyan" if is_best else "white",
+            )
 
             blend = row.get("blended")
             c_val = row.get("c")
@@ -753,8 +784,8 @@ def render_reco(order, util, rec_doc, held_syms):
             )
         )
 
-
     return console.export_text(styles=True) + NL
+
 
 def main() -> int:
     user_args = sys.argv[1:]
@@ -909,7 +940,7 @@ def main() -> int:
     #         except Exception:
     #             pass
     #
-        # 1b) Overview (expanded universe, totals-only) removed
+    # 1b) Overview (expanded universe, totals-only) removed
     # 2) Pi Grid
     # OVERVIEW_AE_FROM_SNAPSHOT_V2
     # Rich bordered + colorized A–E totals table from the UI snapshot (cache-only; includes inverses)
@@ -1047,7 +1078,6 @@ def main() -> int:
     tri_overview = render_overview_triscore(order, held_syms)
     if tri_overview:
         sys.stdout.write(tri_overview + chr(10))
-
 
     sys.stdout.write(
         c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10)

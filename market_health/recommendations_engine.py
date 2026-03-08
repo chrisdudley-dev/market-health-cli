@@ -223,7 +223,9 @@ def recommend(
     )
     min_delta = float(min_delta_raw if min_delta_raw not in (None, "") else 0.12)
 
-    min_floor_raw = constraints.get("min_floor", constraints.get("candidate_min_floor", 0.0))
+    min_floor_raw = constraints.get(
+        "min_floor", constraints.get("candidate_min_floor", 0.0)
+    )
     min_floor = float(min_floor_raw if min_floor_raw not in (None, "") else 0.0)
 
     sgov_symbol = str(constraints.get("sgov_symbol", "SGOV") or "SGOV").strip().upper()
@@ -392,7 +394,11 @@ def recommend(
                 "status": (
                     "READY"
                     if len(rejection_reasons) == 0
-                    else ("FALLBACK_ONLY" if rejection_reasons == ["policy_fallback_only"] else "BLOCKED")
+                    else (
+                        "FALLBACK_ONLY"
+                        if rejection_reasons == ["policy_fallback_only"]
+                        else "BLOCKED"
+                    )
                 ),
             }
         )
@@ -435,9 +441,7 @@ def recommend(
         "fallback_candidate_available": fallback_available,
         "fallback_reason": None,
         "utility_weights": (
-            dict(util[best].get("utility_weights", {}))
-            if best is not None
-            else {}
+            dict(util[best].get("utility_weights", {})) if best is not None else {}
         ),
         "delta_utility": best_delta,
         "decision_metric": "blended_utility",
@@ -448,12 +452,15 @@ def recommend(
         ),
         "held_scored": held_present,
         "held_utilities": {h: float(util[h].get("utility", 0.0)) for h in held_present},
-        "held_components": {h: {
-            "c": util[h].get("current_utility"),
-            "h1": util[h].get("h1_utility"),
-            "h5": util[h].get("h5_utility"),
-            "blended": util[h].get("utility"),
-        } for h in held_present},
+        "held_components": {
+            h: {
+                "c": util[h].get("current_utility"),
+                "h1": util[h].get("h1_utility"),
+                "h5": util[h].get("h5_utility"),
+                "blended": util[h].get("utility"),
+            }
+            for h in held_present
+        },
         "weakest_components": weakest_components,
         "candidate_utility": (
             float(util[best].get("utility", 0.0)) if best is not None else None
@@ -477,13 +484,15 @@ def recommend(
 
     if best is not None:
         best_blended = float(util[best].get("utility", 0.0))
-        best_clears = (best_blended >= min_floor) and ((best_delta or 0.0) >= min_delta) and (best != weakest)
+        best_clears = (
+            (best_blended >= min_floor)
+            and ((best_delta or 0.0) >= min_delta)
+            and (best != weakest)
+        )
         if best_clears:
             selected_to = best
             selected_mode = "best_candidate"
-            selected_reason = (
-                f"Candidate {best} clears min floor {min_floor:.3f} and min delta {min_delta:.3f}."
-            )
+            selected_reason = f"Candidate {best} clears min floor {min_floor:.3f} and min delta {min_delta:.3f}."
 
     if selected_to is None and fallback_available:
         selected_to = sgov_symbol
@@ -553,7 +562,9 @@ def recommend(
             if row.get("sym") == selected_to:
                 extra = [f"constraint:{name}" for name in triggered]
                 row["passes_constraints"] = False
-                row["rejection_reasons"] = list(row.get("rejection_reasons") or []) + extra
+                row["rejection_reasons"] = (
+                    list(row.get("rejection_reasons") or []) + extra
+                )
                 row["status"] = "BLOCKED"
                 break
 
@@ -582,4 +593,3 @@ def recommend(
         constraints_triggered=(),
         diagnostics=diagnostics,
     )
-

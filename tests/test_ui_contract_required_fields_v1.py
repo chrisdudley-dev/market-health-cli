@@ -77,8 +77,12 @@ def test_ui_contract_required_fields_and_types():
         assert isinstance(summary.get("sectors_count"), int)
     assert isinstance(summary.get("events_count"), int)
     assert summary.get("recommendations_status") in {"ok", "missing", "unreadable"}
-    assert summary.get("recommendation_action") is None or isinstance(summary.get("recommendation_action"), str)
-    assert summary.get("recommendation_reason") is None or isinstance(summary.get("recommendation_reason"), str)
+    assert summary.get("recommendation_action") is None or isinstance(
+        summary.get("recommendation_action"), str
+    )
+    assert summary.get("recommendation_reason") is None or isinstance(
+        summary.get("recommendation_reason"), str
+    )
 
     # Data must include the main payload keys used by the UI.
     for k in (

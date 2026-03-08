@@ -19,7 +19,14 @@ def test_precious_candidate_can_win_replacement():
     scores = [
         _row("XLB", 8, asset_type="sector", group="SECTOR"),
         _row("XLE", 11, asset_type="sector", group="SECTOR"),
-        _row("GLDM", 14, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
+        _row(
+            "GLDM",
+            14,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
         _row("SGOV", 7, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "XLB"}]}
@@ -45,7 +52,14 @@ def test_sgov_fallback_when_no_candidate_clears_floor_and_delta():
     scores = [
         _row("XLK", 10, asset_type="sector", group="SECTOR"),
         _row("XLF", 11, asset_type="sector", group="SECTOR"),
-        _row("GLDM", 10, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
+        _row(
+            "GLDM",
+            10,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
         _row("SGOV", 8, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "XLK"}]}
@@ -72,7 +86,14 @@ def test_candidate_rejection_reasons_include_floor_and_delta():
     scores = [
         _row("XLP", 10, asset_type="sector", group="SECTOR"),
         _row("XLF", 11, asset_type="sector", group="SECTOR"),
-        _row("GLDM", 10, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
+        _row(
+            "GLDM",
+            10,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
     ]
     pos = {"positions": [{"symbol": "XLP"}]}
 
@@ -98,7 +119,14 @@ def test_candidate_rejection_reasons_include_floor_and_delta():
 def test_constraint_failure_is_exposed_on_selected_candidate():
     scores = [
         _row("XLB", 8, asset_type="sector", group="SECTOR"),
-        _row("GLDM", 14, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
+        _row(
+            "GLDM",
+            14,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
         _row("SGOV", 7, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "XLB"}]}
