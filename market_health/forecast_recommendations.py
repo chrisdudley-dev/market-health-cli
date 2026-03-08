@@ -159,14 +159,67 @@ def recommend_forecast_mode(
             },
         )
 
-    ranked = rank_candidates_by_robust_edge(
-        from_symbol=weakest,
-        candidate_symbols=candidates,
-        scores=scores,
-        horizons_trading_days=horizons,
-        disagreement_veto_edge=veto_edge,
+    w = _weights_from_positions(positions)
+    default_weight = 1.0 / max(1, len(held_present))
+
+    ranked_pairs = []
+    for from_sym in held_present:
+        ranked = rank_candidates_by_robust_edge(
+            from_symbol=from_sym,
+            candidate_symbols=candidates,
+            scores=scores,
+            horizons_trading_days=horizons,
+            disagreement_veto_edge=veto_edge,
+        )
+        if not ranked:
+            continue
+
+        pair = ranked[0]
+        from_weight = float(w.get(from_sym, default_weight))
+        weighted_robust_edge = from_weight * pair.robust_edge
+        key = (
+            1 if pair.vetoed else 0,
+            -weighted_robust_edge,
+            -pair.robust_edge,
+            -pair.avg_edge,
+            pair.from_symbol,
+            pair.to_symbol,
+        )
+        ranked_pairs.append((key, pair, from_weight, weighted_robust_edge))
+
+    if not ranked_pairs:
+        return Recommendation(
+            action="NOOP",
+            reason="No forecast pair candidates could be ranked.",
+            horizon_trading_days=horizon,
+            constraints_applied=applied,
+            diagnostics={
+                "mode": "forecast",
+                "held": held_present,
+                "forecast_horizons": horizons,
+            },
+        )
+
+    ranked_pairs.sort(key=lambda item: item[0])
+    _, best, from_weight, weighted_robust_edge = ranked_pairs[0]
+    selected_from = best.from_symbol
+    decision_metric = (
+        "portfolio_weighted_robust_edge" if len(held_present) > 1 else "robust_edge"
     )
-    best = ranked[0]
+    pair_diagnostics = [
+        {
+            "from_symbol": pair.from_symbol,
+            "to_symbol": pair.to_symbol,
+            "from_weight": pair_weight,
+            "weighted_robust_edge": pair_weighted_edge,
+            "robust_edge": pair.robust_edge,
+            "avg_edge": pair.avg_edge,
+            "vetoed": pair.vetoed,
+            "veto_reason": pair.veto_reason,
+            "edges_by_h": {str(h): pair.edges_by_h.get(h) for h in horizons},
+        }
+        for _, pair, pair_weight, pair_weighted_edge in ranked_pairs
+    ]
 
     diagnostics = {
         "mode": "forecast",
@@ -174,9 +227,12 @@ def recommend_forecast_mode(
         "horizon_trading_days": horizon,
         "forecast_horizons": horizons,
         "weakest_held": weakest,
+        "selected_from_symbol": selected_from,
         "best_candidate": best.to_symbol,
         "robust_edge": best.robust_edge,
-        "decision_metric": "robust_edge",
+        "weighted_robust_edge": weighted_robust_edge,
+        "selected_weight": from_weight,
+        "decision_metric": decision_metric,
         "edge": best.robust_edge,
         "avg_edge": best.avg_edge,
         "edges_by_h": {str(h): best.edges_by_h.get(h) for h in horizons},
@@ -185,6 +241,7 @@ def recommend_forecast_mode(
         "disagreement_veto_edge": veto_edge,
         "vetoed": best.vetoed,
         "veto_reason": best.veto_reason,
+        "candidate_pairs": pair_diagnostics,
     }
 
     if best.vetoed:
@@ -197,7 +254,7 @@ def recommend_forecast_mode(
             diagnostics=diagnostics,
         )
 
-    if not (best.robust_edge >= thr and best.to_symbol != weakest):
+    if not (best.robust_edge >= thr and best.to_symbol != selected_from):
         return Recommendation(
             action="NOOP",
             reason=f"No candidate clears robust threshold (best={best.robust_edge:.3f} < {thr:.3f}); hold.",
@@ -212,8 +269,7 @@ def recommend_forecast_mode(
     if swaps_today >= max_swaps:
         triggered.append("max_swaps_per_day")
 
-    w = _weights_from_positions(positions)
-    w2 = apply_swap(w, weakest, best.to_symbol)
+    w2 = apply_swap(w, selected_from, best.to_symbol)
     div = check_diversity(
         w2,
         max_weight_per_symbol=float(constraints.get("max_weight_per_symbol", 0.25)),
@@ -239,7 +295,7 @@ def recommend_forecast_mode(
     if cooldown_days > 0 and isinstance(history, list):
         hist = [h for h in history if isinstance(h, SwapEvent)]
         cd = check_cooldown(
-            proposed_from=weakest,
+            proposed_from=selected_from,
             proposed_to=best.to_symbol,
             history=hist,
             cooldown_trading_days=cooldown_days,
@@ -263,7 +319,7 @@ def recommend_forecast_mode(
     return Recommendation(
         action="SWAP",
         reason=f"Forecast robust edge {best.robust_edge:.3f} clears threshold {thr:.3f}.",
-        from_symbol=weakest,
+        from_symbol=selected_from,
         to_symbol=best.to_symbol,
         horizon_trading_days=horizon,
         target_trade_date=None,
