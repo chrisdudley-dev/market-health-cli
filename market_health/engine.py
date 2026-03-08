@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import yfinance as yf
-
+from market_health.universe import get_asset_meta
 
 import threading
 
@@ -431,6 +431,20 @@ def safe_download(
         return any(c in cols for c in ["Close", "Adj Close"])
 
     def try_modes(ticker: str) -> pd.DataFrame:
+        if _DOWNLOAD_OVERRIDE_FN is not None:
+            try:
+                frame = _DOWNLOAD_OVERRIDE_FN(
+                    ticker,
+                    period=period,
+                    interval=interval,
+                    ttl_sec=ttl_sec,
+                )
+                frame = normalize_cols(ticker, frame)
+                if first_valid(frame):
+                    return frame
+            except Exception:
+                pass
+
         modes = [
             dict(fn="download", auto_adjust=False, period=period, interval=interval),
             dict(fn="download", auto_adjust=True, period=period, interval=interval),
@@ -747,6 +761,87 @@ def compute_position_flow_checks(df: pd.DataFrame) -> List[dict]:
     return checks
 
 
+def _build_categories_for_asset(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+    asset_type: str,
+) -> Dict[str, Dict[str, List[dict]]]:
+    # Minimal dispatch skeleton for #162.
+    # Current behavior is intentionally preserved across asset families.
+    if asset_type == "sector":
+        pass
+    elif asset_type == "inverse":
+        pass
+    elif asset_type == "precious":
+        pass
+    elif asset_type == "parking":
+        pass
+
+    try:
+        b_scores = (
+            score_trend_structure(df_sym, spy_close)
+            if not df_sym.empty
+            else [0, 0, 0, 0, 0, 0]
+        )
+    except Exception:
+        b_scores = [0, 0, 0, 0, 0, 0]
+
+    try:
+        e_scores = (
+            score_environment(sym, df_sym, spy_close, vix_close, ranks)
+            if not df_sym.empty
+            else [0, 0, 0, 0, 0, 1]
+        )
+    except Exception:
+        e_scores = [0, 0, 0, 0, 0, 1]
+
+    try:
+        d_checks = compute_risk_volatility_checks(
+            sym, df_sym, data.get("SPY", pd.DataFrame())
+        )
+    except Exception:
+        d_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["D"]]
+
+    try:
+        a_checks = compute_catalyst_proxies(df_sym)
+    except Exception:
+        a_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["A"]]
+
+    try:
+        c_checks = compute_position_flow_checks(df_sym)
+    except Exception:
+        c_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["C"]]
+
+    if _flag("MH_FEATURE_A_V1"):
+        a_checks = _apply_dimension_overrides("A", a_checks, df_sym)
+    if _flag("MH_FEATURE_C_V1"):
+        c_checks = _apply_dimension_overrides("C", c_checks, df_sym)
+    if _flag("MH_FEATURE_D_V1"):
+        d_checks = _apply_dimension_overrides("D", d_checks, df_sym)
+
+    return {
+        "A": {"checks": a_checks},
+        "B": {
+            "checks": [
+                asdict(CheckScore(label, score))
+                for label, score in zip(CHECK_LABELS["B"], b_scores)
+            ]
+        },
+        "C": {"checks": c_checks},
+        "D": {"checks": d_checks},
+        "E": {
+            "checks": [
+                asdict(CheckScore(label, score))
+                for label, score in zip(CHECK_LABELS["E"], e_scores)
+            ]
+        },
+    }
+
+
 # ---------- Public API ----------
 def compute_scores(
     sectors: List[str] = None,
@@ -783,72 +878,28 @@ def compute_scores(
 
     for sym in sectors:
         df_sym = data.get(sym, pd.DataFrame())
+        meta = get_asset_meta(sym)
 
-        # ----- B: Trend & Structure
-        try:
-            b_scores = (
-                score_trend_structure(df_sym, spy_close)
-                if not df_sym.empty
-                else [0, 0, 0, 0, 0, 0]
-            )
-        except Exception:
-            b_scores = [0, 0, 0, 0, 0, 0]
+        cats = _build_categories_for_asset(
+            sym=sym,
+            df_sym=df_sym,
+            spy_close=spy_close,
+            vix_close=vix_close,
+            ranks=ranks,
+            data=data,
+            asset_type=meta.asset_type,
+        )
 
-        # ----- E: Environment & Regime
-        try:
-            e_scores = (
-                score_environment(sym, df_sym, spy_close, vix_close, ranks)
-                if not df_sym.empty
-                else [0, 0, 0, 0, 0, 1]
-            )
-        except Exception:
-            e_scores = [0, 0, 0, 0, 0, 1]
-
-        # ----- D: Risk & Volatility (real checks)
-        try:
-            d_checks = compute_risk_volatility_checks(
-                sym, df_sym, data.get("SPY", pd.DataFrame())
-            )
-        except Exception:
-            d_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["D"]]
-
-        # ----- A: Catalyst Health (simple proxies for now)
-        try:
-            a_checks = compute_catalyst_proxies(df_sym)
-        except Exception:
-            a_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["A"]]
-
-        # Optional A/C/D upgraded inputs (behind flags, safe fallbacks)
-        try:
-            c_checks = compute_position_flow_checks(df_sym)
-        except Exception:
-            c_checks = [{"label": lab, "score": 1} for lab in CHECK_LABELS["C"]]
-        if _flag("MH_FEATURE_A_V1"):
-            a_checks = _apply_dimension_overrides("A", a_checks, df_sym)
-        if _flag("MH_FEATURE_C_V1"):
-            c_checks = _apply_dimension_overrides("C", c_checks, df_sym)
-        if _flag("MH_FEATURE_D_V1"):
-            d_checks = _apply_dimension_overrides("D", d_checks, df_sym)
-
-        cats = {
-            "A": {"checks": a_checks},
-            "B": {
-                "checks": [
-                    asdict(CheckScore(label, score))
-                    for label, score in zip(CHECK_LABELS["B"], b_scores)
-                ]
-            },
-            "C": {"checks": c_checks},
-            "D": {"checks": d_checks},
-            "E": {
-                "checks": [
-                    asdict(CheckScore(label, score))
-                    for label, score in zip(CHECK_LABELS["E"], e_scores)
-                ]
-            },
-        }
-
-        out.append({"symbol": sym, "categories": cats})
+        out.append(
+            {
+                "symbol": sym,
+                "asset_type": meta.asset_type,
+                "group": meta.group,
+                "metal_type": meta.metal_type,
+                "is_basket": meta.is_basket,
+                "categories": cats,
+            }
+        )
 
     return out
 
@@ -861,7 +912,7 @@ _compute_scores_impl = compute_scores
 
 def compute_scores(*args, download_fn=None, **kwargs):
     with _DownloadOverride(download_fn):
-        return _compute_scores_impl(*args, **kwargs)
+        return _compute_scores_impl(*args, download_fn=download_fn, **kwargs)
 
 
 # /PROVIDER_INJECT_WRAP_V1

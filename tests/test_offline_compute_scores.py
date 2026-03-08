@@ -8,8 +8,7 @@ def _make_df(symbol: str, n: int = 160) -> pd.DataFrame:
     seed = abs(hash(symbol)) % (2**32)
     rng = np.random.default_rng(seed)
 
-    end = pd.Timestamp.now("UTC").normalize()
-    idx = pd.date_range(end=end, periods=n, freq="B")
+    idx = pd.bdate_range(start=pd.Timestamp("2025-01-02", tz="UTC"), periods=n)
 
     trend = np.linspace(0, 10, n)
     noise = rng.normal(0, 0.2, n).cumsum() * 0.05
