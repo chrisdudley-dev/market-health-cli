@@ -91,3 +91,39 @@ def test_forecast_mode_holds_when_robust_edge_is_below_threshold():
     assert rec.action == "NOOP"
     assert "min_improvement_threshold" in rec.constraints_triggered
     assert abs(rec.diagnostics["robust_edge"] - 0.04) < 1e-9
+
+
+def test_forecast_mode_chooses_best_pair_not_just_weakest_held():
+    scores = {
+        "AAA": {
+            1: {"forecast_score": 0.20},
+            5: {"forecast_score": 0.20},
+        },
+        "BBB": {
+            1: {"forecast_score": 0.45},
+            5: {"forecast_score": 0.45},
+        },
+        "CCC": {
+            1: {"forecast_score": 0.23},
+            5: {"forecast_score": 0.23},
+        },
+        "DDD": {
+            1: {"forecast_score": 0.60},
+            5: {"forecast_score": 0.60},
+        },
+    }
+
+    rec = recommend_forecast_mode(
+        positions={
+            "positions": [
+                {"symbol": "AAA", "market_value": 1000.0},
+                {"symbol": "BBB", "market_value": 1000.0},
+            ]
+        },
+        constraints=_forecast_constraints(scores),
+    )
+
+    assert rec.action == "SWAP"
+    assert rec.from_symbol == "AAA"
+    assert rec.to_symbol == "DDD"
+    assert abs(rec.diagnostics["robust_edge"] - 0.40) < 1e-9
