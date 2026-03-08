@@ -212,6 +212,8 @@ def recommend(
       - min_delta / min_improvement_threshold: SWAP only if best candidate improves utility by >= threshold
       - min_floor: candidate absolute utility floor required for normal replacement
       - sgov_symbol + sgov_is_policy_fallback: use SGOV as deterministic fallback when enabled
+      - max_precious_holdings: maximum simultaneous PRECIOUS holdings after the swap
+      - block_gltr_component_overlap: block GLTR plus single-metal overlap in v1
       - max_swaps_per_day + swaps_today: NOOP if swap quota reached
       - turnover_cap: NOOP if 1/len(held) > cap
       - sector_cap: NOOP if sector concentration would exceed cap (requires row["sector"] present)
@@ -231,6 +233,14 @@ def recommend(
     sgov_symbol = str(constraints.get("sgov_symbol", "SGOV") or "SGOV").strip().upper()
     sgov_is_policy_fallback = bool(constraints.get("sgov_is_policy_fallback", False))
 
+    max_precious_raw = constraints.get("max_precious_holdings", 1)
+    max_precious_holdings = int(
+        max_precious_raw if max_precious_raw not in (None, "") else 1
+    )
+    block_gltr_component_overlap = bool(
+        constraints.get("block_gltr_component_overlap", False)
+    )
+
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
 
@@ -249,6 +259,9 @@ def recommend(
         applied_list.append("min_floor")
     if sgov_is_policy_fallback:
         applied_list.append("sgov_policy_fallback")
+    applied_list.append("max_precious_holdings")
+    if block_gltr_component_overlap:
+        applied_list.append("block_gltr_component_overlap")
     if sector_cap is not None:
         applied_list.append("sector_cap")
     if turnover_cap is not None:
@@ -265,12 +278,9 @@ def recommend(
             constraints_applied=applied,
             constraints_triggered=(),
             diagnostics={
-                "min_floor": min_floor,
                 "min_delta": min_delta,
-                "threshold": min_delta,
+                "min_floor": min_floor,
                 "horizon_trading_days": horizon,
-                "sgov_symbol": sgov_symbol,
-                "sgov_is_policy_fallback": sgov_is_policy_fallback,
             },
         )
 
@@ -282,6 +292,7 @@ def recommend(
     )
 
     row_meta: Dict[str, Dict[str, Any]] = {}
+    sym_sector: Dict[str, str] = {}
     for row in scores:
         if not isinstance(row, dict):
             continue
@@ -294,8 +305,10 @@ def recommend(
             "group": row.get("group"),
             "metal_type": row.get("metal_type"),
             "is_basket": row.get("is_basket"),
-            "sector": row.get("sector"),
         }
+        sec = row.get("sector")
+        if isinstance(sec, str) and sec.strip():
+            sym_sector[sym_u] = sec.strip().upper()
 
     held_present = [h for h in held if h in util]
     if not held_present:
@@ -307,13 +320,10 @@ def recommend(
             constraints_applied=applied,
             constraints_triggered=(),
             diagnostics={
-                "min_floor": min_floor,
                 "min_delta": min_delta,
-                "threshold": min_delta,
+                "min_floor": min_floor,
                 "horizon_trading_days": horizon,
                 "held": held,
-                "sgov_symbol": sgov_symbol,
-                "sgov_is_policy_fallback": sgov_is_policy_fallback,
             },
         )
 
@@ -323,8 +333,8 @@ def recommend(
     )
     weakest_blended = float(util[weakest].get("utility", 0.0))
 
-    all_candidates = [s for s in util.keys() if s not in set(held_present)]
-    if not all_candidates:
+    candidates = [s for s in util.keys() if s not in set(held_present)]
+    if not candidates:
         return Recommendation(
             action="NOOP",
             reason="No candidates available outside held set.",
@@ -333,123 +343,120 @@ def recommend(
             constraints_applied=applied,
             constraints_triggered=(),
             diagnostics={
-                "min_floor": min_floor,
                 "min_delta": min_delta,
-                "threshold": min_delta,
+                "min_floor": min_floor,
                 "horizon_trading_days": horizon,
                 "held": held_present,
-                "weakest_held": weakest,
-                "sgov_symbol": sgov_symbol,
-                "sgov_is_policy_fallback": sgov_is_policy_fallback,
             },
         )
 
-    normal_candidates = [
-        s for s in all_candidates if not (sgov_is_policy_fallback and s == sgov_symbol)
-    ]
+    def _candidate_sort_key(sym: str) -> Tuple[float, Tuple[str]]:
+        return (-float(util[sym].get("utility", 0.0)), stable_tiebreak_key(sym))
 
-    candidate_rows = []
-    for sym, meta in sorted(
-        ((s, util[s]) for s in all_candidates),
-        key=lambda kv: (float(kv[1].get("utility", 0.0)), kv[0]),
-        reverse=True,
-    ):
+    def _is_precious(sym: str) -> bool:
+        return row_meta.get(sym, {}).get("group") == "PRECIOUS"
+
+    def _after_swap_precious(candidate: str) -> List[str]:
+        after = [h for h in held_present if h != weakest and _is_precious(h)]
+        if _is_precious(candidate):
+            after.append(candidate)
+        return after
+
+    def _policy_reasons(candidate: str) -> List[str]:
+        reasons: List[str] = []
+        if not _is_precious(candidate):
+            return reasons
+
+        after_precious = _after_swap_precious(candidate)
+
+        if len(after_precious) > max_precious_holdings:
+            reasons.append("policy:max_precious_holdings")
+
+        if block_gltr_component_overlap:
+            after_metals = [row_meta.get(sym, {}).get("metal_type") for sym in after_precious]
+            has_basket = any(m == "basket" for m in after_metals)
+            has_single = any(
+                isinstance(m, str) and m not in {"basket"} for m in after_metals
+            )
+            if has_basket and has_single:
+                reasons.append("policy:block_gltr_component_overlap")
+
+        return reasons
+
+    candidate_rows: List[Dict[str, Any]] = []
+    candidate_row_index: Dict[str, Dict[str, Any]] = {}
+    normal_candidates = [s for s in candidates if s != sgov_symbol]
+
+    for sym in sorted(candidates, key=_candidate_sort_key):
+        meta = util[sym]
         blended = float(meta.get("utility", 0.0))
-        c_util = meta.get("current_utility")
-        h1_util = meta.get("h1_utility")
-        h5_util = meta.get("h5_utility")
         delta_blended = blended - weakest_blended
 
-        rejection_reasons: List[str] = []
-        passes_policy = True
+        reasons: List[str] = []
+        passes_floor = None
+        passes_delta = None
+        passes_policy = None
 
-        if sgov_is_policy_fallback and sym == sgov_symbol:
-            passes_policy = False
-            rejection_reasons.append("policy_fallback_only")
+        if sym == sgov_symbol:
+            reasons.append("fallback_only")
         else:
-            if blended < min_floor:
-                rejection_reasons.append("below_floor")
-            if delta_blended < min_delta:
-                rejection_reasons.append("below_delta")
+            passes_floor = blended >= min_floor
+            passes_delta = delta_blended >= min_delta
+            policy_reasons = _policy_reasons(sym)
+            passes_policy = len(policy_reasons) == 0
 
-        candidate_rows.append(
-            {
-                "sym": sym,
-                "asset_type": row_meta.get(sym, {}).get("asset_type"),
-                "group": row_meta.get(sym, {}).get("group"),
-                "metal_type": row_meta.get(sym, {}).get("metal_type"),
-                "is_basket": row_meta.get(sym, {}).get("is_basket"),
-                "blended": blended,
-                "c": c_util,
-                "h1": h1_util,
-                "h5": h5_util,
-                "delta_blended": delta_blended,
-                "min_floor": min_floor,
-                "threshold": min_delta,
-                "passes_floor": blended >= min_floor,
-                "passes_delta": delta_blended >= min_delta,
-                "passes_policy": passes_policy,
-                "passes_constraints": True,
-                "rejection_reasons": rejection_reasons,
-                "status": (
-                    "READY"
-                    if len(rejection_reasons) == 0
-                    else (
-                        "FALLBACK_ONLY"
-                        if rejection_reasons == ["policy_fallback_only"]
-                        else "BLOCKED"
-                    )
-                ),
-            }
-        )
+            if not passes_floor:
+                reasons.append("below_floor")
+            if not passes_delta:
+                reasons.append("below_delta")
+            reasons.extend(policy_reasons)
 
-    best = None
-    best_delta = None
-    if normal_candidates:
-        best_u = max(float(util[s].get("utility", 0.0)) for s in normal_candidates)
-        best_cands = [
-            s for s in normal_candidates if float(util[s].get("utility", 0.0)) == best_u
-        ]
-        best = min(best_cands, key=stable_tiebreak_key)
-        best_delta = float(util[best].get("utility", 0.0)) - weakest_blended
+        reasons = list(dict.fromkeys(reasons))
+        row = {
+            "sym": sym,
+            "blended": blended,
+            "c": meta.get("current_utility"),
+            "h1": meta.get("h1_utility"),
+            "h5": meta.get("h5_utility"),
+            "delta_blended": delta_blended,
+            "threshold": min_delta,
+            "min_floor": min_floor,
+            "passes_floor": passes_floor,
+            "passes_delta": passes_delta,
+            "passes_policy": passes_policy,
+            "status": "READY" if not reasons else ("FALLBACK_ONLY" if sym == sgov_symbol else "BLOCKED"),
+            "rejection_reasons": reasons,
+            "asset_type": row_meta.get(sym, {}).get("asset_type"),
+            "group": row_meta.get(sym, {}).get("group"),
+            "metal_type": row_meta.get(sym, {}).get("metal_type"),
+            "is_basket": row_meta.get(sym, {}).get("is_basket"),
+        }
+        candidate_rows.append(row)
+        candidate_row_index[sym] = row
 
-    fallback_available = (
-        sgov_is_policy_fallback
-        and sgov_symbol in util
-        and sgov_symbol not in held_present
-        and sgov_symbol != weakest
+    best_normal = (
+        sorted(normal_candidates, key=_candidate_sort_key)[0]
+        if normal_candidates
+        else None
     )
 
-    weakest_components = {
-        "c": util[weakest].get("current_utility"),
-        "h1": util[weakest].get("h1_utility"),
-        "h5": util[weakest].get("h5_utility"),
-        "blended": util[weakest].get("utility"),
-    }
-
+    utility_weights_source = util.get(best_normal or weakest, {})
     diagnostics = {
-        "min_floor": min_floor,
         "min_delta": min_delta,
+        "min_floor": min_floor,
         "threshold": min_delta,
         "horizon_trading_days": horizon,
         "weakest_held": weakest,
-        "best_candidate": best,
-        "selected_candidate": None,
-        "selection_mode": None,
-        "sgov_symbol": sgov_symbol,
-        "sgov_is_policy_fallback": sgov_is_policy_fallback,
-        "fallback_candidate_available": fallback_available,
-        "fallback_reason": None,
-        "utility_weights": (
-            dict(util[best].get("utility_weights", {})) if best is not None else {}
-        ),
-        "delta_utility": best_delta,
+        "best_candidate": best_normal,
+        "utility_weights": dict(utility_weights_source.get("utility_weights", {})),
         "decision_metric": "blended_utility",
-        "edge": best_delta,
-        "health_score_from": weakest_blended,
+        "edge": None,
+        "delta_utility": None,
+        "health_score_from": float(util[weakest].get("utility", 0.0)),
         "health_score_to": (
-            float(util[best].get("utility", 0.0)) if best is not None else None
+            float(util[best_normal].get("utility", 0.0)) if best_normal else None
         ),
+        "held": held,
         "held_scored": held_present,
         "held_utilities": {h: float(util[h].get("utility", 0.0)) for h in held_present},
         "held_components": {
@@ -461,135 +468,216 @@ def recommend(
             }
             for h in held_present
         },
-        "weakest_components": weakest_components,
         "candidate_utility": (
-            float(util[best].get("utility", 0.0)) if best is not None else None
+            float(util[best_normal].get("utility", 0.0)) if best_normal else None
         ),
         "candidate_components": (
             {
-                "c": util[best].get("current_utility"),
-                "h1": util[best].get("h1_utility"),
-                "h5": util[best].get("h5_utility"),
-                "blended": util[best].get("utility"),
+                "c": util[best_normal].get("current_utility"),
+                "h1": util[best_normal].get("h1_utility"),
+                "h5": util[best_normal].get("h5_utility"),
+                "blended": util[best_normal].get("utility"),
             }
-            if best is not None
+            if best_normal
             else {}
         ),
         "candidate_rows": candidate_rows,
     }
 
-    selected_to = None
-    selected_mode = None
-    selected_reason = None
-
-    if best is not None:
-        best_blended = float(util[best].get("utility", 0.0))
-        best_clears = (
-            (best_blended >= min_floor)
-            and ((best_delta or 0.0) >= min_delta)
-            and (best != weakest)
-        )
-        if best_clears:
-            selected_to = best
-            selected_mode = "best_candidate"
-            selected_reason = f"Candidate {best} clears min floor {min_floor:.3f} and min delta {min_delta:.3f}."
-
-    if selected_to is None and fallback_available:
-        selected_to = sgov_symbol
-        selected_mode = "policy_fallback"
-        selected_reason = (
-            f"No candidate clears min floor {min_floor:.3f} and min delta {min_delta:.3f}; "
-            f"rotate into {sgov_symbol} fallback asset."
-        )
-        diagnostics["fallback_reason"] = "no_candidate_clears_floor_and_delta"
-
-    if selected_to is None:
-        return Recommendation(
-            action="NOOP",
-            reason=(
-                f"No candidate clears min floor {min_floor:.3f} and min delta {min_delta:.3f}; hold."
-            ),
-            horizon_trading_days=horizon,
-            target_trade_date=None,
-            constraints_applied=applied,
-            constraints_triggered=("min_floor_or_delta",),
-            diagnostics=diagnostics,
-        )
-
-    diagnostics["selected_candidate"] = selected_to
-    diagnostics["selection_mode"] = selected_mode
-
-    triggered: List[str] = []
-
-    if swaps_today >= max_swaps:
-        triggered.append("max_swaps_per_day")
+    if best_normal is not None:
+        delta = float(util[best_normal].get("utility", 0.0)) - weakest_blended
+        diagnostics["delta_utility"] = delta
+        diagnostics["edge"] = delta
 
     if turnover_cap is not None:
         turnover = 1.0 / max(1, len(held_present))
         diagnostics["turnover"] = turnover
         diagnostics["turnover_cap"] = turnover_cap
-        if turnover > turnover_cap:
-            triggered.append("turnover_cap")
 
-    if sector_cap is not None:
-        sym_sector: Dict[str, str] = {}
-        for row in scores:
-            if not isinstance(row, dict):
-                continue
-            sym = row.get("symbol")
-            sec = row.get("sector")
-            if isinstance(sym, str) and sym and isinstance(sec, str) and sec:
-                sym_sector[sym.strip().upper()] = sec.strip()
+    def _apply_global_constraints(target_symbol: str) -> List[str]:
+        triggered: List[str] = []
 
-        cand_sec = sym_sector.get(selected_to)
-        if cand_sec:
-            held_counts: Dict[str, int] = {}
-            for h in held_present:
-                hs = sym_sector.get(h)
-                if hs:
-                    held_counts[hs] = held_counts.get(hs, 0) + 1
+        if swaps_today >= max_swaps:
+            triggered.append("max_swaps_per_day")
 
-            worst_sec = sym_sector.get(weakest)
-            post = held_counts.get(cand_sec, 0) + (0 if worst_sec == cand_sec else 1)
-            diagnostics["sector_cap"] = sector_cap
-            diagnostics["candidate_sector"] = cand_sec
-            diagnostics["post_sector_count"] = post
-            if post > sector_cap:
-                triggered.append("sector_cap")
+        if turnover_cap is not None:
+            turnover = 1.0 / max(1, len(held_present))
+            if turnover > turnover_cap:
+                triggered.append("turnover_cap")
 
-    if triggered:
-        for row in diagnostics.get("candidate_rows", []):
-            if row.get("sym") == selected_to:
-                extra = [f"constraint:{name}" for name in triggered]
-                row["passes_constraints"] = False
-                row["rejection_reasons"] = (
-                    list(row.get("rejection_reasons") or []) + extra
-                )
-                row["status"] = "BLOCKED"
-                break
+        if sector_cap is not None:
+            cand_sec = sym_sector.get(target_symbol)
+            if cand_sec:
+                held_counts: Dict[str, int] = {}
+                for h in held_present:
+                    hs = sym_sector.get(h)
+                    if hs:
+                        held_counts[hs] = held_counts.get(hs, 0) + 1
+
+                worst_sec = sym_sector.get(weakest)
+                post = held_counts.get(cand_sec, 0) + (0 if worst_sec == cand_sec else 1)
+
+                diagnostics["sector_cap"] = sector_cap
+                diagnostics["candidate_sector"] = cand_sec
+                diagnostics["post_sector_count"] = post
+
+                if post > sector_cap:
+                    triggered.append("sector_cap")
+
+        return list(dict.fromkeys(triggered))
+
+    def _append_constraint_reasons(sym: str, triggered: List[str]) -> None:
+        row = candidate_row_index.get(sym)
+        if not row:
+            return
+        reasons = list(row.get("rejection_reasons") or [])
+        for name in triggered:
+            tag = f"constraint:{name}"
+            if tag not in reasons:
+                reasons.append(tag)
+        row["rejection_reasons"] = reasons
+        row["status"] = "BLOCKED"
+
+    best_ready = next(
+        (
+            sym
+            for sym in sorted(normal_candidates, key=_candidate_sort_key)
+            if not candidate_row_index[sym]["rejection_reasons"]
+        ),
+        None,
+    )
+
+    if best_ready is not None:
+        triggered = _apply_global_constraints(best_ready)
+        if triggered:
+            _append_constraint_reasons(best_ready, triggered)
+            diagnostics["selection_mode"] = "best_candidate_blocked"
+            diagnostics["fallback_reason"] = None
+            return Recommendation(
+                action="NOOP",
+                reason="Swap blocked by constraints: " + ", ".join(triggered) + ".",
+                horizon_trading_days=horizon,
+                target_trade_date=None,
+                constraints_applied=applied,
+                constraints_triggered=tuple(triggered),
+                diagnostics=diagnostics,
+            )
+
+        delta = float(util[best_ready].get("utility", 0.0)) - weakest_blended
+        diagnostics["selection_mode"] = "best_candidate"
+        diagnostics["fallback_reason"] = None
+        diagnostics["best_candidate"] = best_ready
+        diagnostics["candidate_utility"] = float(util[best_ready].get("utility", 0.0))
+        diagnostics["candidate_components"] = {
+            "c": util[best_ready].get("current_utility"),
+            "h1": util[best_ready].get("h1_utility"),
+            "h5": util[best_ready].get("h5_utility"),
+            "blended": util[best_ready].get("utility"),
+        }
+        diagnostics["delta_utility"] = delta
+        diagnostics["edge"] = delta
 
         return Recommendation(
-            action="NOOP",
+            action="SWAP",
             reason=(
-                "Fallback blocked by constraints: " + ", ".join(triggered)
-                if selected_mode == "policy_fallback"
-                else "Swap blocked by constraints: " + ", ".join(triggered)
+                f"Best candidate clears min floor and min delta "
+                f"(best blended Δ={delta:.3f}); swap."
             ),
+            from_symbol=weakest,
+            to_symbol=best_ready,
             horizon_trading_days=horizon,
             target_trade_date=None,
             constraints_applied=applied,
-            constraints_triggered=tuple(triggered),
+            constraints_triggered=(),
             diagnostics=diagnostics,
         )
 
+    def _fallback_reason() -> str:
+        normal_rows = [
+            candidate_row_index[s]
+            for s in normal_candidates
+            if s in candidate_row_index
+        ]
+        if not normal_rows:
+            return "no_candidate_rows"
+
+        any_policy_blocked = any(
+            bool(r.get("passes_floor"))
+            and bool(r.get("passes_delta"))
+            and (r.get("passes_policy") is False)
+            for r in normal_rows
+        )
+        if any_policy_blocked:
+            return "policy_blocked"
+
+        return "no_candidate_clears_floor_and_delta"
+
+    fallback_reason = _fallback_reason()
+
+    if sgov_is_policy_fallback and sgov_symbol in candidates:
+        triggered = _apply_global_constraints(sgov_symbol)
+        if triggered:
+            _append_constraint_reasons(sgov_symbol, triggered)
+            diagnostics["selection_mode"] = "sgov_fallback_blocked"
+            diagnostics["fallback_reason"] = fallback_reason
+            return Recommendation(
+                action="NOOP",
+                reason="SGOV fallback blocked by constraints: " + ", ".join(triggered) + ".",
+                horizon_trading_days=horizon,
+                target_trade_date=None,
+                constraints_applied=applied,
+                constraints_triggered=tuple(triggered),
+                diagnostics=diagnostics,
+            )
+
+        diagnostics["selection_mode"] = (
+            "sgov_fallback" if fallback_reason == "policy_blocked" else "policy_fallback"
+        )
+        diagnostics["fallback_reason"] = fallback_reason
+        return Recommendation(
+            action="SWAP",
+            reason=f"No candidate clears policy gates; fallback to {sgov_symbol}.",
+            from_symbol=weakest,
+            to_symbol=sgov_symbol,
+            horizon_trading_days=horizon,
+            target_trade_date=None,
+            constraints_applied=applied,
+            constraints_triggered=(),
+            diagnostics=diagnostics,
+        )
+
+    diagnostics["selection_mode"] = "no_swap"
+    diagnostics["fallback_reason"] = fallback_reason
+
+    if best_normal is None:
+        reason = "No candidates available outside held set."
+        triggered = ()
+    else:
+        reasons = candidate_row_index.get(best_normal, {}).get("rejection_reasons") or []
+        triggered = tuple(
+            r for r in reasons if isinstance(r, str) and r.startswith("policy:")
+        )
+
+        if "below_floor" in reasons and "below_delta" in reasons:
+            reason = (
+                f"No candidate clears min floor ({min_floor:.3f}) and "
+                f"min delta ({min_delta:.3f}); hold."
+            )
+        elif "below_floor" in reasons:
+            reason = f"No candidate clears min floor ({min_floor:.3f}); hold."
+        elif "below_delta" in reasons:
+            reason = f"No candidate clears min delta ({min_delta:.3f}); hold."
+        elif reasons:
+            reason = "Best candidate blocked by policy: " + ", ".join(reasons) + "."
+        else:
+            reason = "No eligible replacement candidate found; hold."
+
     return Recommendation(
-        action="SWAP",
-        reason=selected_reason or "Swap selected.",
-        from_symbol=weakest,
-        to_symbol=selected_to,
+        action="NOOP",
+        reason=reason,
         horizon_trading_days=horizon,
         target_trade_date=None,
         constraints_applied=applied,
-        constraints_triggered=(),
+        constraints_triggered=triggered,
         diagnostics=diagnostics,
     )
