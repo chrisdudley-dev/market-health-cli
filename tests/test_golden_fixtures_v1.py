@@ -25,53 +25,6 @@ class TestGoldenFixturesV1(unittest.TestCase):
 
         got = generate_golden_fixtures_v1()
 
-        if want_forecast != got["forecast"]:
-            import hashlib
-
-            def _h(x):
-                return hashlib.sha256(
-                    json.dumps(x, sort_keys=True).encode()
-                ).hexdigest()
-
-            def _first_diff(a, b, path="root"):
-                if type(a) is not type(b):
-                    return path, a, b
-
-                if isinstance(a, dict):
-                    for k in sorted(set(a) | set(b)):
-                        if k not in a:
-                            return f"{path}.{k}", "<missing>", b[k]
-                        if k not in b:
-                            return f"{path}.{k}", a[k], "<missing>"
-                        diff = _first_diff(a[k], b[k], f"{path}.{k}")
-                        if diff is not None:
-                            return diff
-                    return None
-
-                if isinstance(a, list):
-                    if len(a) != len(b):
-                        return f"{path}.length", len(a), len(b)
-                    for i, (xa, xb) in enumerate(zip(a, b)):
-                        diff = _first_diff(xa, xb, f"{path}[{i}]")
-                        if diff is not None:
-                            return diff
-                    return None
-
-                if a != b:
-                    return path, a, b
-
-                return None
-
-            print("FORECAST WANT HASH:", _h(want_forecast))
-            print("FORECAST GOT  HASH:", _h(got["forecast"]))
-
-            diff = _first_diff(want_forecast, got["forecast"])
-            if diff is not None:
-                path, a, b = diff
-                print("FIRST DIFF PATH:", path)
-                print("WANT VALUE:", json.dumps(a, sort_keys=True, default=str))
-                print("GOT  VALUE:", json.dumps(b, sort_keys=True, default=str))
-
         self.assertEqual(
             want_forecast,
             got["forecast"],

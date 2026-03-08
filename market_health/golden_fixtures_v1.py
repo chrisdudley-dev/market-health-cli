@@ -140,10 +140,16 @@ def _generate_golden_fixtures_v1_impl() -> Dict[str, Any]:
     universe, syms = build_universe()
 
     # compute_forecast_universe returns: {SYM: {H: payload}}
+    deterministic_calendar = {
+        "schema": "calendar.v1",
+        "windows": {"by_h": {"1": {}, "5": {}}},
+    }
+
     scores = compute_forecast_universe(
         universe=universe,
         spy=universe["SPY"],
         horizons_trading_days=(1, 5),
+        calendar=deterministic_calendar,
     )
     _force_horizon_fields_in_forecast_fixture(scores)
 
