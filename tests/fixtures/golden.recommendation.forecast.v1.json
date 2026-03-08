@@ -15,6 +15,7 @@
   "recommendation": {
     "action": "NOOP",
     "constraints_applied": [
+      "max_precious_holdings",
       "max_swaps_per_day",
       "min_delta"
     ],
