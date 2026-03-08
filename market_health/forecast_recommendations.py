@@ -236,6 +236,18 @@ def recommend_forecast_mode(
         "edge": best.robust_edge,
         "avg_edge": best.avg_edge,
         "edges_by_h": {str(h): best.edges_by_h.get(h) for h in horizons},
+        "selected_pair": {
+            "from_symbol": selected_from,
+            "to_symbol": best.to_symbol,
+            "from_weight": from_weight,
+            "robust_edge": best.robust_edge,
+            "weighted_robust_edge": weighted_robust_edge,
+            "avg_edge": best.avg_edge,
+            "decision_metric": decision_metric,
+            "edges_by_h": {str(h): best.edges_by_h.get(h) for h in horizons},
+            "vetoed": best.vetoed,
+            "veto_reason": best.veto_reason,
+        },
         # keep legacy UI key until #115 updates display text
         "delta_utility": best.robust_edge,
         "disagreement_veto_edge": veto_edge,
