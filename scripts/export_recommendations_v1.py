@@ -240,8 +240,6 @@ def main() -> int:
             "min_improvement_threshold": args.min_improvement,
             "min_delta": args.min_improvement,
             "min_floor": args.min_floor,
-            "min_delta": args.min_improvement,
-            "min_floor": args.min_floor,
             "sgov_symbol": "SGOV",
             "sgov_is_policy_fallback": True,
             "forecast_mode": bool(forecast_enabled),
