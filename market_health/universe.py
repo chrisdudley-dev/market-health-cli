@@ -6,8 +6,8 @@ import os
 @dataclass(frozen=True)
 class AssetMeta:
     symbol: str
-    asset_type: str  # sector | inverse | precious | parking
-    group: str  # SECTOR | INVERSE | PRECIOUS | PARKING
+    asset_type: str  # sector | inverse | precious | parking | unsupported
+    group: str  # SECTOR | INVERSE | PRECIOUS | PARKING | UNSUPPORTED
     metal_type: Optional[str] = (
         None  # gold | silver | platinum | palladium | basket | None
     )
@@ -48,6 +48,13 @@ PRECIOUS_SYMBOLS = [
     "GLTR",
 ]
 
+PRECIOUS_SINGLE_SYMBOLS = [
+    "GLDM",
+    "SIVR",
+    "PPLT",
+    "PALL",
+]
+
 PARKING_SYMBOLS = [
     "SGOV",
 ]
@@ -72,10 +79,10 @@ def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list
     return symbols
 
 
-def get_asset_meta(symbol: str) -> AssetMeta:
+def classify_asset_symbol(symbol: str) -> AssetMeta:
     sym = symbol.upper().strip()
 
-    if sym in SECTOR_SYMBOLS:
+    if sym in SECTOR_SYMBOLS or (sym.startswith("XL") and len(sym) <= 5):
         return AssetMeta(symbol=sym, asset_type="sector", group="SECTOR")
 
     if sym in INVERSE_SYMBOLS:
@@ -109,4 +116,8 @@ def get_asset_meta(symbol: str) -> AssetMeta:
     if sym in PARKING_SYMBOLS:
         return AssetMeta(symbol=sym, asset_type="parking", group="PARKING")
 
-    return AssetMeta(symbol=sym, asset_type="sector", group="SECTOR")
+    return AssetMeta(symbol=sym, asset_type="unsupported", group="UNSUPPORTED")
+
+
+def get_asset_meta(symbol: str) -> AssetMeta:
+    return classify_asset_symbol(symbol)
