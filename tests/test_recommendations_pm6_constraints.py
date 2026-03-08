@@ -23,8 +23,22 @@ def _candidate_rows(rec):
 def test_second_precious_holding_is_blocked_and_falls_back_to_sgov():
     scores = [
         _row("XLB", 8, asset_type="sector", group="SECTOR"),
-        _row("PALL", 13, asset_type="precious", group="PRECIOUS", metal_type="palladium", is_basket=False),
-        _row("GLDM", 14, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
+        _row(
+            "PALL",
+            13,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="palladium",
+            is_basket=False,
+        ),
+        _row(
+            "GLDM",
+            14,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
         _row("SGOV", 7, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "XLB"}, {"symbol": "PALL"}]}
@@ -54,8 +68,22 @@ def test_second_precious_holding_is_blocked_and_falls_back_to_sgov():
 def test_gltr_overlap_is_blocked_and_falls_back_to_sgov():
     scores = [
         _row("XLB", 8, asset_type="sector", group="SECTOR"),
-        _row("PALL", 13, asset_type="precious", group="PRECIOUS", metal_type="palladium", is_basket=False),
-        _row("GLTR", 14, asset_type="precious", group="PRECIOUS", metal_type="basket", is_basket=True),
+        _row(
+            "PALL",
+            13,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="palladium",
+            is_basket=False,
+        ),
+        _row(
+            "GLTR",
+            14,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="basket",
+            is_basket=True,
+        ),
         _row("SGOV", 7, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "XLB"}, {"symbol": "PALL"}]}
@@ -84,8 +112,22 @@ def test_gltr_overlap_is_blocked_and_falls_back_to_sgov():
 
 def test_precious_replacement_is_allowed_when_replacing_existing_precious():
     scores = [
-        _row("GLDM", 8, asset_type="precious", group="PRECIOUS", metal_type="gold", is_basket=False),
-        _row("PALL", 14, asset_type="precious", group="PRECIOUS", metal_type="palladium", is_basket=False),
+        _row(
+            "GLDM",
+            8,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="gold",
+            is_basket=False,
+        ),
+        _row(
+            "PALL",
+            14,
+            asset_type="precious",
+            group="PRECIOUS",
+            metal_type="palladium",
+            is_basket=False,
+        ),
         _row("SGOV", 7, asset_type="parking", group="PARKING"),
     ]
     pos = {"positions": [{"symbol": "GLDM"}]}

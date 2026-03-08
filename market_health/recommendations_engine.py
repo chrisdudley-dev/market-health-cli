@@ -373,7 +373,9 @@ def recommend(
             reasons.append("policy:max_precious_holdings")
 
         if block_gltr_component_overlap:
-            after_metals = [row_meta.get(sym, {}).get("metal_type") for sym in after_precious]
+            after_metals = [
+                row_meta.get(sym, {}).get("metal_type") for sym in after_precious
+            ]
             has_basket = any(m == "basket" for m in after_metals)
             has_single = any(
                 isinstance(m, str) and m not in {"basket"} for m in after_metals
@@ -424,7 +426,9 @@ def recommend(
             "passes_floor": passes_floor,
             "passes_delta": passes_delta,
             "passes_policy": passes_policy,
-            "status": "READY" if not reasons else ("FALLBACK_ONLY" if sym == sgov_symbol else "BLOCKED"),
+            "status": "READY"
+            if not reasons
+            else ("FALLBACK_ONLY" if sym == sgov_symbol else "BLOCKED"),
             "rejection_reasons": reasons,
             "asset_type": row_meta.get(sym, {}).get("asset_type"),
             "group": row_meta.get(sym, {}).get("group"),
@@ -515,7 +519,9 @@ def recommend(
                         held_counts[hs] = held_counts.get(hs, 0) + 1
 
                 worst_sec = sym_sector.get(weakest)
-                post = held_counts.get(cand_sec, 0) + (0 if worst_sec == cand_sec else 1)
+                post = held_counts.get(cand_sec, 0) + (
+                    0 if worst_sec == cand_sec else 1
+                )
 
                 diagnostics["sector_cap"] = sector_cap
                 diagnostics["candidate_sector"] = cand_sec
@@ -622,7 +628,9 @@ def recommend(
             diagnostics["fallback_reason"] = fallback_reason
             return Recommendation(
                 action="NOOP",
-                reason="SGOV fallback blocked by constraints: " + ", ".join(triggered) + ".",
+                reason="SGOV fallback blocked by constraints: "
+                + ", ".join(triggered)
+                + ".",
                 horizon_trading_days=horizon,
                 target_trade_date=None,
                 constraints_applied=applied,
@@ -631,7 +639,9 @@ def recommend(
             )
 
         diagnostics["selection_mode"] = (
-            "sgov_fallback" if fallback_reason == "policy_blocked" else "policy_fallback"
+            "sgov_fallback"
+            if fallback_reason == "policy_blocked"
+            else "policy_fallback"
         )
         diagnostics["fallback_reason"] = fallback_reason
         return Recommendation(
@@ -653,7 +663,9 @@ def recommend(
         reason = "No candidates available outside held set."
         triggered = ()
     else:
-        reasons = candidate_row_index.get(best_normal, {}).get("rejection_reasons") or []
+        reasons = (
+            candidate_row_index.get(best_normal, {}).get("rejection_reasons") or []
+        )
         triggered = tuple(
             r for r in reasons if isinstance(r, str) and r.startswith("policy:")
         )

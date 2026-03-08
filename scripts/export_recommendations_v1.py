@@ -289,7 +289,9 @@ def main() -> int:
             "positions_path": str(pos_p),
             "positions_mode": positions_meta.get("mode"),
             "positions_mapped": positions_meta.get("mapped"),
-            "positions_supported_outside_universe": positions_meta.get("supported_outside_universe"),
+            "positions_supported_outside_universe": positions_meta.get(
+                "supported_outside_universe"
+            ),
             "positions_classified": positions_meta.get("classified"),
             "positions_unmapped": positions_meta.get("unmapped"),
             "scores_source": used_source,
