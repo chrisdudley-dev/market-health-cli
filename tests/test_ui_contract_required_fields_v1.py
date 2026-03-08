@@ -77,6 +77,8 @@ def test_ui_contract_required_fields_and_types():
         assert isinstance(summary.get("sectors_count"), int)
     assert isinstance(summary.get("events_count"), int)
     assert summary.get("recommendations_status") in {"ok", "missing", "unreadable"}
+    assert summary.get("recommendation_action") is None or isinstance(summary.get("recommendation_action"), str)
+    assert summary.get("recommendation_reason") is None or isinstance(summary.get("recommendation_reason"), str)
 
     # Data must include the main payload keys used by the UI.
     for k in (
@@ -89,6 +91,12 @@ def test_ui_contract_required_fields_and_types():
         assert k in data
 
     assert isinstance(data["sectors"], list)
+    if data["sectors"]:
+        row = data["sectors"][0]
+        assert isinstance(row.get("asset_type"), str)
+        assert isinstance(row.get("group"), str)
+        assert "metal_type" in row
+        assert isinstance(row.get("is_basket"), bool)
     assert data["environment"] is None or isinstance(data["environment"], dict)
     assert data["positions"] is None or isinstance(data["positions"], dict)
     assert data["state"] is None or isinstance(data["state"], dict)

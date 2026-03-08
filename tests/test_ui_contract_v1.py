@@ -87,6 +87,7 @@ def test_contract_empty_home_is_valid(tmp_path):
     assert contract["data"]["sectors"] is None
     assert contract["data"]["state"] is None
     assert contract["data"]["recommendations"] is None
+    assert contract["data"]["recommendation_summary"] is None or isinstance(contract["data"]["recommendation_summary"], dict)
     assert contract["summary"]["recommendations_status"] in {
         "ok",
         "missing",
@@ -119,6 +120,12 @@ def test_contract_with_fixtures_is_populated_and_signature_stable(tmp_path):
     assert isinstance(contract["data"]["environment"], dict)
     assert isinstance(contract["data"]["positions"], dict)
     assert isinstance(contract["data"]["sectors"], list)
+    if contract["data"]["sectors"]:
+        row = contract["data"]["sectors"][0]
+        assert isinstance(row.get("asset_type"), str)
+        assert isinstance(row.get("group"), str)
+        assert "metal_type" in row
+        assert isinstance(row.get("is_basket"), bool)
     assert isinstance(contract["data"]["state"], dict)
 
     expected_path = Path("tests/fixtures/expected/ui_contract.signature.tsv")

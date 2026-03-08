@@ -51,6 +51,10 @@ Required:
 - `events_count` (int)
 - `recommendations_status` (string; one of `ok`, `missing`, `unreadable`)
 
+Common additional fields:
+- `recommendation_action` (string or null)
+- `recommendation_reason` (string or null)
+
 Optional (may not be present in all exporters):
 - `sectors_count` (int)
 - other rollups
@@ -63,6 +67,10 @@ Required payload keys used by the UI:
 - `sectors` (array)
 - `state` (object)
 - `recommendations` (object)
+
+Notes:
+- `data.sectors[]` rows may include `asset_type`, `group`, `metal_type`, and `is_basket`
+- `data.recommendation_summary` may expose derived recommendation fields for UI convenience
 
 Additional common payload:
 - `dimensions_meta` (object; A-F label metadata)
