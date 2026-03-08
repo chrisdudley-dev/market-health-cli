@@ -79,8 +79,23 @@ def recommend_forecast_mode(
     *, positions: Any, constraints: Dict[str, Any]
 ) -> Recommendation:
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
-    thr = float(constraints.get("min_improvement_threshold", 0.12))
-    veto_edge = float(constraints.get("disagreement_veto_edge", 0.0))
+
+    calibration_thresholds = constraints.get("calibration_thresholds") or {}
+    if not isinstance(calibration_thresholds, dict):
+        calibration_thresholds = {}
+
+    thr = float(
+        calibration_thresholds.get(
+            "min_improvement_threshold",
+            constraints.get("min_improvement_threshold", 0.12),
+        )
+    )
+    veto_edge = float(
+        calibration_thresholds.get(
+            "disagreement_veto_edge",
+            constraints.get("disagreement_veto_edge", 0.0),
+        )
+    )
 
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
