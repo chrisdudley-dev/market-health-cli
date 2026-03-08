@@ -98,6 +98,7 @@ def main() -> int:
     ap.add_argument("--interval", default="1d")
     ap.add_argument("--horizon", type=int, default=5)
     ap.add_argument("--min-improvement", type=float, default=0.12)
+    ap.add_argument("--min-floor", type=float, default=0.55)
     ap.add_argument("--max-swaps-per-day", type=int, default=1)
     ap.add_argument("--sector-cap", type=int, default=None)
     ap.add_argument("--turnover-cap", type=float, default=None)
@@ -237,6 +238,12 @@ def main() -> int:
         scores=score_rows,
         constraints={
             "min_improvement_threshold": args.min_improvement,
+            "min_delta": args.min_improvement,
+            "min_floor": args.min_floor,
+            "min_delta": args.min_improvement,
+            "min_floor": args.min_floor,
+            "sgov_symbol": "SGOV",
+            "sgov_is_policy_fallback": True,
             "forecast_mode": bool(forecast_enabled),
             "forecast_status": forecast_status,
             "forecast_path": str(forecast_p),
