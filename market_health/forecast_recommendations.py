@@ -174,18 +174,18 @@ def recommend_forecast_mode(
         if not ranked:
             continue
 
-        pair = ranked[0]
         from_weight = float(w.get(from_sym, default_weight))
-        weighted_robust_edge = from_weight * pair.robust_edge
-        key = (
-            1 if pair.vetoed else 0,
-            -weighted_robust_edge,
-            -pair.robust_edge,
-            -pair.avg_edge,
-            pair.from_symbol,
-            pair.to_symbol,
-        )
-        ranked_pairs.append((key, pair, from_weight, weighted_robust_edge))
+        for pair in ranked:
+            weighted_robust_edge = from_weight * pair.robust_edge
+            key = (
+                1 if pair.vetoed else 0,
+                -weighted_robust_edge,
+                -pair.robust_edge,
+                -pair.avg_edge,
+                pair.from_symbol,
+                pair.to_symbol,
+            )
+            ranked_pairs.append((key, pair, from_weight, weighted_robust_edge))
 
     if not ranked_pairs:
         return Recommendation(
