@@ -849,7 +849,19 @@ def _build_categories_precious(
     ranks: Dict[str, int],
     data: Dict[str, pd.DataFrame],
 ) -> Dict[str, Dict[str, List[dict]]]:
-    return _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+    cats = _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+
+    # PM4 v1:
+    # Keep A-D shared, but neutralize sector-specific E checks for precious metals.
+    try:
+        e_checks = cats["E"]["checks"]
+        for idx in (1, 2):  # Sector Rank, Breadth
+            if idx < len(e_checks) and isinstance(e_checks[idx], dict):
+                e_checks[idx]["score"] = 1
+    except Exception:
+        pass
+
+    return cats
 
 
 def _build_categories_parking(
