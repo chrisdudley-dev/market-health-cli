@@ -750,26 +750,14 @@ def compute_position_flow_checks(df: pd.DataFrame) -> List[dict]:
     return checks
 
 
-def _build_categories_for_asset(
+def _build_categories_common(
     sym: str,
     df_sym: pd.DataFrame,
     spy_close: pd.Series,
     vix_close: pd.Series,
     ranks: Dict[str, int],
     data: Dict[str, pd.DataFrame],
-    asset_type: str,
 ) -> Dict[str, Dict[str, List[dict]]]:
-    # Minimal dispatch skeleton for #162.
-    # Current behavior is intentionally preserved across asset families.
-    if asset_type == "sector":
-        pass
-    elif asset_type == "inverse":
-        pass
-    elif asset_type == "precious":
-        pass
-    elif asset_type == "parking":
-        pass
-
     try:
         b_scores = (
             score_trend_structure(df_sym, spy_close)
@@ -829,6 +817,69 @@ def _build_categories_for_asset(
             ]
         },
     }
+
+
+def _build_categories_sector(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+) -> Dict[str, Dict[str, List[dict]]]:
+    return _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+
+
+def _build_categories_inverse(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+) -> Dict[str, Dict[str, List[dict]]]:
+    return _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+
+
+def _build_categories_precious(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+) -> Dict[str, Dict[str, List[dict]]]:
+    return _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+
+
+def _build_categories_parking(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+) -> Dict[str, Dict[str, List[dict]]]:
+    return _build_categories_common(sym, df_sym, spy_close, vix_close, ranks, data)
+
+
+def _build_categories_for_asset(
+    sym: str,
+    df_sym: pd.DataFrame,
+    spy_close: pd.Series,
+    vix_close: pd.Series,
+    ranks: Dict[str, int],
+    data: Dict[str, pd.DataFrame],
+    asset_type: str,
+) -> Dict[str, Dict[str, List[dict]]]:
+    builders = {
+        "sector": _build_categories_sector,
+        "inverse": _build_categories_inverse,
+        "precious": _build_categories_precious,
+        "parking": _build_categories_parking,
+    }
+    builder = builders.get(asset_type, _build_categories_sector)
+    return builder(sym, df_sym, spy_close, vix_close, ranks, data)
 
 
 # ---------- Public API ----------
