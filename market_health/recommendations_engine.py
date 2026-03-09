@@ -218,6 +218,11 @@ def recommend(
       - turnover_cap: NOOP if 1/len(held) > cap
       - sector_cap: NOOP if sector concentration would exceed cap (requires row["sector"] present)
     """
+    if bool(constraints.get("forecast_mode", False)):
+        from market_health.forecast_recommendations import recommend_forecast_mode
+
+        return recommend_forecast_mode(positions=positions, constraints=constraints)
+
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
 
     min_delta_raw = constraints.get(
