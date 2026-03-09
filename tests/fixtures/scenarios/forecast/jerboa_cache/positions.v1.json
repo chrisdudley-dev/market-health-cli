@@ -1,0 +1,7 @@
+{
+  "schema": "positions.v1",
+  "positions": [
+    {"symbol": "AAA", "market_value": 100.0},
+    {"symbol": "BBB", "market_value": 900.0}
+  ]
+}

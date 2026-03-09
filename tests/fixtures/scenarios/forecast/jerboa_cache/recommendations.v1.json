@@ -1,0 +1,140 @@
+{
+  "asof": "2026-03-09T12:46:43Z",
+  "generated_at": "2026-03-09T12:46:43Z",
+  "inputs": {
+    "block_gltr_component_overlap": true,
+    "cooldown_trading_days": 0,
+    "disagreement_veto_edge": 0.0,
+    "forecast_mode": true,
+    "forecast_path": "/root/market-health-cli/tests/fixtures/scenarios/forecast/jerboa_cache/forecast_scores.v1.json",
+    "forecast_status": "ok",
+    "hhi_cap": 1.0,
+    "horizon_trading_days": 5,
+    "interval": "1d",
+    "max_precious_holdings": 1,
+    "max_weight_per_symbol": 1.0,
+    "min_delta": 0.01,
+    "min_distinct_symbols": 1,
+    "min_floor": 0.55,
+    "min_improvement_threshold": 0.01,
+    "period": "6mo",
+    "positions_classified": {
+      "INVERSE": [],
+      "PARKING": [],
+      "PRECIOUS": [],
+      "SECTOR": [],
+      "UNSUPPORTED": [
+        "AAA",
+        "BBB"
+      ]
+    },
+    "positions_mapped": [
+      "AAA",
+      "BBB"
+    ],
+    "positions_mode": "sectorized",
+    "positions_path": "/root/market-health-cli/tests/fixtures/scenarios/forecast/jerboa_cache/positions.v1.json",
+    "positions_supported_outside_universe": [],
+    "positions_unmapped": [],
+    "scores_source": "compute_scores",
+    "sgov_is_policy_fallback": true,
+    "sgov_symbol": "SGOV",
+    "snapshot_epoch": 1773060403
+  },
+  "recommendation": {
+    "action": "SWAP",
+    "constraints_applied": [
+      "forecast_mode",
+      "robust_edge=min(edge(H))",
+      "disagreement_veto_edge",
+      "diversity_constraints",
+      "cooldown",
+      "max_swaps_per_day",
+      "min_improvement_threshold"
+    ],
+    "diagnostics": {
+      "avg_edge": 0.14999999999999997,
+      "best_candidate": "DDD",
+      "candidate_pairs": [
+        {
+          "avg_edge": 0.14999999999999997,
+          "edges_by_h": {
+            "1": 0.14999999999999997,
+            "5": 0.14999999999999997
+          },
+          "from_symbol": "BBB",
+          "from_weight": 0.9,
+          "robust_edge": 0.14999999999999997,
+          "to_symbol": "DDD",
+          "veto_reason": "",
+          "vetoed": false,
+          "weighted_robust_edge": 0.13499999999999998
+        },
+        {
+          "avg_edge": 0.39999999999999997,
+          "edges_by_h": {
+            "1": 0.39999999999999997,
+            "5": 0.39999999999999997
+          },
+          "from_symbol": "AAA",
+          "from_weight": 0.1,
+          "robust_edge": 0.39999999999999997,
+          "to_symbol": "DDD",
+          "veto_reason": "",
+          "vetoed": false,
+          "weighted_robust_edge": 0.04
+        }
+      ],
+      "decision_metric": "portfolio_weighted_robust_edge",
+      "delta_utility": 0.14999999999999997,
+      "disagreement_veto_edge": 0.0,
+      "diversity": {
+        "distinct": 2,
+        "hhi": 0.8200000000000001,
+        "max_weight": 0.9
+      },
+      "diversity_ok": true,
+      "diversity_reasons": [],
+      "edge": 0.14999999999999997,
+      "edges_by_h": {
+        "1": 0.14999999999999997,
+        "5": 0.14999999999999997
+      },
+      "forecast_horizons": [
+        1,
+        5
+      ],
+      "horizon_trading_days": 5,
+      "mode": "forecast",
+      "robust_edge": 0.14999999999999997,
+      "selected_from_symbol": "BBB",
+      "selected_pair": {
+        "avg_edge": 0.14999999999999997,
+        "decision_metric": "portfolio_weighted_robust_edge",
+        "edges_by_h": {
+          "1": 0.14999999999999997,
+          "5": 0.14999999999999997
+        },
+        "from_symbol": "BBB",
+        "from_weight": 0.9,
+        "robust_edge": 0.14999999999999997,
+        "to_symbol": "DDD",
+        "veto_reason": "",
+        "vetoed": false,
+        "weighted_robust_edge": 0.13499999999999998
+      },
+      "selected_weight": 0.9,
+      "threshold": 0.01,
+      "veto_reason": "",
+      "vetoed": false,
+      "weakest_held": "AAA",
+      "weighted_robust_edge": 0.13499999999999998
+    },
+    "from_symbol": "BBB",
+    "horizon_trading_days": 5,
+    "reason": "Forecast robust edge 0.150 clears threshold 0.010.",
+    "target_trade_date": "2026-03-16",
+    "to_symbol": "DDD"
+  },
+  "schema": "recommendations.v1"
+}
