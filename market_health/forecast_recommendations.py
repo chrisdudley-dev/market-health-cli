@@ -80,18 +80,29 @@ def recommend_forecast_mode(
 ) -> Recommendation:
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
 
+    calibration_doc = constraints.get("calibration") or {}
+    if not isinstance(calibration_doc, dict):
+        calibration_doc = {}
+
+    calibration_doc_thresholds = calibration_doc.get("thresholds") or {}
+    if not isinstance(calibration_doc_thresholds, dict):
+        calibration_doc_thresholds = {}
+
     calibration_thresholds = constraints.get("calibration_thresholds") or {}
     if not isinstance(calibration_thresholds, dict):
         calibration_thresholds = {}
 
+    effective_thresholds = dict(calibration_doc_thresholds)
+    effective_thresholds.update(calibration_thresholds)
+
     thr = float(
-        calibration_thresholds.get(
+        effective_thresholds.get(
             "min_improvement_threshold",
             constraints.get("min_improvement_threshold", 0.12),
         )
     )
     veto_edge = float(
-        calibration_thresholds.get(
+        effective_thresholds.get(
             "disagreement_veto_edge",
             constraints.get("disagreement_veto_edge", 0.0),
         )
