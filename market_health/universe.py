@@ -66,7 +66,7 @@ def _flag(name: str, default: str = "0") -> bool:
 
 
 def precious_metals_enabled() -> bool:
-    return _flag("MH_ENABLE_PRECIOUS_METALS", "0")
+    return _flag("MH_ENABLE_PRECIOUS_METALS", "1")
 
 
 def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list[str]:

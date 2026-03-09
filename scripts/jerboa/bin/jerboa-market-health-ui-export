@@ -13,7 +13,8 @@ SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
 POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
 
 # Ensure python can import from repo checkout regardless of invocation dir
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
 cd "$REPO_ROOT"
 
 mkdir -p "$(dirname "$OUT_JSON")"
@@ -34,7 +35,7 @@ if command -v cygpath >/dev/null 2>&1; then
   esac
 fi
 
-HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
+PYTHONPATH="$REPO_ROOT" HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
 import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
