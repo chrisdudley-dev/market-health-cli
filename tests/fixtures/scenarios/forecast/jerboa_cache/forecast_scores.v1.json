@@ -1,0 +1,18 @@
+{
+  "schema": "forecast_scores.v1",
+  "horizons_trading_days": [1, 5],
+  "scores": {
+    "AAA": {
+      "1": {"forecast_score": 0.20},
+      "5": {"forecast_score": 0.20}
+    },
+    "BBB": {
+      "1": {"forecast_score": 0.45},
+      "5": {"forecast_score": 0.45}
+    },
+    "DDD": {
+      "1": {"forecast_score": 0.60},
+      "5": {"forecast_score": 0.60}
+    }
+  }
+}
