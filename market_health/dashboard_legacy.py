@@ -679,8 +679,11 @@ def render_reco(order, util, rec_doc, held_syms):
     reason = rec.get("reason") or "-"
     metric = d.get("decision_metric") or "-"
     weights = _fmt_pct_weights(d.get("utility_weights"))
-    best = d.get("best_candidate")
-    weakest = d.get("weakest_held")
+    selected_pair = (
+        d.get("selected_pair") if isinstance(d.get("selected_pair"), dict) else {}
+    )
+    best = selected_pair.get("to_symbol") or d.get("best_candidate")
+    weakest = selected_pair.get("from_symbol") or d.get("weakest_held")
     held_components = d.get("held_components") or {}
     candidate_components = d.get("candidate_components") or {}
     weakest_components = (
