@@ -28,6 +28,12 @@ Decision object (`recommendation`) always includes:
 - `target_trade_date`: `YYYY-MM-DD` or `null` (filled once trading-day semantics are available)
 - `constraints_applied`: list of constraint names applied (may be empty)
 
+Common diagnostics now include:
+- `candidate_rows`: ranked candidate rows with `status` and `rejection_reasons`
+- `min_floor`
+- `min_delta`
+- `fallback_reason` when SGOV policy fallback is used
+
 ## SWAP fields
 When `action = "SWAP"`, also includes:
 - `from_symbol`

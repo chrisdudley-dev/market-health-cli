@@ -17,3 +17,21 @@ def test_recommendation_lines_from_contract_noop():
     lines = _recommendation_lines_from_contract(contract)
     assert any("Recommendation:" in s for s in lines)
     assert any("NOOP" in s.upper() or "SWAP" in s.upper() for s in lines)
+
+
+def test_recommendation_lines_from_contract_forecast_swap():
+    rec = json.loads(
+        Path(
+            "tests/fixtures/scenarios/forecast/jerboa_cache/recommendations.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    contract = {
+        "summary": {"recommendations_status": "ok"},
+        "data": {"recommendations": rec},
+    }
+
+    lines = _recommendation_lines_from_contract(contract)
+
+    assert any("Recommendation:" in s and "SWAP" in s.upper() for s in lines)
+    assert any("Swap:" in s and "BBB" in s and "DDD" in s for s in lines)
+    assert any("Edge (" in s and "portfolio_weighted_robust_edge" in s for s in lines)

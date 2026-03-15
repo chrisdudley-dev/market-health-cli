@@ -189,7 +189,12 @@ def load_live_dataset(
 def extend_universe_with_inverses(
     sectors: list[str], inverse_map_path: str
 ) -> tuple[list[str], dict]:
-    pairs, status = load_inverse_pairs(inverse_map_path)
+    loaded = load_inverse_pairs(inverse_map_path)
+    if isinstance(loaded, tuple) and len(loaded) == 2:
+        pairs, status = loaded
+    else:
+        pairs, status = loaded, "ok"
+
     out = list(sectors)
     added = 0
     # include both the long + inverse side if present in map
