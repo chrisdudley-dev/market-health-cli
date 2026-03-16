@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Tuple
 from market_health.forecast_policy import rank_candidates_by_robust_edge
 from market_health.diversity_constraints import apply_swap, check_diversity
 from market_health.cooldown_policy import SwapEvent, check_cooldown
+from market_health.exposure_overlap import overlap_allowed
 
 # Import types/helpers from legacy engine (safe: imported lazily by recommend()).
 from market_health.recommendations_engine import (
@@ -106,6 +107,7 @@ def recommend_forecast_mode(
         "forecast_mode",
         "robust_edge=min(edge(H))",
         "disagreement_veto_edge",
+        "overlap_policy_v1",
         "diversity_constraints",
         "cooldown",
         "max_swaps_per_day",
@@ -187,6 +189,29 @@ def recommend_forecast_mode(
         "veto_reason": best.veto_reason,
     }
 
+    overlap_limit = float(constraints.get("max_overlap_score", 0.75))
+    overlap_ok, overlap = overlap_allowed(
+        weakest,
+        best.to_symbol,
+        max_overlap_score=overlap_limit,
+        context_by_symbol=constraints.get("exposure_contexts"),
+    )
+    diagnostics.update(
+        {
+            "overlap_ok": overlap_ok,
+            "overlap": {
+                "class": overlap.overlap_class,
+                "score": overlap.overlap_score,
+                "reason": overlap.reason,
+                "same_market": overlap.same_market,
+                "same_region": overlap.same_region,
+                "same_family": overlap.same_family,
+                "same_bucket": overlap.same_bucket,
+            },
+            "max_overlap_score": overlap_limit,
+        }
+    )
+
     if best.vetoed:
         return Recommendation(
             action="NOOP",
@@ -208,6 +233,9 @@ def recommend_forecast_mode(
         )
 
     triggered: List[str] = []
+
+    if not overlap_ok:
+        triggered.append("overlap_policy_v1")
 
     if swaps_today >= max_swaps:
         triggered.append("max_swaps_per_day")
