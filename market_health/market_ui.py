@@ -18,6 +18,7 @@ from rich.table import Table
 from rich.text import Text
 
 from market_health.engine import SECTORS_DEFAULT, SECTOR_LEADERS, compute_scores
+from market_health.inverse_universe_v1 import load_inverse_pairs
 from market_health.ui_contract_meta import dimension_heading
 
 FORCE_COLOR = bool(
@@ -185,6 +186,29 @@ def load_live_dataset(
     return [build_sector_from_json(obj) for obj in payload]
 
 
+def extend_universe_with_inverses(
+    sectors: list[str], inverse_map_path: str
+) -> tuple[list[str], dict]:
+    loaded = load_inverse_pairs(inverse_map_path)
+    if isinstance(loaded, tuple) and len(loaded) == 2:
+        pairs, status = loaded
+    else:
+        pairs, status = loaded, "ok"
+
+    out = list(sectors)
+    added = 0
+    # include both the long + inverse side if present in map
+    for p in pairs:
+        for sym in (getattr(p, "long", None), getattr(p, "inverse", None)):
+            if isinstance(sym, str):
+                s = sym.strip().upper()
+                if s and s not in out:
+                    out.append(s)
+                    added += 1
+    meta = {"status": status, "pairs": len(pairs), "added": added}
+    return out, meta
+
+
 # ---------- rendering ----------
 def render_header(console: Console, mono: bool = False) -> None:
     ts = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -208,11 +232,12 @@ def render_header(console: Console, mono: bool = False) -> None:
 
 
 def render_overview(
-    console: Console, rows: List[SectorRow], mono: bool = False
+    console: Console,
+    rows: List[SectorRow],
+    mono: bool = False,
+    title: str = "Overview (A–E totals per sector)",
 ) -> None:
-    tbl = Table(
-        title="Overview (A–E totals per sector)", box=box.SIMPLE_HEAVY, show_lines=False
-    )
+    tbl = Table(title=title, box=box.SIMPLE_HEAVY, show_lines=False)
     tbl.add_column("Sector", justify="left", style="bold cyan")
     for key in "ABCDE":
         tbl.add_column(key, justify="center")
@@ -298,89 +323,80 @@ def _sector_for_symbol(sym: str):
     return None
 
 
+def _rows_to_current_sectors_payload(
+    rows: Optional[List[SectorRow]],
+) -> Optional[List[dict]]:
+    """Convert in-memory SectorRow list into the payload shape used by Tri-Score renderers."""
+    if not rows:
+        return None
+    out: List[dict] = []
+    for r in rows:
+        cats: Dict[str, dict] = {}
+        for k, cat in (r.categories or {}).items():
+            cats[str(k)] = {
+                "checks": [
+                    {"label": c.label, "score": int(c.score)}
+                    for c in (cat.checks or [])
+                ]
+            }
+        out.append({"symbol": r.symbol, "categories": cats})
+    return out
+
+
 def _render_positions_panel(
     console,
     mono: bool = False,
     max_rows: int = 8,
-    sector_style: Optional[Dict[str, str]] = None,
+    sector_style=None,
+    current_rows: Optional[List[SectorRow]] = None,
 ) -> None:
-    """Render a compact positions panel under the Pi Grid (reads ~/.cache/jerboa/positions.v1.json)."""
+    """Render 'My Positions' tri-score panel.
+
+    Prefer ASCII prototype output (matches the 3-digit 0/1/2 cells),
+    fallback to the Rich tri-score renderer.
+    """
+    current_sectors = _rows_to_current_sectors_payload(current_rows)
+
+    # 1) ASCII prototype (preferred)
     try:
-        import json
-        from rich.panel import Panel
-        from rich.table import Table
-        from rich import box
+        from .ui_triscore_ascii import render_positions_triscore_ascii  # type: ignore
 
-        path = os.path.expanduser("~/.cache/jerboa/positions.v1.json")
-        if not os.path.isfile(path):
-            return
-
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        positions = data.get("positions") or []
-        source = data.get("source") or {}
-        src_type = source.get("type") or "unknown"
-
-        if not positions:
-            msg = (
-                "No positions imported yet.\n"
-                "Export a Thinkorswim Position Statement CSV to:\n"
-                "  ~/imports/thinkorswim\n"
-                "Then run:\n"
-                "  jerboa-market-health-positions-refresh"
+        try:
+            txt = render_positions_triscore_ascii(
+                mono=mono,
+                max_rows=max_rows,
+                sector_style=sector_style,
+                current_sectors=current_sectors,
             )
-            if mono:
-                console.print(
-                    "Positions: none (run jerboa-market-health-positions-refresh after exporting ToS CSV)"
-                )
-            else:
-                console.print(
-                    Panel.fit(msg, title=f"Positions ({src_type})", border_style="cyan")
-                )
+        except TypeError:
+            try:
+                txt = render_positions_triscore_ascii(mono=mono)
+            except TypeError:
+                txt = render_positions_triscore_ascii()
+        if txt:
+            console.print(str(txt).rstrip())
             return
-
-        t = Table(box=box.SIMPLE, show_header=True, header_style="bold")
-        t.add_column("Sym")
-        t.add_column("Acct")
-        t.add_column("Type")
-        t.add_column("Qty", justify="right")
-        t.add_column("Details")
-
-        for p in positions[:max_rows]:
-            sym = str(p.get("symbol", "?"))
-            sym_cell = Text(sym)
-            sec = _sector_for_symbol(sym)
-            st = (sector_style or {}).get(sec or "", "")
-            if st and ((not mono) or FORCE_COLOR):
-                sym_cell.stylize(st)
-            acct = str(p.get("account_label") or "")
-            typ = str(p.get("asset_type", "?"))
-            qty = str(p.get("qty", ""))
-
-            details = ""
-            if typ == "option":
-                details = f"{p.get('expiry', '?')}  {p.get('strike', '?')}  {p.get('right', '?')}"
-
-            t.add_row(sym_cell, acct, typ, qty, details)
-
-        title = f"Positions ({len(positions)})  •  source={src_type}"
-        if mono:
-            console.print(title)
-            for p in positions[:max_rows]:
-                sym = str(p.get("symbol", "?"))
-                typ = str(p.get("asset_type", "?"))
-                qty = str(p.get("qty", ""))
-                acct = str(p.get("account_label") or "")
-                det = ""
-                if typ == "option":
-                    det = f"{p.get('expiry', '?')} {p.get('strike', '?')} {p.get('right', '?')}"
-                console.print(f"- {sym}  acct={acct}  {typ}  qty={qty}  {det}".rstrip())
-        else:
-            console.print(Panel(t, title=title, border_style="cyan"))
-
     except Exception:
-        # Never break the widget for positions issues
+        pass
+
+    # 2) Rich renderer fallback
+    try:
+        from .ui_triscore import render_positions_triscore
+
+        try:
+            out = render_positions_triscore(
+                mono=mono,
+                max_rows=max_rows,
+                sector_style=sector_style,
+                current_sectors=current_sectors,
+            )
+        except TypeError:
+            out = render_positions_triscore(mono=mono)
+        if out is not None:
+            console.print(out)
+            return
+    except Exception as e:
+        console.print(f"[yellow]Tri-Score panel unavailable: {e}[/yellow]")
         return
 
 
@@ -449,7 +465,9 @@ def render_pi_grid(
         r.symbol: pct_style((r.total / MAX_TOTAL) if MAX_TOTAL else 0.0, mono)
         for r in rows
     }
-    _render_positions_panel(console, mono=mono, sector_style=style_by_sector)
+    _render_positions_panel(
+        console, mono=mono, sector_style=style_by_sector, current_rows=rows
+    )
 
 
 def _is_ui_contract(obj: object) -> bool:
@@ -464,23 +482,56 @@ def _is_ui_contract(obj: object) -> bool:
     return ("sectors" in d) and ("state" in d) and ("positions" in d)
 
 
-def _rows_from_ui_contract(contract: dict, sectors_filter: list[str] | None) -> list:
-    d = contract.get("data") or {}
-    sectors = d.get("sectors")
+def _rows_from_ui_contract(
+    contract: dict, sectors_filter: list[str] | None
+) -> list[SectorRow]:
+    """Extract SectorRow list from a UI contract (market_health.ui.v1.json).
+
+    Supports:
+      - contract.data.sectors = [ {...}, ... ]
+      - contract.data.sectors.sectors = [ {...}, ... ]
+      - contract.data.sectors.rows = [ {...}, ... ]
+    """
+    data = contract.get("data") or {}
+    sectors = data.get("sectors")
+
+    # Unwrap common nested shapes
+    if isinstance(sectors, dict):
+        for k in ("sectors", "rows", "data"):
+            v = sectors.get(k)
+            if isinstance(v, list):
+                sectors = v
+                break
+
     if not isinstance(sectors, list):
         return []
-    rows = [build_sector_from_json(x) for x in sectors if isinstance(x, dict)]
+
     if sectors_filter:
-        keep = set(sectors_filter)
-        rows = [r for r in rows if getattr(r, "symbol", None) in keep]
-    rows.sort(key=lambda r: getattr(r, "total", 0), reverse=True)
-    return rows
+        want = {s.upper() for s in sectors_filter}
+        sectors = [
+            x
+            for x in sectors
+            if isinstance(x, dict) and str(x.get("symbol", "")).upper() in want
+        ]
+
+    return [build_sector_from_json(x) for x in sectors if isinstance(x, dict)]
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Market Health – Sector Union (Rich UI)")
     p.add_argument(
         "--sectors", nargs="+", default=SECTORS_DEFAULT, help="Tickers to include"
+    )
+    p.add_argument(
+        "--inverse-map",
+        type=str,
+        default=os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json"),
+        help="Inverse ETF map used to extend the UI universe.",
+    )
+    p.add_argument(
+        "--no-inverses",
+        action="store_true",
+        help="Disable auto-including inverse ETFs in the UI.",
     )
     p.add_argument(
         "--topk", type=int, default=3, help="How many top sectors to expand in details"
@@ -534,7 +585,13 @@ def main():
 
     def load_rows() -> List[SectorRow]:
         if args.demo:
-            return build_demo_dataset(args.sectors, seed=42)
+            sectors = list(args.sectors)
+            if not getattr(args, "no_inverses", False):
+                sectors, meta = extend_universe_with_inverses(
+                    sectors, getattr(args, "inverse_map", "")
+                )
+                args._inverse_meta = meta
+            return build_demo_dataset(sectors, seed=42)
         if args.json_path:
             try:
                 # If json_path is a UI contract (market_health.ui.v1.json), load rows from contract.data.sectors
@@ -551,7 +608,13 @@ def main():
                 return []
         # live from engine
         try:
-            return load_live_dataset(args.sectors, args.period, args.interval, args.ttl)
+            sectors = list(args.sectors)
+            if not getattr(args, "no_inverses", False):
+                sectors, meta = extend_universe_with_inverses(
+                    sectors, getattr(args, "inverse_map", "")
+                )
+                args._inverse_meta = meta
+            return load_live_dataset(sectors, args.period, args.interval, args.ttl)
         except Exception as e:
             console.print(f"[red]Failed to compute live scores: {e}[/red]")
             return []
@@ -579,7 +642,14 @@ def main():
                 rec_lines = _recommendation_lines_from_contract(contract)
                 if rec_lines:
                     console.print(Panel("\n".join(rec_lines), title="Recommendations"))
-            render_overview(console, rows, mono=args.mono)
+            meta = getattr(args, "_inverse_meta", {})
+            inv_added = meta.get("added", 0) if isinstance(meta, dict) else 0
+            title = (
+                "Overview (A–E totals per sector; incl inverses)"
+                if inv_added
+                else "Overview (A–E totals per sector)"
+            )
+            render_overview(console, rows, mono=args.mono, title=title)
             render_details(console, rows, top_k=args.topk, mono=args.mono)
     else:
         if args.json_path:
@@ -597,10 +667,6 @@ def main():
             return
     else:
         render_once()
-
-
-if __name__ == "__main__":
-    main()
 
 
 def _recommendation_lines_from_contract(contract: dict) -> list[str]:
@@ -700,3 +766,7 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
         val = diag.get("edge", diag.get("delta_utility"))
         lines.append(f"Edge ({dm}): {val}")
     return lines
+
+
+if __name__ == "__main__":
+    main()
