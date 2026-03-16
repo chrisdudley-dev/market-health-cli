@@ -20,7 +20,7 @@ def test_japan_market_profile_and_symbol_catalog_load() -> None:
 
     assert len(symbols) == 1
     sym = symbols[0]
-    assert sym.symbol == "JP_BROAD"
+    assert sym.symbol == "EWJ"
     assert sym.family_id == "broad_equity"
     assert sym.calendar_id == "JPX"
 
