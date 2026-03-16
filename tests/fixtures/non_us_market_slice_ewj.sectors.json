@@ -1,0 +1,12 @@
+[
+  {
+    "symbol": "EWJ",
+    "categories": {
+      "A": {"checks": [{"label": "News", "score": 1}]},
+      "B": {"checks": [{"label": "RS vs SPY", "score": 1}]},
+      "C": {"checks": [{"label": "OI/Flow", "score": 1}]},
+      "D": {"checks": [{"label": "ATR%", "score": 1}]},
+      "E": {"checks": [{"label": "SPY Trend", "score": 1}]}
+    }
+  }
+]

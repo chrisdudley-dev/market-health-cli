@@ -122,3 +122,30 @@ PY
 
 - Prefer deterministic inputs checked into `tests/fixtures/scenarios/...`.
 - Keep fixture generators as small scripts (or python snippets) and document them here.
+
+## Onboarding an additional non-US market
+
+Use the first Japan slice as the template for future market onboarding.
+
+1. Add a market profile under `config/markets/`.
+2. Add symbol metadata under `config/symbols/global_markets.yaml`.
+3. Reuse or extend taxonomy/family config under `config/taxonomy/`.
+4. If the market should become executable in scoring, wire the symbol into the active universe and any required leaders mapping.
+5. Verify metadata and export coverage with:
+   - `tests/test_market_catalog_v1.py`
+   - `tests/test_engine_market_metadata_v1.py`
+   - `tests/test_ui_export_global_market_metadata_v1.py`
+   - `tests/test_non_us_market_slice_smoke_v1.py`
+
+Recommended local refresh/export sequence:
+
+    PYTHONPATH=$PWD python3 scripts/export_environment_v1.py
+    PYTHONPATH=$PWD python3 scripts/export_ohlcv_sectors_v1.py
+    PYTHONPATH=$PWD python3 scripts/export_forecast_scores_v1.py --source ~/.cache/jerboa/ohlcv.sectors.v1.json
+    PYTHONPATH=$PWD python3 scripts/ui_export_ui_contract_v1.py
+
+Success criteria for a newly onboarded market:
+- symbol is present in `market_health.sectors.json`
+- symbol metadata is present in `market_health.ui.v1.json`
+- forecast/export artifacts remain readable
+- canonical `mh` UI still renders without regressions
