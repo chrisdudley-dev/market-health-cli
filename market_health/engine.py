@@ -189,6 +189,11 @@ SECTORS_DEFAULT = [
     "XLK",
     "XLE",
     "EWJ",
+    "1624.T",
+    "1625.T",
+    "1627.T",
+    "1632.T",
+    "1633.T",
 ]
 
 # Curated leaders per sector for the Leaders%>20D proxy

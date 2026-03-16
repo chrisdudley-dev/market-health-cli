@@ -36,8 +36,11 @@ class SymbolMeta:
     taxonomy: str
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+@dataclass(frozen=True)
+class TaxonomyBridgeEntry:
+    bucket_id: str
+    family_id: str
+    representative_symbol: str
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -46,6 +49,10 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"Expected mapping in {path}")
     return data
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
 
 
 def load_market_profile(path: Path) -> MarketProfile:
@@ -58,6 +65,26 @@ def load_symbol_catalog(path: Path) -> list[SymbolMeta]:
     if not isinstance(rows, list):
         raise ValueError("symbols must be a list")
     return [SymbolMeta(**row) for row in rows]
+
+
+def load_taxonomy_bridge(path: Path) -> dict[str, TaxonomyBridgeEntry]:
+    data = _read_yaml(path)
+    bridge = data.get("bridge", {})
+    if not isinstance(bridge, dict):
+        raise ValueError("bridge must be a mapping")
+
+    out: dict[str, TaxonomyBridgeEntry] = {}
+    for bucket_id, row in bridge.items():
+        if not isinstance(bucket_id, str) or not bucket_id.strip():
+            raise ValueError("bridge keys must be non-empty strings")
+        if not isinstance(row, dict):
+            raise ValueError(f"{bucket_id}: bridge entry must be a mapping")
+        out[bucket_id] = TaxonomyBridgeEntry(
+            bucket_id=bucket_id,
+            family_id=str(row["family_id"]),
+            representative_symbol=str(row["representative_symbol"]),
+        )
+    return out
 
 
 def validate_symbol_against_market(symbol: SymbolMeta, market: MarketProfile) -> None:
@@ -73,23 +100,42 @@ def validate_symbol_against_market(symbol: SymbolMeta, market: MarketProfile) ->
         raise ValueError(f"{symbol.symbol}: taxonomy mismatch")
 
 
-def load_market_profile_for_market(market: str, repo_root: Path | None = None) -> MarketProfile:
-    root = repo_root or _repo_root()
-    return load_market_profile(root / "config" / "markets" / f"{market.lower()}.yaml")
-
-
-def load_global_symbol_catalog(repo_root: Path | None = None) -> list[SymbolMeta]:
-    root = repo_root or _repo_root()
-    return load_symbol_catalog(root / "config" / "symbols" / "global_markets.yaml")
+def validate_symbol_against_bridge(
+    symbol: SymbolMeta,
+    bridge: dict[str, TaxonomyBridgeEntry],
+) -> None:
+    entry = bridge.get(symbol.bucket_id)
+    if entry is None:
+        raise ValueError(f"{symbol.symbol}: bucket_id missing from taxonomy bridge")
+    if symbol.family_id != entry.family_id:
+        raise ValueError(f"{symbol.symbol}: family_id mismatch for bucket {symbol.bucket_id}")
 
 
 @lru_cache(maxsize=1)
-def get_global_symbol_meta_map() -> dict[str, SymbolMeta]:
-    return {row.symbol.upper(): row for row in load_global_symbol_catalog()}
+def get_symbol_catalog() -> list[SymbolMeta]:
+    return load_symbol_catalog(_repo_root() / "config" / "symbols" / "global_markets.yaml")
+
+
+@lru_cache(maxsize=None)
+def load_market_profile_for_market(market: str) -> MarketProfile:
+    return load_market_profile(
+        _repo_root() / "config" / "markets" / f"{market.lower()}.yaml"
+    )
+
+
+@lru_cache(maxsize=None)
+def get_taxonomy_bridge_for_market(market: str) -> dict[str, TaxonomyBridgeEntry]:
+    return load_taxonomy_bridge(
+        _repo_root() / "config" / "taxonomy" / f"{market.lower()}_topix17_bridge.yaml"
+    )
 
 
 def get_symbol_meta(symbol: str) -> SymbolMeta | None:
-    return get_global_symbol_meta_map().get(symbol.upper().strip())
+    symbol_u = symbol.strip().upper()
+    for meta in get_symbol_catalog():
+        if meta.symbol.upper() == symbol_u:
+            return meta
+    return None
 
 
 def get_market_profile_for_symbol(symbol: str) -> MarketProfile | None:
@@ -97,3 +143,11 @@ def get_market_profile_for_symbol(symbol: str) -> MarketProfile | None:
     if meta is None:
         return None
     return load_market_profile_for_market(meta.market)
+
+
+def get_taxonomy_bridge_entry_for_symbol(symbol: str) -> TaxonomyBridgeEntry | None:
+    meta = get_symbol_meta(symbol)
+    if meta is None:
+        return None
+    bridge = get_taxonomy_bridge_for_market(meta.market)
+    return bridge.get(meta.bucket_id)
