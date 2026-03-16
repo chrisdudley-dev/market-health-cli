@@ -9,3 +9,58 @@ symbols:
     calendar_id: JPX
     currency: JPY
     taxonomy: topix17
+
+  - symbol: 1624.T
+    market: JP
+    region: APAC
+    kind: sector_representative
+    bucket_id: jp_machinery
+    family_id: industrials
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
+
+  - symbol: 1625.T
+    market: JP
+    region: APAC
+    kind: sector_representative
+    bucket_id: jp_electric_appliances_precision
+    family_id: technology
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
+
+  - symbol: 1627.T
+    market: JP
+    region: APAC
+    kind: sector_representative
+    bucket_id: jp_electric_power_gas
+    family_id: utilities
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
+
+  - symbol: 1632.T
+    market: JP
+    region: APAC
+    kind: sector_representative
+    bucket_id: jp_financials_ex_banks
+    family_id: financials
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
+
+  - symbol: 1633.T
+    market: JP
+    region: APAC
+    kind: sector_representative
+    bucket_id: jp_real_estate
+    family_id: real_estate
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
