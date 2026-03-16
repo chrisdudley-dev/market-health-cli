@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
+from market_health.market_catalog import get_market_profile_for_symbol, get_symbol_meta
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -204,6 +205,35 @@ SECTOR_LEADERS: Dict[str, List[str]] = {
     "XLU": ["NEE", "DUK", "SO", "AEP", "D"],
     "XLP": ["PG", "KO", "PEP", "COST", "WMT"],
 }
+
+
+def get_symbol_market_context(sym: str) -> dict | None:
+    meta = get_symbol_meta(sym)
+    if meta is None:
+        return None
+
+    market = get_market_profile_for_symbol(sym)
+    if market is None:
+        return None
+
+    return {
+        "symbol": meta.symbol,
+        "market": meta.market,
+        "region": meta.region,
+        "kind": meta.kind,
+        "bucket_id": meta.bucket_id,
+        "family_id": meta.family_id,
+        "benchmark_symbol": meta.benchmark_symbol,
+        "calendar_id": meta.calendar_id,
+        "currency": meta.currency,
+        "taxonomy": meta.taxonomy,
+        "session_model": market.session_model,
+    }
+
+
+def is_known_non_us_symbol(sym: str) -> bool:
+    ctx = get_symbol_market_context(sym)
+    return bool(ctx and ctx["market"] != "US")
 
 
 @dataclass
