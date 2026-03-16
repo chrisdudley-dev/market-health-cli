@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from market_health.ui_contract_meta import DIMENSIONS_META_V1
 from market_health.universe import get_asset_meta
+from market_health.market_catalog import get_symbol_meta
 
 # Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
 HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
@@ -81,12 +82,23 @@ def enrich_sector_rows(obj):
         if not isinstance(sym, str) or not sym.strip():
             out.append(row)
             continue
-        meta_obj = get_asset_meta(sym)
+        asset_meta = get_asset_meta(sym)
+        market_meta = get_symbol_meta(sym.strip().upper())
         new_row = dict(row)
-        new_row.setdefault("asset_type", meta_obj.asset_type)
-        new_row.setdefault("group", meta_obj.group)
-        new_row.setdefault("metal_type", meta_obj.metal_type)
-        new_row.setdefault("is_basket", meta_obj.is_basket)
+        new_row.setdefault("asset_type", asset_meta.asset_type)
+        new_row.setdefault("group", asset_meta.group)
+        new_row.setdefault("metal_type", asset_meta.metal_type)
+        new_row.setdefault("is_basket", asset_meta.is_basket)
+        if market_meta is not None:
+            new_row.setdefault("market", market_meta.market)
+            new_row.setdefault("region", market_meta.region)
+            new_row.setdefault("kind", market_meta.kind)
+            new_row.setdefault("bucket_id", market_meta.bucket_id)
+            new_row.setdefault("family_id", market_meta.family_id)
+            new_row.setdefault("benchmark_symbol", market_meta.benchmark_symbol)
+            new_row.setdefault("calendar_id", market_meta.calendar_id)
+            new_row.setdefault("currency", market_meta.currency)
+            new_row.setdefault("taxonomy", market_meta.taxonomy)
         out.append(new_row)
     return out
 
@@ -188,6 +200,32 @@ for item in pos_list:
     if len(symbols) >= 12:
         break
 
+def symbols_sample_meta(symbols):
+    out = []
+    if not isinstance(symbols, list):
+        return out
+    for sym in symbols:
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        meta_obj = get_symbol_meta(sym.strip().upper())
+        if meta_obj is None:
+            continue
+        out.append(
+            {
+                "symbol": meta_obj.symbol,
+                "market": meta_obj.market,
+                "region": meta_obj.region,
+                "kind": meta_obj.kind,
+                "bucket_id": meta_obj.bucket_id,
+                "family_id": meta_obj.family_id,
+                "benchmark_symbol": meta_obj.benchmark_symbol,
+                "calendar_id": meta_obj.calendar_id,
+                "currency": meta_obj.currency,
+                "taxonomy": meta_obj.taxonomy,
+            }
+        )
+    return out
+
 
   # --- Category A: events/catalysts provider boundary (graceful) ---
 ev_cfg_p = Path(os.path.expanduser("~/.config/jerboa/event_provider.json"))
@@ -287,6 +325,7 @@ payload = {
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
         "symbols_sample": symbols,
+        "symbols_sample_meta": symbols_sample_meta(symbols),
     },
     # Keep full data for now (still one file); React reads just what it needs.
     "data": {
