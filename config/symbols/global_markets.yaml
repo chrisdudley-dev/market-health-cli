@@ -1,0 +1,11 @@
+symbols:
+  - symbol: JP_BROAD
+    market: JP
+    region: APAC
+    kind: broad_market
+    bucket_id: jp_broad_market
+    family_id: broad_equity
+    benchmark_symbol: TOPIX
+    calendar_id: JPX
+    currency: JPY
+    taxonomy: topix17
