@@ -125,6 +125,48 @@ def _attach_recommendation_symbol_meta(doc: Dict[str, Any]) -> None:
         rec["to_symbol_meta"] = to_meta
 
 
+def _build_exposure_contexts(
+    score_rows: List[Dict[str, Any]],
+    positions: Dict[str, Any],
+) -> Dict[str, Dict[str, Any]]:
+    out: Dict[str, Dict[str, Any]] = {}
+
+    def _add(sym: Any, row: Dict[str, Any] | None = None) -> None:
+        if not isinstance(sym, str) or not sym.strip():
+            return
+        sym_u = sym.strip().upper()
+
+        ctx: Dict[str, Any] = {"symbol": sym_u}
+        if isinstance(row, dict):
+            for k in ("market", "region", "family_id", "bucket_id", "kind", "taxonomy"):
+                v = row.get(k)
+                if isinstance(v, str) and v.strip():
+                    ctx[k] = v.strip()
+
+        meta = get_symbol_meta(sym_u)
+        if meta is not None:
+            ctx.setdefault("market", meta.market)
+            ctx.setdefault("region", meta.region)
+            ctx.setdefault("family_id", meta.family_id)
+            ctx.setdefault("bucket_id", meta.bucket_id)
+            ctx.setdefault("kind", meta.kind)
+            ctx.setdefault("taxonomy", meta.taxonomy)
+
+        if len(ctx) > 1:
+            out[sym_u] = ctx
+
+    for row in score_rows:
+        if isinstance(row, dict):
+            _add(row.get("symbol"), row=row)
+
+    if isinstance(positions, dict) and isinstance(positions.get("positions"), list):
+        for p in positions["positions"]:
+            if isinstance(p, dict):
+                _add(p.get("symbol") or p.get("ticker"))
+
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Export recommendations.v1.json to ~/.cache/jerboa/"
@@ -306,6 +348,7 @@ def main() -> int:
                 if isinstance(forecast_doc, dict)
                 else None
             ),
+            "exposure_contexts": _build_exposure_contexts(score_rows, positions_for_rec),
             "cooldown_history": [],
         },
     )
