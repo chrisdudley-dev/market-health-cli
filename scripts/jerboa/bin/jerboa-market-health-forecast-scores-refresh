@@ -1,36 +1,61 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
 QUIET=0
-if [ "${1:-}" = "--quiet" ]; then QUIET=1; shift; fi
+if [ "${1:-}" = "--quiet" ]; then
+  QUIET=1
+  shift
+fi
 
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
 
-OUT="${HOME}/.cache/jerboa/forecast_scores.v1.json"
-SRC_DEFAULT="${HOME}/.cache/jerboa/ohlcv.sectors.v1.json"
-rc=0
-
-args=()
-if [ -f "$SRC_DEFAULT" ]; then
-  args+=(--source "$SRC_DEFAULT")
+if [ -x "$ROOT/.venv/bin/python" ]; then
+  PYTHON="$ROOT/.venv/bin/python"
+elif [ -x "$ROOT/.venv-ci/bin/python" ]; then
+  PYTHON="$ROOT/.venv-ci/bin/python"
+else
+  PYTHON="${JERBOA_PYTHON:-python3}"
 fi
 
-if [ "$QUIET" -eq 1 ]; then
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" --quiet || rc=$?
-else
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" || rc=$?
+OUT="${HOME}/.cache/jerboa/forecast_scores.v1.json"
+SRC_DEFAULT="${HOME}/.cache/jerboa/ohlcv.sectors.v1.json"
+SRC="${JERBOA_FORECAST_SOURCE:-}"
+
+rc=0
+
+if [ -z "$SRC" ]; then
+  SRC="$SRC_DEFAULT"
+  if [ "$QUIET" -eq 1 ]; then
+    PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_ohlcv_sectors_v1.py" --out "$SRC" --quiet >/dev/null || rc=$?
+  else
+    PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_ohlcv_sectors_v1.py" --out "$SRC" || rc=$?
+  fi
+fi
+
+args=()
+if [ "$rc" -eq 0 ] && [ -f "$SRC" ]; then
+  args+=(--source "$SRC")
+fi
+
+if [ "$rc" -eq 0 ]; then
+  if [ "$QUIET" -eq 1 ]; then
+    PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" --quiet || rc=$?
+  else
+    PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" || rc=$?
+  fi
 fi
 
 if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/validate_forecast_scores_v1.py" --path "$OUT" >/dev/null || rc=$?
+  PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/validate_forecast_scores_v1.py" --path "$OUT" >/dev/null || rc=$?
 fi
 
 if [ "$QUIET" -ne 1 ]; then
   if [ "$rc" -eq 0 ]; then
-    echo "OK: forecast scores refresh"
+    echo "OK: forecast refresh -> $OUT"
   else
-    echo "ERR: forecast scores refresh failed (rc=$rc)"
+    echo "ERR: forecast refresh rc=$rc"
   fi
 fi
+
 exit "$rc"
