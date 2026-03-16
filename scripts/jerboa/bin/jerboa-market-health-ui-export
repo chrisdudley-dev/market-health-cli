@@ -13,7 +13,8 @@ SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
 POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
 
 # Ensure python can import from repo checkout regardless of invocation dir
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO_ROOT="$(cd "$(dirname "$SELF")/../../.." && pwd)"
 cd "$REPO_ROOT"
 
 mkdir -p "$(dirname "$OUT_JSON")"
@@ -34,11 +35,12 @@ if command -v cygpath >/dev/null 2>&1; then
   esac
 fi
 
-HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
+PYTHONPATH="$REPO_ROOT" HOME="$HOME_FOR_PY" "$PYTHON" - <<'PY'
 import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 from market_health.ui_contract_meta import DIMENSIONS_META_V1
+from market_health.universe import get_asset_meta
 
 # Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
 HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
@@ -66,6 +68,52 @@ def meta(p: Path):
         return {"path": str(p), "exists": False, "mtime": 0, "bytes": 0}
     st = p.stat()
     return {"path": str(p), "exists": True, "mtime": int(st.st_mtime), "bytes": int(st.st_size)}
+
+def enrich_sector_rows(obj):
+    if not isinstance(obj, list):
+        return obj
+    out = []
+    for row in obj:
+        if not isinstance(row, dict):
+            out.append(row)
+            continue
+        sym = row.get("symbol")
+        if not isinstance(sym, str) or not sym.strip():
+            out.append(row)
+            continue
+        meta_obj = get_asset_meta(sym)
+        new_row = dict(row)
+        new_row.setdefault("asset_type", meta_obj.asset_type)
+        new_row.setdefault("group", meta_obj.group)
+        new_row.setdefault("metal_type", meta_obj.metal_type)
+        new_row.setdefault("is_basket", meta_obj.is_basket)
+        out.append(new_row)
+    return out
+
+def recommendation_summary_blob(rec_blob):
+    out = {
+        "action": None,
+        "reason": None,
+        "fallback_reason": None,
+        "has_candidate_rows": False,
+    }
+    if not isinstance(rec_blob, dict):
+        return out
+    rec = rec_blob.get("recommendation")
+    if not isinstance(rec, dict):
+        rec = rec_blob if isinstance(rec_blob, dict) else {}
+    if not isinstance(rec, dict):
+        return out
+    out["action"] = rec.get("action")
+    out["reason"] = rec.get("reason")
+    diag = rec.get("diagnostics")
+    if isinstance(diag, dict):
+        cand = diag.get("candidate_rows")
+        out["has_candidate_rows"] = isinstance(cand, list) and len(cand) > 0
+        out["fallback_reason"] = diag.get("fallback_reason")
+    if out["fallback_reason"] is None and out["action"] == "NOOP":
+        out["fallback_reason"] = out["reason"]
+    return out
 
 def status_line_fallback(state: dict | None) -> str:
     if not isinstance(state, dict):
@@ -96,6 +144,9 @@ env   = read_json(env_p)
 sect  = read_json(sect_p)
 pos   = read_json(pos_p)
 
+if isinstance(sect, list):
+    sect = enrich_sector_rows(sect)
+
 rec_raw = read_json(rec_p)
 
 forecast_raw = read_json(forecast_p)
@@ -120,6 +171,8 @@ elif isinstance(forecast_raw, dict) and forecast_raw.get("_error"):
 
 if not status_line:
     status_line = status_line_fallback(state)
+
+rec_summary = recommendation_summary_blob(rec)
 
 # Small derived summary (safe / schema-agnostic)
 pos_list = []
@@ -228,6 +281,8 @@ payload = {
     "summary": {
         "positions_count": len(pos_list),
         "recommendations_status": rec_status,
+        "recommendation_action": rec_summary.get("action"),
+        "recommendation_reason": rec_summary.get("reason"),
         "forecast_scores_status": forecast_status,
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
@@ -241,6 +296,7 @@ payload = {
         "positions": pos,
         "dimensions_meta": DIMENSIONS_META_V1,
         "recommendations": rec,
+        "recommendation_summary": rec_summary,
         "forecast_scores": forecast,
           "events": events,
     },
