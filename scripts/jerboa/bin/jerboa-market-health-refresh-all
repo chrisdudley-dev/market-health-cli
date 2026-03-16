@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+if [ -x "$ROOT/.venv/bin/python" ]; then
+  PYTHON="$ROOT/.venv/bin/python"
+elif [ -x "$ROOT/.venv-ci/bin/python" ]; then
+  PYTHON="$ROOT/.venv-ci/bin/python"
+else
+  PYTHON="${JERBOA_PYTHON:-python3}"
+fi
 set -Eeuo pipefail
+QUIET=0
+for __arg in "$@"; do
+  if [ "$__arg" = "--quiet" ]; then
+    QUIET=1
+    break
+  fi
+done
+
 
 FORCE=0
 ARGS=()
@@ -13,6 +30,7 @@ done
 ENV_JSON="${HOME}/.cache/jerboa/environment.v1.json"
 SECT_JSON="${HOME}/.cache/jerboa/market_health.sectors.json"
 POS_JSON="${HOME}/.cache/jerboa/positions.v1.json"
+FS_JSON="${HOME}/.cache/jerboa/forecast_scores.v1.json"
 REC_JSON="${HOME}/.cache/jerboa/recommendations.v1.json"
 
 LOCKDIR="${HOME}/.cache/jerboa/locks"
@@ -23,59 +41,99 @@ mkdir -p "$LOCKDIR" "$STATEDIR"
 LOCK="${LOCKDIR}/market_health_refresh_all.lock"
 exec 9>"$LOCK"
 if ! flock -n 9; then
-  # Record lock contention (useful if timer cadence is too tight)
-  python3 - <<'PY'
+  "$PYTHON" - <<'PY'
 import json, os
 from datetime import datetime, timezone
 p = os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json")
 os.makedirs(os.path.dirname(p), exist_ok=True)
 state = {}
 try:
-  state = json.load(open(p, "r", encoding="utf-8"))
+    state = json.load(open(p, "r", encoding="utf-8"))
 except Exception:
-  state = {}
+    state = {}
 state.update({
-  "schema": "jerboa.market_health_refresh_all.state.v1",
-  "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-  "status": "skipped",
-  "reason": "lock-busy",
+    "schema": "jerboa.market_health_refresh_all.state.v1",
+    "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    "status": "skipped",
+    "reason": "lock-busy",
 })
 with open(p, "w", encoding="utf-8") as f:
-  json.dump(state, f, indent=2, sort_keys=True); f.write("\n")
+    json.dump(state, f, indent=2, sort_keys=True)
+    f.write("\n")
 PY
   exit 0
 fi
 
 mtime() { stat -c %Y "$1" 2>/dev/null || echo 0; }
+
+POS_MAX_AGE_MINUTES="${JERBOA_POSITIONS_MAX_AGE_MINUTES:-15}"
+is_stale_minutes() {
+  local p="$1"
+  local max_min="$2"
+  [ "${max_min:-0}" -le 0 ] && return 1
+  local ts
+  ts="$(mtime "$p")"
+  [ "$ts" -le 0 ] && return 0
+  local now
+  now="$(date +%s)"
+  [ $(( now - ts )) -gt $(( max_min * 60 )) ]
+}
+
+pos_stale=0
+if is_stale_minutes "$POS_JSON" "$POS_MAX_AGE_MINUTES"; then
+  pos_stale=1
+fi
+
+
 b_env="$(mtime "$ENV_JSON")"
 b_sect="$(mtime "$SECT_JSON")"
 b_pos="$(mtime "$POS_JSON")"
+b_fs="$(mtime "$FS_JSON")"
 b_rec="$(mtime "$REC_JSON")"
 
 pos_rc=0
 mkt_rc=0
+fs_rc=0
 rec_rc=0
 
-# Positions refresh (prefer existing positions.v1.json unless forced or CSV provided)
 if [ "${ARGS[0]:-}" = "--csv" ] && [ -n "${ARGS[1]:-}" ]; then
   "${HOME}/bin/jerboa-market-health-positions-refresh" --csv "${ARGS[1]}" || pos_rc=$?
-elif [ "$FORCE" -eq 1 ] || [ ! -s "$POS_JSON" ] || [ "${JERBOA_POSITIONS_ALWAYS_REFRESH:-0}" = "1" ]; then
+elif [ "$FORCE" -eq 1 ] || [ ! -s "$POS_JSON" ] || [ "${JERBOA_POSITIONS_ALWAYS_REFRESH:-0}" = "1" ] || [ "$pos_stale" -eq 1 ]; then
   "${HOME}/bin/jerboa-market-health-positions-refresh" || pos_rc=$?
 else
-  # positions.v1.json already exists and is non-empty; skip noisy discovery refresh
   pos_rc=0
 fi
 
-# Market refresh (safe arg passing)
+FILTERED_ARGS=()
+for __arg in "${ARGS[@]:-}"; do
+  if [ "$__arg" = "--quiet" ]; then
+    continue
+  fi
+  FILTERED_ARGS+=("$__arg")
+done
+
 if [ "$FORCE" -eq 1 ]; then
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" --force "${FILTERED_ARGS[@]}" || mkt_rc=$?
 else
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" "${FILTERED_ARGS[@]}" || mkt_rc=$?
+fi
+
+if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
+  "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" --quiet >/dev/null || fs_rc=$?
+else
+  fs_rc=127
+fi
+
+if [ "${fs_rc:-0}" -eq 0 ] && [ -x "${HOME}/bin/jerboa-market-health-recommendations-refresh" ]; then
+  "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
+elif [ "${fs_rc:-0}" -ne 0 ]; then
+  rec_rc="${fs_rc}"
 fi
 
 a_env="$(mtime "$ENV_JSON")"
 a_sect="$(mtime "$SECT_JSON")"
 a_pos="$(mtime "$POS_JSON")"
+a_fs="$(mtime "$FS_JSON")"
 a_rec="$(mtime "$REC_JSON")"
 
 changed_market=0
@@ -83,13 +141,13 @@ changed_pos=0
 changed_rec=0
 [ "$a_env"  -gt "$b_env"  ] && changed_market=1
 [ "$a_sect" -gt "$b_sect" ] && changed_market=1
+[ "$a_fs"   -gt "$b_fs"   ] && changed_market=1
 [ "$a_pos"  -gt "$b_pos"  ] && changed_pos=1
 [ "$a_rec"  -gt "$b_rec"  ] && changed_rec=1
 
-# Decide status + reason
 status="ok"
 reason="updated"
-if [ "$pos_rc" -ne 0 ] || [ "$mkt_rc" -ne 0 ]; then
+if [ "$pos_rc" -ne 0 ] || [ "$mkt_rc" -ne 0 ] || [ "$fs_rc" -ne 0 ] || [ "$rec_rc" -ne 0 ]; then
   status="error"
   reason="subcommand-failed"
 elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ] && [ "$changed_rec" -eq 0 ]; then
@@ -97,8 +155,7 @@ elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ] && [ "$changed_rec"
   reason="no-changes"
 fi
 
-# Persist state snapshot for doctor/debug (always)
-python3 - <<PY
+"$PYTHON" - <<PY
 import json, os
 from datetime import datetime, timezone
 p = os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json")
@@ -109,47 +166,53 @@ state = {
   "status": "$status",
   "reason": "$reason",
   "forced": bool(int("$FORCE")),
-  "rc": {"positions": int("$pos_rc"), "market": int("$mkt_rc"), "recommendations": int("$rec_rc")},
-  "changed": {"market": int("$changed_market"), "positions": int("$changed_pos"), "recommendations": int("$changed_rec")},
+  "rc": {
+    "positions": int("$pos_rc"),
+    "market": int("$mkt_rc"),
+    "forecast": int("$fs_rc"),
+    "recommendations": int("$rec_rc"),
+  },
+  "changed": {
+    "market": int("$changed_market"),
+    "positions": int("$changed_pos"),
+    "recommendations": int("$changed_rec"),
+  },
   "mtimes": {
-    "before": {"env": int("$b_env"), "sectors": int("$b_sect"), "positions": int("$b_pos"), "recommendations": int("$b_rec")},
-    "after":  {"env": int("$a_env"), "sectors": int("$a_sect"), "positions": int("$a_pos"), "recommendations": int("$a_rec")},
+    "before": {
+      "env": int("$b_env"),
+      "sectors": int("$b_sect"),
+      "positions": int("$b_pos"),
+      "forecast": int("$b_fs"),
+      "recommendations": int("$b_rec"),
+    },
+    "after": {
+      "env": int("$a_env"),
+      "sectors": int("$a_sect"),
+      "positions": int("$a_pos"),
+      "forecast": int("$a_fs"),
+      "recommendations": int("$a_rec"),
+    },
   },
 }
 with open(p, "w", encoding="utf-8") as f:
-  json.dump(state, f, indent=2, sort_keys=True); f.write("\n")
+  json.dump(state, f, indent=2, sort_keys=True)
+  f.write("\n")
 PY
 
-# Journald: one line max, only when meaningful
+"${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
 
-# JERBOA_UI_EXPORT_V1
-# Update UI contract (React/web reads this single file)
-
-  # Recommendations refresh (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-recommendations-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
+if [ "$QUIET" -ne 1 ]; then
+  if [ -n "${INVOCATION_ID:-}" ]; then
+    if [ "$status" = "error" ]; then
+      echo "ERR: refresh-all failed (market_rc=$mkt_rc positions_rc=$pos_rc forecast_rc=$fs_rc rec_rc=$rec_rc)"
+    elif [ "$changed_market" -eq 1 ] || [ "$changed_pos" -eq 1 ] || [ "$changed_rec" -eq 1 ]; then
+      echo "OK: refresh-all updated (market=$changed_market positions=$changed_pos rec=$changed_rec)"
+    fi
   else
-    rec_rc=127
+    echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec fs_rc=$fs_rc rec_rc=$rec_rc"
   fi
-
-  # Forecast scores (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" --quiet >/dev/null || true
-  fi
-
-  "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
-
-if [ -n "${INVOCATION_ID:-}" ]; then
-  if [ "$status" = "error" ]; then
-    echo "ERR: refresh-all failed (market_rc=$mkt_rc positions_rc=$pos_rc)"
-  elif [ "$changed_market" -eq 1 ] || [ "$changed_pos" -eq 1 ]; then
-    echo "OK: refresh-all updated (market=$changed_market positions=$changed_pos)"
-  fi
-else
-  echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec rec_rc=$rec_rc"
 fi
 
-# Exit non-zero only if a subcommand failed
 if [ "$status" = "error" ]; then
   exit 1
 fi
