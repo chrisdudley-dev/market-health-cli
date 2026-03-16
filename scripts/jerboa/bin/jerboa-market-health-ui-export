@@ -186,6 +186,9 @@ if not status_line:
 
 rec_summary = recommendation_summary_blob(rec)
 
+sample_meta = symbols_sample_meta(symbols)
+market_mix = summarize_market_mix(sect, sample_meta)
+
 # Small derived summary (safe / schema-agnostic)
 pos_list = []
 if isinstance(pos, dict) and isinstance(pos.get("positions"), list):
@@ -225,6 +228,37 @@ def symbols_sample_meta(symbols):
             }
         )
     return out
+
+
+def summarize_market_mix(sectors, symbols_sample):
+    markets = set()
+    regions = set()
+
+    if isinstance(sectors, list):
+        for row in sectors:
+            if isinstance(row, dict):
+                m = row.get("market")
+                r = row.get("region")
+                if isinstance(m, str) and m.strip():
+                    markets.add(m.strip().upper())
+                if isinstance(r, str) and r.strip():
+                    regions.add(r.strip().upper())
+
+    if isinstance(symbols_sample, list):
+        for row in symbols_sample:
+            if isinstance(row, dict):
+                m = row.get("market")
+                r = row.get("region")
+                if isinstance(m, str) and m.strip():
+                    markets.add(m.strip().upper())
+                if isinstance(r, str) and r.strip():
+                    regions.add(r.strip().upper())
+
+    return {
+        "markets_present": sorted(markets),
+        "regions_present": sorted(regions),
+        "mixed_markets": len(markets) > 1,
+    }
 
 
   # --- Category A: events/catalysts provider boundary (graceful) ---
@@ -325,7 +359,10 @@ payload = {
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
         "symbols_sample": symbols,
-        "symbols_sample_meta": symbols_sample_meta(symbols),
+        "symbols_sample_meta": sample_meta,
+        "markets_present": market_mix["markets_present"],
+        "regions_present": market_mix["regions_present"],
+        "mixed_markets": market_mix["mixed_markets"],
     },
     # Keep full data for now (still one file); React reads just what it needs.
     "data": {

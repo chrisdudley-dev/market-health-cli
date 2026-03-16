@@ -90,6 +90,37 @@ def symbols_sample_meta(symbols):
     return out
 
 
+def summarize_market_mix(sectors, symbols_sample):
+    markets = set()
+    regions = set()
+
+    if isinstance(sectors, list):
+        for row in sectors:
+            if isinstance(row, dict):
+                m = row.get("market")
+                r = row.get("region")
+                if isinstance(m, str) and m.strip():
+                    markets.add(m.strip().upper())
+                if isinstance(r, str) and r.strip():
+                    regions.add(r.strip().upper())
+
+    if isinstance(symbols_sample, list):
+        for row in symbols_sample:
+            if isinstance(row, dict):
+                m = row.get("market")
+                r = row.get("region")
+                if isinstance(m, str) and m.strip():
+                    markets.add(m.strip().upper())
+                if isinstance(r, str) and r.strip():
+                    regions.add(r.strip().upper())
+
+    return {
+        "markets_present": sorted(markets),
+        "regions_present": sorted(regions),
+        "mixed_markets": len(markets) > 1,
+    }
+
+
 def status_line_fallback(state: dict | None) -> str:
     if not isinstance(state, dict):
         return "market-health: STATE missing"
@@ -140,6 +171,9 @@ for item in pos_list:
             symbols.append(sym)
     if len(symbols) >= 12:
         break
+
+sample_meta = symbols_sample_meta(symbols)
+market_mix = summarize_market_mix(sect, sample_meta)
 
 
 # --- Category A: events/catalysts provider boundary (graceful) ---
@@ -236,7 +270,10 @@ payload = {
     },
     "summary": {
         "symbols_sample": symbols,
-        "symbols_sample_meta": symbols_sample_meta(symbols),
+        "symbols_sample_meta": sample_meta,
+        "markets_present": market_mix["markets_present"],
+        "regions_present": market_mix["regions_present"],
+        "mixed_markets": market_mix["mixed_markets"],
         "positions_count": len(pos_list),
         "events_count": len(events_list),
         "events_status": (

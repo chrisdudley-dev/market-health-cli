@@ -669,6 +669,55 @@ def main():
         render_once()
 
 
+def _build_symbol_market_index(contract: dict) -> dict[str, str]:
+    out: dict[str, str] = {}
+
+    def _add(sym, market) -> None:
+        if isinstance(sym, str) and sym.strip() and isinstance(market, str) and market.strip():
+            out[sym.strip().upper()] = market.strip().upper()
+
+    summary = contract.get("summary") or {}
+    sample_meta = summary.get("symbols_sample_meta")
+    if isinstance(sample_meta, list):
+        for row in sample_meta:
+            if isinstance(row, dict):
+                _add(row.get("symbol"), row.get("market"))
+
+    data = contract.get("data") or {}
+    sectors = data.get("sectors")
+    if isinstance(sectors, list):
+        for row in sectors:
+            if isinstance(row, dict):
+                _add(row.get("symbol"), row.get("market"))
+
+    rec_blob = data.get("recommendations")
+    if isinstance(rec_blob, dict):
+        rec = rec_blob.get("recommendation")
+        if isinstance(rec, dict):
+            for key in ("from_symbol_meta", "to_symbol_meta"):
+                meta = rec.get(key)
+                if isinstance(meta, dict):
+                    _add(meta.get("symbol"), meta.get("market"))
+            diag = rec.get("diagnostics")
+            if isinstance(diag, dict):
+                for key in ("best_candidate_meta", "weakest_held_meta"):
+                    meta = diag.get(key)
+                    if isinstance(meta, dict):
+                        _add(meta.get("symbol"), meta.get("market"))
+
+    return out
+
+
+def _fmt_symbol_with_market(sym, market_index: dict[str, str]) -> str:
+    if not isinstance(sym, str) or not sym.strip():
+        return str(sym)
+    sym_u = sym.strip().upper()
+    market = market_index.get(sym_u)
+    if isinstance(market, str) and market and market != "US":
+        return f"{sym_u} [{market}]"
+    return sym_u
+
+
 def _recommendation_lines_from_contract(contract: dict) -> list[str]:
     """
     Render SWAP/NOOP recommendation summary from the UI contract.
@@ -678,6 +727,7 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
     status = summary.get("recommendations_status", "missing")
 
     data = contract.get("data") or {}
+    market_index = _build_symbol_market_index(contract)
     rec_blob = data.get("recommendations")
 
     # Always show a stable section header
@@ -708,7 +758,9 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
         diag = rec.get("diagnostics") or {}
         if isinstance(diag, dict):
             if "best_candidate" in diag:
-                lines.append(f"Best candidate: {diag.get('best_candidate')}")
+                lines.append(
+                    f"Best candidate: {_fmt_symbol_with_market(diag.get('best_candidate'), market_index)}"
+                )
             if "delta_utility" in diag:
                 dm = diag.get("decision_metric") or (
                     "robust_edge" if diag.get("mode") == "forecast" else "delta_utility"
@@ -743,9 +795,11 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
         )
 
         if from_sym and to_sym:
-            lines.append(f"Swap: {from_sym} -> {to_sym}")
+            lines.append(
+                f"Swap: {_fmt_symbol_with_market(from_sym, market_index)} -> {_fmt_symbol_with_market(to_sym, market_index)}"
+            )
         elif to_sym:
-            lines.append(f"Swap target: {to_sym}")
+            lines.append(f"Swap target: {_fmt_symbol_with_market(to_sym, market_index)}")
         else:
             lines.append("Swap: (details unavailable)")
 
