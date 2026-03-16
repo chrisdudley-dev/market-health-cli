@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from market_health.market_catalog import get_symbol_meta
 
 out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
 out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -34,6 +35,61 @@ def meta(p: Path):
     }
 
 
+def enrich_sector_rows(obj):
+    if not isinstance(obj, list):
+        return obj
+    out = []
+    for row in obj:
+        if not isinstance(row, dict):
+            out.append(row)
+            continue
+        sym = row.get("symbol")
+        if not isinstance(sym, str) or not sym.strip():
+            out.append(row)
+            continue
+        meta_obj = get_symbol_meta(sym.strip().upper())
+        new_row = dict(row)
+        if meta_obj is not None:
+            new_row.setdefault("market", meta_obj.market)
+            new_row.setdefault("region", meta_obj.region)
+            new_row.setdefault("kind", meta_obj.kind)
+            new_row.setdefault("bucket_id", meta_obj.bucket_id)
+            new_row.setdefault("family_id", meta_obj.family_id)
+            new_row.setdefault("benchmark_symbol", meta_obj.benchmark_symbol)
+            new_row.setdefault("calendar_id", meta_obj.calendar_id)
+            new_row.setdefault("currency", meta_obj.currency)
+            new_row.setdefault("taxonomy", meta_obj.taxonomy)
+        out.append(new_row)
+    return out
+
+
+def symbols_sample_meta(symbols):
+    out = []
+    if not isinstance(symbols, list):
+        return out
+    for sym in symbols:
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        meta_obj = get_symbol_meta(sym.strip().upper())
+        if meta_obj is None:
+            continue
+        out.append(
+            {
+                "symbol": meta_obj.symbol,
+                "market": meta_obj.market,
+                "region": meta_obj.region,
+                "kind": meta_obj.kind,
+                "bucket_id": meta_obj.bucket_id,
+                "family_id": meta_obj.family_id,
+                "benchmark_symbol": meta_obj.benchmark_symbol,
+                "calendar_id": meta_obj.calendar_id,
+                "currency": meta_obj.currency,
+                "taxonomy": meta_obj.taxonomy,
+            }
+        )
+    return out
+
+
 def status_line_fallback(state: dict | None) -> str:
     if not isinstance(state, dict):
         return "market-health: STATE missing"
@@ -64,6 +120,9 @@ state = read_json(state_p)
 env = read_json(env_p)
 sect = read_json(sect_p)
 pos = read_json(pos_p)
+
+if isinstance(sect, list):
+    sect = enrich_sector_rows(sect)
 
 if not status_line:
     status_line = status_line_fallback(state)
@@ -177,6 +236,7 @@ payload = {
     },
     "summary": {
         "symbols_sample": symbols,
+        "symbols_sample_meta": symbols_sample_meta(symbols),
         "positions_count": len(pos_list),
         "events_count": len(events_list),
         "events_status": (
