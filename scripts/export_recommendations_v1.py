@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 from market_health.engine import compute_scores
+from market_health.market_catalog import get_symbol_meta
 from market_health.recommendations_engine import recommend
 from market_health.positions_sectorize import sectorize_positions
 
@@ -76,6 +77,52 @@ def to_contract(rec_doc: Dict[str, Any]) -> Dict[str, Any]:
     if rec_doc.get("schema") != "recommendations.v1":
         raise ValueError("schema must be recommendations.v1")
     return rec_doc
+
+
+def _symbol_meta_dict(symbol: Any) -> Dict[str, Any] | None:
+    if not isinstance(symbol, str) or not symbol.strip():
+        return None
+
+    meta = get_symbol_meta(symbol.strip().upper())
+    if meta is None:
+        return None
+
+    return {
+        "symbol": meta.symbol,
+        "market": meta.market,
+        "region": meta.region,
+        "kind": meta.kind,
+        "bucket_id": meta.bucket_id,
+        "family_id": meta.family_id,
+        "benchmark_symbol": meta.benchmark_symbol,
+        "calendar_id": meta.calendar_id,
+        "currency": meta.currency,
+        "taxonomy": meta.taxonomy,
+    }
+
+
+def _attach_recommendation_symbol_meta(doc: Dict[str, Any]) -> None:
+    rec = doc.get("recommendation")
+    if not isinstance(rec, dict):
+        return
+
+    diag = rec.get("diagnostics")
+    if isinstance(diag, dict):
+        best_meta = _symbol_meta_dict(diag.get("best_candidate"))
+        if best_meta is not None:
+            diag["best_candidate_meta"] = best_meta
+
+        weakest_meta = _symbol_meta_dict(diag.get("weakest_held"))
+        if weakest_meta is not None:
+            diag["weakest_held_meta"] = weakest_meta
+
+    from_meta = _symbol_meta_dict(rec.get("from_symbol"))
+    if from_meta is not None:
+        rec["from_symbol_meta"] = from_meta
+
+    to_meta = _symbol_meta_dict(rec.get("to_symbol"))
+    if to_meta is not None:
+        rec["to_symbol_meta"] = to_meta
 
 
 def main() -> int:
@@ -311,6 +358,8 @@ def main() -> int:
     if rec.action == "SWAP":
         doc["recommendation"]["from_symbol"] = rec.from_symbol
         doc["recommendation"]["to_symbol"] = rec.to_symbol
+
+    _attach_recommendation_symbol_meta(doc)
 
     doc = to_contract(doc)
 
