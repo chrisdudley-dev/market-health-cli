@@ -187,6 +187,7 @@ SECTORS_DEFAULT = [
     "XLY",
     "XLK",
     "XLE",
+    "EWJ",
 ]
 
 # Curated leaders per sector for the Leaders%>20D proxy
@@ -194,6 +195,7 @@ SECTOR_LEADERS: Dict[str, List[str]] = {
     "XLK": ["AAPL", "MSFT", "NVDA", "AVGO", "META", "GOOGL", "AMD", "CRM"],
     "XLF": ["JPM", "BAC", "WFC", "GS", "MS", "C", "BLK"],
     "XLE": ["XOM", "CVX", "COP", "SLB", "EOG", "PSX"],
+    "EWJ": ["TM", "SONY", "MUFG", "SMFG", "NTTYY"],
     "XLY": ["AMZN", "TSLA", "HD", "MCD", "NKE", "LOW"],
     "XLI": ["CAT", "HON", "GE", "BA", "UPS", "DE"],
     "XLB": ["LIN", "SHW", "ECL", "NUE", "DOW"],

@@ -1,5 +1,5 @@
 symbols:
-  - symbol: JP_BROAD
+  - symbol: EWJ
     market: JP
     region: APAC
     kind: broad_market
