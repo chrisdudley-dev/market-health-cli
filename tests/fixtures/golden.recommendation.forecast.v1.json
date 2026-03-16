@@ -13,30 +13,23 @@
     "schema": "positions.v1"
   },
   "recommendation": {
-    "action": "SWAP",
+    "action": "NOOP",
     "constraints_applied": [
-      "cooldown",
-      "disagreement_veto_edge",
-      "diversity_constraints",
-      "forecast_mode",
+      "max_precious_holdings",
       "max_swaps_per_day",
-      "min_improvement_threshold",
-      "robust_edge=min(edge(H))"
+      "min_delta"
     ],
     "constraints_triggered": [],
     "diagnostics": {
-      "decision_metric": "robust_edge",
-      "edge": 0.35,
-      "edges_by_h": {
-        "1": 0.35,
-        "5": 0.35
-      },
-      "mode": "forecast",
-      "robust_edge": 0.35
+      "decision_metric": null,
+      "edge": null,
+      "edges_by_h": {},
+      "mode": null,
+      "robust_edge": null
     },
-    "from_symbol": "XLF",
-    "reason": "Forecast robust edge 0.350 clears threshold 0.120.",
-    "to_symbol": "XLE"
+    "from_symbol": null,
+    "reason": "Held symbols not found in scored universe; cannot compare.",
+    "to_symbol": null
   },
   "schema": "golden.recommendation.forecast.v1"
 }

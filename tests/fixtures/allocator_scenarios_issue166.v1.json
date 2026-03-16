@@ -1,0 +1,154 @@
+{
+  "schema": "allocator_scenarios_issue166.v1",
+  "scenarios": [
+    {
+      "name": "weakest-held-below-floor-to-sgov",
+      "positions": {"positions": [{"symbol": "XLK"}]},
+      "score_rows": [
+        {"symbol": "XLK", "pts": 10, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "XLF", "pts": 11, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "GLDM", "pts": 10, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "gold", "is_basket": false},
+        {"symbol": "SGOV", "pts": 8, "asset_type": "parking", "group": "PARKING"}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": true,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "SWAP",
+        "from_symbol": "XLK",
+        "to_symbol": "SGOV",
+        "selection_mode": "policy_fallback",
+        "fallback_reason": "no_candidate_clears_floor_and_delta"
+      }
+    },
+    {
+      "name": "weakest-held-below-floor-to-gltr",
+      "positions": {"positions": [{"symbol": "XLB"}]},
+      "score_rows": [
+        {"symbol": "XLB", "pts": 8, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "XLE", "pts": 11, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "GLTR", "pts": 14, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "basket", "is_basket": true},
+        {"symbol": "SGOV", "pts": 7, "asset_type": "parking", "group": "PARKING"}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": true,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "SWAP",
+        "from_symbol": "XLB",
+        "to_symbol": "GLTR",
+        "selection_mode": "best_candidate"
+      }
+    },
+    {
+      "name": "precious-to-sgov",
+      "positions": {"positions": [{"symbol": "GLDM"}]},
+      "score_rows": [
+        {"symbol": "GLDM", "pts": 10, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "gold", "is_basket": false},
+        {"symbol": "PALL", "pts": 11, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "palladium", "is_basket": false},
+        {"symbol": "SGOV", "pts": 8, "asset_type": "parking", "group": "PARKING"}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": true,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "SWAP",
+        "from_symbol": "GLDM",
+        "to_symbol": "SGOV",
+        "selection_mode": "policy_fallback",
+        "fallback_reason": "no_candidate_clears_floor_and_delta"
+      }
+    },
+    {
+      "name": "sgov-to-metal",
+      "positions": {"positions": [{"symbol": "SGOV"}]},
+      "score_rows": [
+        {"symbol": "SGOV", "pts": 7, "asset_type": "parking", "group": "PARKING"},
+        {"symbol": "GLDM", "pts": 14, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "gold", "is_basket": false},
+        {"symbol": "XLE", "pts": 11, "asset_type": "sector", "group": "SECTOR"}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": true,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "SWAP",
+        "from_symbol": "SGOV",
+        "to_symbol": "GLDM",
+        "selection_mode": "best_candidate"
+      }
+    },
+    {
+      "name": "second-precious-holding-blocked",
+      "positions": {"positions": [{"symbol": "XLB"}, {"symbol": "PALL"}]},
+      "score_rows": [
+        {"symbol": "XLB", "pts": 8, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "PALL", "pts": 13, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "palladium", "is_basket": false},
+        {"symbol": "GLDM", "pts": 14, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "gold", "is_basket": false},
+        {"symbol": "SGOV", "pts": 7, "asset_type": "parking", "group": "PARKING"}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": true,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "SWAP",
+        "from_symbol": "XLB",
+        "to_symbol": "SGOV",
+        "selection_mode": "sgov_fallback",
+        "rejection_reasons_by_symbol": {
+          "GLDM": ["policy:max_precious_holdings"]
+        }
+      }
+    },
+    {
+      "name": "candidate-fails-delta",
+      "positions": {"positions": [{"symbol": "XLP"}]},
+      "score_rows": [
+        {"symbol": "XLP", "pts": 10, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "XLF", "pts": 11, "asset_type": "sector", "group": "SECTOR"},
+        {"symbol": "GLDM", "pts": 10, "asset_type": "precious", "group": "PRECIOUS", "metal_type": "gold", "is_basket": false}
+      ],
+      "constraints": {
+        "min_floor": 0.55,
+        "min_delta": 0.12,
+        "sgov_symbol": "SGOV",
+        "sgov_is_policy_fallback": false,
+        "max_precious_holdings": 1,
+        "block_gltr_component_overlap": true
+      },
+      "expected": {
+        "action": "NOOP",
+        "from_symbol": null,
+        "to_symbol": null,
+        "rejection_reasons_by_symbol": {
+          "XLF": ["below_delta"],
+          "GLDM": ["below_floor", "below_delta"]
+        }
+      }
+    }
+  ]
+}

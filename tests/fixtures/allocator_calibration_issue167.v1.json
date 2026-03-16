@@ -1,0 +1,67 @@
+{
+  "schema": "allocator_calibration_issue167.v1",
+  "recommended_defaults": {
+    "min_floor": 0.55,
+    "min_delta": 0.12
+  },
+  "comparison_inputs_from": "tests/fixtures/allocator_scenarios_issue166.v1.json",
+  "modes": [
+    {
+      "name": "sgov-only",
+      "notes": "Precious-metals candidates removed from the candidate set; SGOV remains the fallback policy asset."
+    },
+    {
+      "name": "sgov-plus-metals",
+      "notes": "Precious-metals candidates included, with max one precious holding and GLTR overlap blocking."
+    }
+  ],
+  "scenario_expectations": [
+    {
+      "name": "weakest-held-below-floor-to-sgov",
+      "sgov-only": {"action": "SWAP", "to_symbol": "SGOV"},
+      "sgov-plus-metals": {"action": "SWAP", "to_symbol": "SGOV"},
+      "calibration_note": "Defaults preserve SGOV fallback when no candidate clears both floor and delta."
+    },
+    {
+      "name": "weakest-held-below-floor-to-gltr",
+      "sgov-only": {"action": "SWAP", "to_symbol": "SGOV"},
+      "sgov-plus-metals": {"action": "SWAP", "to_symbol": "GLTR"},
+      "calibration_note": "Defaults allow a clearly superior precious basket to replace SGOV fallback."
+    },
+    {
+      "name": "precious-to-sgov",
+      "sgov-only": {"action": "SWAP", "to_symbol": "SGOV"},
+      "sgov-plus-metals": {"action": "SWAP", "to_symbol": "SGOV"},
+      "calibration_note": "Defaults still allow risk-off parking when precious alternatives are only marginally better."
+    },
+    {
+      "name": "sgov-to-metal",
+      "sgov-only": {"action": "NOOP", "to_symbol": null},
+      "sgov-plus-metals": {"action": "SWAP", "to_symbol": "GLDM"},
+      "calibration_note": "Defaults let SGOV exit into metal only when the improvement is decisive."
+    },
+    {
+      "name": "second-precious-holding-blocked",
+      "sgov-only": {"action": "SWAP", "to_symbol": "SGOV"},
+      "sgov-plus-metals": {"action": "SWAP", "to_symbol": "SGOV"},
+      "calibration_note": "Constraint behavior dominates threshold tuning here."
+    },
+    {
+      "name": "candidate-fails-delta",
+      "sgov-only": {"action": "NOOP", "to_symbol": null},
+      "sgov-plus-metals": {"action": "NOOP", "to_symbol": null},
+      "calibration_note": "Defaults keep marginal candidates from churning the portfolio."
+    }
+  ],
+  "recommendation": {
+    "keep_defaults": true,
+    "justification": [
+      "min_floor=0.55 keeps weak absolute candidates out of the portfolio",
+      "min_delta=0.12 prevents marginal churn",
+      "with precious enabled, strong metals can still beat SGOV fallback",
+      "constraint-driven cases remain stable under the same defaults"
+    ],
+    "follow_up_needed": false,
+    "follow_up_notes": "Add another tuning issue only if broader real-world scenario packs show SGOV fallback is too sticky or metals are too eager to win."
+  }
+}

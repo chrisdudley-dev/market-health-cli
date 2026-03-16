@@ -82,6 +82,10 @@ data.positions.source.type	str
 data.positions.summary.count	int
 data.positions.summary.equities	int
 data.positions.summary.options	int
+data.recommendation_summary.action	str
+data.recommendation_summary.fallback_reason	str
+data.recommendation_summary.has_candidate_rows	bool
+data.recommendation_summary.reason	str
 data.recommendations.inputs.horizon_trading_days	int
 data.recommendations.inputs.interval	str
 data.recommendations.inputs.min_improvement_threshold	float
@@ -108,6 +112,7 @@ data.recommendations.recommendation.reason	str
 data.recommendations.recommendation.target_trade_date	str
 data.recommendations.schema	str
 data.sectors	list[dict]
+data.sectors[].asset_type	str
 data.sectors[].categories.A.checks	list[dict]
 data.sectors[].categories.A.checks[].label	str
 data.sectors[].categories.A.checks[].score	int
@@ -126,6 +131,9 @@ data.sectors[].categories.E.checks[].score	int
 data.sectors[].categories.F.checks	list[dict]
 data.sectors[].categories.F.checks[].label	str
 data.sectors[].categories.F.checks[].score	int
+data.sectors[].group	str
+data.sectors[].is_basket	bool
+data.sectors[].metal_type	NoneType
 data.sectors[].symbol	str
 data.state.changed.market	int
 data.state.changed.positions	int
@@ -190,6 +198,8 @@ summary.events_count	int
 summary.events_status	str
 summary.forecast_scores_status	str
 summary.positions_count	int
+summary.recommendation_action	str
+summary.recommendation_reason	str
 summary.recommendations_status	str
 summary.symbols_sample	list[str]
 summary.symbols_sample[]	str

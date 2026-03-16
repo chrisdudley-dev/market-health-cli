@@ -1,6 +1,7 @@
 """market_health.positions_sectorize
 
-Map arbitrary holdings into the sector-ETF universe (XLB..XLY) via a local overrides file.
+Map arbitrary holdings into the active scored universe while preserving
+asset-family classification metadata for supported non-sector holdings.
 
 - No network I/O
 - No DB dependency
@@ -13,6 +14,8 @@ import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+from market_health.universe import classify_asset_symbol
 
 
 DEFAULT_OVERRIDES_PATH = os.path.expanduser(
@@ -68,16 +71,26 @@ def sectorize_positions(
       {"schema":"positions.v1","positions":[{"symbol":"XLK","market_value":...}, ...]}
 
     meta:
-      - mapped: original symbols mapped
-      - unmapped: originals ignored
-      - mode: "sectorized" or "raw"
+      - mapped: original symbols mapped into the active universe
+      - supported_outside_universe: known supported holdings not currently scoreable
+      - unmapped: unsupported originals ignored
+      - classified: holdings bucketed by asset family
+      - mode: "sectorized"
     """
     uni = {u.upper() for u in universe if isinstance(u, str)}
     overrides = _read_overrides(overrides_path)
 
     mapped: List[str] = []
+    supported_outside_universe: List[str] = []
     unmapped: List[str] = []
     agg: Dict[str, float] = {}
+    classified: Dict[str, List[str]] = {
+        "SECTOR": [],
+        "INVERSE": [],
+        "PRECIOUS": [],
+        "PARKING": [],
+        "UNSUPPORTED": [],
+    }
 
     plist = []
     if isinstance(positions, dict) and isinstance(positions.get("positions"), list):
@@ -89,31 +102,34 @@ def sectorize_positions(
         sym = _sym_from_position_item(item)
         if not sym:
             continue
+
         val = _value_from_position_item(item)
         if val <= 0:
             val = 1.0
 
+        asset_meta = classify_asset_symbol(sym)
+        classified.setdefault(asset_meta.group, []).append(sym)
+
         target = None
 
-        # already in universe
         if sym in uni:
             target = sym
-        else:
-            # exact override
-            if sym in overrides:
-                target = overrides[sym]
-            else:
-                # option-like: use underlying before "_"
-                if "_" in sym:
-                    und = sym.split("_", 1)[0]
-                    if und in overrides:
-                        target = overrides[und]
+        elif sym in overrides:
+            target = overrides[sym]
+        elif "_" in sym:
+            und = sym.split("_", 1)[0]
+            if und in overrides:
+                target = overrides[und]
 
         if target and target in uni:
             agg[target] = agg.get(target, 0.0) + val
             mapped.append(sym)
-        else:
+            continue
+
+        if asset_meta.group == "UNSUPPORTED":
             unmapped.append(sym)
+        else:
+            supported_outside_universe.append(sym)
 
     out_positions = [
         {"symbol": k, "market_value": float(v)} for k, v in sorted(agg.items())
@@ -122,6 +138,10 @@ def sectorize_positions(
     meta = {
         "mode": "sectorized",
         "mapped": sorted(set(mapped)),
+        "supported_outside_universe": sorted(set(supported_outside_universe)),
         "unmapped": sorted(set(unmapped)),
+        "classified": {
+            key: sorted(set(vals)) for key, vals in sorted(classified.items())
+        },
     }
     return out, meta

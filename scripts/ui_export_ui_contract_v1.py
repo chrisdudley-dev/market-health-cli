@@ -2,6 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from market_health.universe import get_asset_meta
 
 out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
 out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -34,6 +35,54 @@ def meta(p: Path):
     }
 
 
+def enrich_sector_rows(obj):
+    if not isinstance(obj, list):
+        return obj
+    out = []
+    for row in obj:
+        if not isinstance(row, dict):
+            out.append(row)
+            continue
+        sym = row.get("symbol")
+        if not isinstance(sym, str) or not sym.strip():
+            out.append(row)
+            continue
+        meta_obj = get_asset_meta(sym)
+        new_row = dict(row)
+        new_row.setdefault("asset_type", meta_obj.asset_type)
+        new_row.setdefault("group", meta_obj.group)
+        new_row.setdefault("metal_type", meta_obj.metal_type)
+        new_row.setdefault("is_basket", meta_obj.is_basket)
+        out.append(new_row)
+    return out
+
+
+def recommendation_summary_blob(rec_blob):
+    out = {
+        "action": None,
+        "reason": None,
+        "fallback_reason": None,
+        "has_candidate_rows": False,
+    }
+    if not isinstance(rec_blob, dict):
+        return out
+    rec = rec_blob.get("recommendation")
+    if not isinstance(rec, dict):
+        rec = rec_blob if isinstance(rec_blob, dict) else {}
+    if not isinstance(rec, dict):
+        return out
+    out["action"] = rec.get("action")
+    out["reason"] = rec.get("reason")
+    diag = rec.get("diagnostics")
+    if isinstance(diag, dict):
+        cand = diag.get("candidate_rows")
+        out["has_candidate_rows"] = isinstance(cand, list) and len(cand) > 0
+        out["fallback_reason"] = diag.get("fallback_reason")
+    if out["fallback_reason"] is None and out["action"] == "NOOP":
+        out["fallback_reason"] = out["reason"]
+    return out
+
+
 def status_line_fallback(state: dict | None) -> str:
     if not isinstance(state, dict):
         return "market-health: STATE missing"
@@ -64,6 +113,12 @@ state = read_json(state_p)
 env = read_json(env_p)
 sect = read_json(sect_p)
 pos = read_json(pos_p)
+
+if isinstance(sect, list):
+    sect = enrich_sector_rows(sect)
+
+rec = None
+rec_summary = recommendation_summary_blob(rec)
 
 if not status_line:
     status_line = status_line_fallback(state)
@@ -178,6 +233,8 @@ payload = {
     "summary": {
         "symbols_sample": symbols,
         "positions_count": len(pos_list),
+        "recommendation_action": rec_summary.get("action"),
+        "recommendation_reason": rec_summary.get("reason"),
         "events_count": len(events_list),
         "events_status": (
             events.get("status", "?") if isinstance(events, dict) else "?"
@@ -189,6 +246,7 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
+        "recommendation_summary": rec_summary,
         "events": events,
     },
 }
