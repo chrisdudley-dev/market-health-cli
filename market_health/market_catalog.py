@@ -34,6 +34,11 @@ class SymbolMeta:
     calendar_id: str
     currency: str
     taxonomy: str
+    tradable_live: bool = True
+    listing_country: str = ""
+    primary_exchange: str = ""
+    execution_class: str = ""
+    broker_profile: str = "us_retail_supported"
 
 
 @dataclass(frozen=True)
@@ -108,12 +113,16 @@ def validate_symbol_against_bridge(
     if entry is None:
         raise ValueError(f"{symbol.symbol}: bucket_id missing from taxonomy bridge")
     if symbol.family_id != entry.family_id:
-        raise ValueError(f"{symbol.symbol}: family_id mismatch for bucket {symbol.bucket_id}")
+        raise ValueError(
+            f"{symbol.symbol}: family_id mismatch for bucket {symbol.bucket_id}"
+        )
 
 
 @lru_cache(maxsize=1)
 def get_symbol_catalog() -> list[SymbolMeta]:
-    return load_symbol_catalog(_repo_root() / "config" / "symbols" / "global_markets.yaml")
+    return load_symbol_catalog(
+        _repo_root() / "config" / "symbols" / "global_markets.yaml"
+    )
 
 
 @lru_cache(maxsize=None)
@@ -151,3 +160,14 @@ def get_taxonomy_bridge_entry_for_symbol(symbol: str) -> TaxonomyBridgeEntry | N
         return None
     bridge = get_taxonomy_bridge_for_market(meta.market)
     return bridge.get(meta.bucket_id)
+
+
+def get_live_symbol_catalog() -> list[SymbolMeta]:
+    return [m for m in get_symbol_catalog() if bool(getattr(m, "tradable_live", True))]
+
+
+def is_symbol_live_tradable(symbol: str) -> bool:
+    meta = get_symbol_meta(symbol)
+    if meta is None:
+        return True
+    return bool(getattr(meta, "tradable_live", True))

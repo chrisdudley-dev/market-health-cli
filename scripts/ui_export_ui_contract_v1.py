@@ -63,32 +63,6 @@ def enrich_sector_rows(obj):
     return out
 
 
-def symbols_sample_meta(symbols):
-    out = []
-    if not isinstance(symbols, list):
-        return out
-    for sym in symbols:
-        if not isinstance(sym, str) or not sym.strip():
-            continue
-        meta_obj = get_symbol_meta(sym.strip().upper())
-        if meta_obj is None:
-            continue
-        out.append(
-            {
-                "symbol": meta_obj.symbol,
-                "market": meta_obj.market,
-                "region": meta_obj.region,
-                "kind": meta_obj.kind,
-                "bucket_id": meta_obj.bucket_id,
-                "family_id": meta_obj.family_id,
-                "benchmark_symbol": meta_obj.benchmark_symbol,
-                "calendar_id": meta_obj.calendar_id,
-                "currency": meta_obj.currency,
-                "taxonomy": meta_obj.taxonomy,
-            }
-        )
-    return out
-
 
 def summarize_market_mix(sectors, symbols_sample):
     markets = set()
@@ -119,6 +93,41 @@ def summarize_market_mix(sectors, symbols_sample):
         "regions_present": sorted(regions),
         "mixed_markets": len(markets) > 1,
     }
+
+
+
+# JP_LIVE_PIVOT_EARLY_SYMBOLS_SAMPLE_META
+
+# JP_LIVE_PIVOT_EARLY_SYMBOLS_SAMPLE_META
+def symbols_sample_meta(symbols):
+    out = []
+    seen = set()
+    for sym in symbols or []:
+        if not isinstance(sym, str):
+            continue
+        meta = get_symbol_meta(sym)
+        if meta is None:
+            continue
+        if str(meta.market).upper() in {"US", "USA"}:
+            continue
+        if meta.symbol in seen:
+            continue
+        out.append(
+            {
+                "symbol": meta.symbol,
+                "market": meta.market,
+                "region": meta.region,
+                "kind": meta.kind,
+                "bucket_id": meta.bucket_id,
+                "family_id": meta.family_id,
+                "benchmark_symbol": meta.benchmark_symbol,
+                "calendar_id": meta.calendar_id,
+                "currency": meta.currency,
+                "taxonomy": meta.taxonomy,
+            }
+        )
+        seen.add(meta.symbol)
+    return out
 
 
 def status_line_fallback(state: dict | None) -> str:
