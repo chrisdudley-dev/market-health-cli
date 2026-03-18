@@ -18,7 +18,17 @@ from rich.table import Table
 from rich.text import Text
 
 from market_health.engine import SECTORS_DEFAULT, SECTOR_LEADERS, compute_scores
-from market_health.inverse_universe_v1 import load_inverse_pairs
+
+try:
+    from market_health.inverse_universe_v1 import load_inverse_pairs
+except ModuleNotFoundError as exc:
+    if exc.name != "market_health.inverse_universe_v1":
+        raise
+
+    def load_inverse_pairs(*_args, **_kwargs):
+        return {}
+
+
 from market_health.ui_contract_meta import dimension_heading
 
 FORCE_COLOR = bool(

@@ -14,7 +14,8 @@ dependencies = [
     "rich>=13.7",
     "numpy",
     "pandas",
-    "yfinance"
+    "yfinance",
+    "PyYAML>=6.0",
 ]
 
 [project.scripts]
