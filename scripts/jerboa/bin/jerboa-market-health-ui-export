@@ -40,7 +40,10 @@ import json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 from market_health.ui_contract_meta import DIMENSIONS_META_V1
-from market_health.universe import get_asset_meta
+try:
+    from market_health.market_catalog import get_symbol_meta as _get_symbol_meta
+except Exception:
+    _get_symbol_meta = None
 
 # Windows-friendly cache root override (tests set JERBOA_HOME_WIN)
 HOME_ROOT = Path(os.environ.get('JERBOA_HOME_WIN') or os.path.expanduser('~'))
@@ -81,12 +84,14 @@ def enrich_sector_rows(obj):
         if not isinstance(sym, str) or not sym.strip():
             out.append(row)
             continue
-        meta_obj = get_asset_meta(sym)
         new_row = dict(row)
-        new_row.setdefault("asset_type", meta_obj.asset_type)
-        new_row.setdefault("group", meta_obj.group)
-        new_row.setdefault("metal_type", meta_obj.metal_type)
-        new_row.setdefault("is_basket", meta_obj.is_basket)
+        if _get_symbol_meta is not None:
+            meta_obj = _get_symbol_meta(sym)
+            if meta_obj is not None:
+                new_row.setdefault("asset_type", getattr(meta_obj, "asset_type", None))
+                new_row.setdefault("group", getattr(meta_obj, "group", None))
+                new_row.setdefault("metal_type", getattr(meta_obj, "metal_type", None))
+                new_row.setdefault("is_basket", getattr(meta_obj, "is_basket", None))
         out.append(new_row)
     return out
 
@@ -281,8 +286,6 @@ payload = {
     "summary": {
         "positions_count": len(pos_list),
         "recommendations_status": rec_status,
-        "recommendation_action": rec_summary.get("action"),
-        "recommendation_reason": rec_summary.get("reason"),
         "forecast_scores_status": forecast_status,
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
@@ -296,7 +299,6 @@ payload = {
         "positions": pos,
         "dimensions_meta": DIMENSIONS_META_V1,
         "recommendations": rec,
-        "recommendation_summary": rec_summary,
         "forecast_scores": forecast,
           "events": events,
     },
