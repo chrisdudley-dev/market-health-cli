@@ -44,6 +44,31 @@ try:
     from market_health.market_catalog import get_symbol_meta as _get_symbol_meta
 except Exception:
     _get_symbol_meta = None
+
+class _NullMeta:
+    def __init__(self, symbol=None):
+        self.symbol = symbol
+        self.name = symbol
+        self.label = symbol
+        self.asset_type = None
+        self.group = None
+        self.metal_type = None
+        self.is_basket = None
+
+    def __getattr__(self, _name):
+        return None
+
+def _safe_symbol_meta(symbol):
+    if _get_symbol_meta is None:
+        return _NullMeta(symbol)
+    try:
+        meta = _get_symbol_meta(symbol)
+    except Exception:
+        meta = None
+    return meta if meta is not None else _NullMeta()
+
+get_symbol_meta = _safe_symbol_meta
+get_asset_meta = _safe_symbol_meta
 try:
     from market_health.market_catalog import get_symbol_meta as _get_symbol_meta
 except Exception:
@@ -85,26 +110,21 @@ def enrich_sector_rows(obj):
             out.append(row)
             continue
         sym = row.get("symbol")
-        if not isinstance(sym, str) or not sym.strip():
-            out.append(row)
-            continue
-        asset_meta = get_asset_meta(sym)
-        market_meta = get_symbol_meta(sym.strip().upper())
         new_row = dict(row)
-        new_row.setdefault("asset_type", asset_meta.asset_type)
-        new_row.setdefault("group", asset_meta.group)
-        new_row.setdefault("metal_type", asset_meta.metal_type)
-        new_row.setdefault("is_basket", asset_meta.is_basket)
-        if market_meta is not None:
-            new_row.setdefault("market", market_meta.market)
-            new_row.setdefault("region", market_meta.region)
-            new_row.setdefault("kind", market_meta.kind)
-            new_row.setdefault("bucket_id", market_meta.bucket_id)
-            new_row.setdefault("family_id", market_meta.family_id)
-            new_row.setdefault("benchmark_symbol", market_meta.benchmark_symbol)
-            new_row.setdefault("calendar_id", market_meta.calendar_id)
-            new_row.setdefault("currency", market_meta.currency)
-            new_row.setdefault("taxonomy", market_meta.taxonomy)
+        if (
+            isinstance(sym, str)
+            and sym.strip()
+            and _get_symbol_meta is not None
+        ):
+            try:
+                meta_obj = _get_symbol_meta(sym)
+            except Exception:
+                meta_obj = None
+            if meta_obj is not None:
+                new_row.setdefault("asset_type", getattr(meta_obj, "asset_type", None))
+                new_row.setdefault("group", getattr(meta_obj, "group", None))
+                new_row.setdefault("metal_type", getattr(meta_obj, "metal_type", None))
+                new_row.setdefault("is_basket", getattr(meta_obj, "is_basket", None))
         out.append(new_row)
     return out
 
@@ -329,7 +349,6 @@ payload = {
           "events_count": len(events_list),
           "events_status": (events.get("status","?") if isinstance(events, dict) else "?"),
         "symbols_sample": symbols,
-        "symbols_sample_meta": symbols_sample_meta(symbols),
     },
     # Keep full data for now (still one file); React reads just what it needs.
     "data": {
