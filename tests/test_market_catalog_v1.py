@@ -11,7 +11,9 @@ def test_japan_market_profile_and_symbol_catalog_load() -> None:
     repo_root = Path(__file__).resolve().parents[1]
 
     market = load_market_profile(repo_root / "config" / "markets" / "jp.yaml")
-    symbols = load_symbol_catalog(repo_root / "config" / "symbols" / "global_markets.yaml")
+    symbols = load_symbol_catalog(
+        repo_root / "config" / "symbols" / "global_markets.yaml"
+    )
 
     assert market.market == "JP"
     assert market.region == "APAC"
