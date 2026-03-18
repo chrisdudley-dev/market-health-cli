@@ -2,12 +2,13 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
-# EXPORT_ENVIRONMENT_V1_SYS_PATH: ensure repo root on sys.path for local runs
 import sys
 from pathlib import Path as _Path
 
 sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 del _Path
+
+# EXPORT_ENVIRONMENT_V1_SYS_PATH: ensure repo root on sys.path for local runs
 
 
 import argparse
@@ -19,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from market_health.engine import compute_scores, SECTORS_DEFAULT
+from market_health.market_catalog import get_symbol_meta
 
 MAX_PER_CATEGORY = 12
 MAX_TOTAL = MAX_PER_CATEGORY * 6
@@ -64,6 +66,46 @@ def _band_3(pct: int) -> str:
     return "RED"
 
 
+
+
+
+
+def _attach_market_metadata_rows(rows):
+    out = []
+    for row in rows or []:
+        if not isinstance(row, dict):
+            out.append(row)
+            continue
+
+        new_row = dict(row)
+        sym = new_row.get("symbol") or new_row.get("ticker") or new_row.get("underlying")
+
+        if isinstance(sym, str) and sym.strip():
+            meta = get_symbol_meta(sym)
+            if meta is not None:
+                if new_row.get("market") is None:
+                    new_row["market"] = meta.market
+                if new_row.get("region") is None:
+                    new_row["region"] = meta.region
+                if new_row.get("kind") is None:
+                    new_row["kind"] = meta.kind
+                if new_row.get("bucket_id") is None:
+                    new_row["bucket_id"] = meta.bucket_id
+                if new_row.get("family_id") is None:
+                    new_row["family_id"] = meta.family_id
+                if new_row.get("benchmark_symbol") is None:
+                    new_row["benchmark_symbol"] = meta.benchmark_symbol
+                if new_row.get("calendar_id") is None:
+                    new_row["calendar_id"] = meta.calendar_id
+                if new_row.get("currency") is None:
+                    new_row["currency"] = meta.currency
+                if new_row.get("taxonomy") is None:
+                    new_row["taxonomy"] = meta.taxonomy
+
+        out.append(new_row)
+    return out
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         description="Export Market Health environment output (environment.v1.json)"
@@ -99,6 +141,7 @@ def main() -> int:
         interval=args.interval,
         ttl_sec=args.ttl_sec,
     )
+    payload = _attach_market_metadata_rows(payload)
 
     sectors_out: List[Dict[str, Any]] = []
     legacy_out: List[Dict[str, Any]] = []
@@ -113,6 +156,15 @@ def main() -> int:
         sectors_out.append(
             {
                 "symbol": sym,
+                "market": item.get("market"),
+                "region": item.get("region"),
+                "kind": item.get("kind"),
+                "bucket_id": item.get("bucket_id"),
+                "family_id": item.get("family_id"),
+                "benchmark_symbol": item.get("benchmark_symbol"),
+                "calendar_id": item.get("calendar_id"),
+                "currency": item.get("currency"),
+                "taxonomy": item.get("taxonomy"),
                 "band": _band_3(pct),
                 "pct": pct,
                 "total": total,
@@ -128,6 +180,15 @@ def main() -> int:
         legacy_out.append(
             {
                 "symbol": sym,
+                "market": item.get("market"),
+                "region": item.get("region"),
+                "kind": item.get("kind"),
+                "bucket_id": item.get("bucket_id"),
+                "family_id": item.get("family_id"),
+                "benchmark_symbol": item.get("benchmark_symbol"),
+                "calendar_id": item.get("calendar_id"),
+                "currency": item.get("currency"),
+                "taxonomy": item.get("taxonomy"),
                 "categories": (item.get("categories") or {}),
             }
         )
