@@ -16,7 +16,12 @@ def test_ui_export_summary_reports_mixed_markets(tmp_path: Path) -> None:
         json.dumps(
             [
                 {"symbol": "XLU", "market": "US", "region": "NA", "categories": {}},
-                {"symbol": "1625.T", "market": "JP", "region": "APAC", "categories": {}},
+                {
+                    "symbol": "1625.T",
+                    "market": "JP",
+                    "region": "APAC",
+                    "categories": {},
+                },
             ],
             indent=2,
         )
@@ -74,7 +79,9 @@ def test_ui_export_summary_reports_mixed_markets(tmp_path: Path) -> None:
         cwd=repo_root,
     )
 
-    out = json.loads((cache_dir / "market_health.ui.v1.json").read_text(encoding="utf-8"))
+    out = json.loads(
+        (cache_dir / "market_health.ui.v1.json").read_text(encoding="utf-8")
+    )
     summary = out["summary"]
 
     assert summary["mixed_markets"] is True

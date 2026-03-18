@@ -84,9 +84,11 @@ def _is_live_tradable(sym: str) -> bool:
     if not bool(getattr(meta, "tradable_live", True)):
         return False
 
-    broker_profile = str(
-        getattr(meta, "broker_profile", "us_retail_supported") or ""
-    ).strip().lower()
+    broker_profile = (
+        str(getattr(meta, "broker_profile", "us_retail_supported") or "")
+        .strip()
+        .lower()
+    )
 
     return broker_profile in {"", "default", "us_retail_supported"}
 

@@ -66,10 +66,6 @@ def _band_3(pct: int) -> str:
     return "RED"
 
 
-
-
-
-
 def _attach_market_metadata_rows(rows):
     out = []
     for row in rows or []:
@@ -78,7 +74,9 @@ def _attach_market_metadata_rows(rows):
             continue
 
         new_row = dict(row)
-        sym = new_row.get("symbol") or new_row.get("ticker") or new_row.get("underlying")
+        sym = (
+            new_row.get("symbol") or new_row.get("ticker") or new_row.get("underlying")
+        )
 
         if isinstance(sym, str) and sym.strip():
             meta = get_symbol_meta(sym)

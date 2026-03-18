@@ -63,7 +63,6 @@ def enrich_sector_rows(obj):
     return out
 
 
-
 def summarize_market_mix(sectors, symbols_sample):
     markets = set()
     regions = set()
@@ -95,8 +94,8 @@ def summarize_market_mix(sectors, symbols_sample):
     }
 
 
-
 # JP_LIVE_PIVOT_EARLY_SYMBOLS_SAMPLE_META
+
 
 # JP_LIVE_PIVOT_EARLY_SYMBOLS_SAMPLE_META
 def symbols_sample_meta(symbols):

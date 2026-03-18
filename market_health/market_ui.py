@@ -673,7 +673,12 @@ def _build_symbol_market_index(contract: dict) -> dict[str, str]:
     out: dict[str, str] = {}
 
     def _add(sym, market) -> None:
-        if isinstance(sym, str) and sym.strip() and isinstance(market, str) and market.strip():
+        if (
+            isinstance(sym, str)
+            and sym.strip()
+            and isinstance(market, str)
+            and market.strip()
+        ):
             out[sym.strip().upper()] = market.strip().upper()
 
     summary = contract.get("summary") or {}
@@ -799,7 +804,9 @@ def _recommendation_lines_from_contract(contract: dict) -> list[str]:
                 f"Swap: {_fmt_symbol_with_market(from_sym, market_index)} -> {_fmt_symbol_with_market(to_sym, market_index)}"
             )
         elif to_sym:
-            lines.append(f"Swap target: {_fmt_symbol_with_market(to_sym, market_index)}")
+            lines.append(
+                f"Swap target: {_fmt_symbol_with_market(to_sym, market_index)}"
+            )
         else:
             lines.append("Swap: (details unavailable)")
 

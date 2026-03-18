@@ -12,7 +12,9 @@ def test_ui_export_smoke_surfaces_non_us_market_metadata(tmp_path: Path) -> None
     cache_dir.mkdir(parents=True, exist_ok=True)
     state_dir.mkdir(parents=True, exist_ok=True)
 
-    fixture_sectors = repo_root / "tests" / "fixtures" / "non_us_market_slice_ewj.sectors.json"
+    fixture_sectors = (
+        repo_root / "tests" / "fixtures" / "non_us_market_slice_ewj.sectors.json"
+    )
     (cache_dir / "market_health.sectors.json").write_text(
         fixture_sectors.read_text(encoding="utf-8"),
         encoding="utf-8",
@@ -25,7 +27,8 @@ def test_ui_export_smoke_surfaces_non_us_market_metadata(tmp_path: Path) -> None
                 "positions": [{"symbol": "EWJ", "market_value": 1000.0}],
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -45,7 +48,8 @@ def test_ui_export_smoke_surfaces_non_us_market_metadata(tmp_path: Path) -> None
                 "forced": False,
             },
             indent=2,
-        ) + "\n",
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -60,7 +64,9 @@ def test_ui_export_smoke_surfaces_non_us_market_metadata(tmp_path: Path) -> None
         cwd=repo_root,
     )
 
-    out = json.loads((cache_dir / "market_health.ui.v1.json").read_text(encoding="utf-8"))
+    out = json.loads(
+        (cache_dir / "market_health.ui.v1.json").read_text(encoding="utf-8")
+    )
 
     ewj = next(row for row in out["data"]["sectors"] if row["symbol"] == "EWJ")
     assert ewj["market"] == "JP"
