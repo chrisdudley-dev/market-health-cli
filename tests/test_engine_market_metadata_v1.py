@@ -1,4 +1,8 @@
-from market_health.engine import SECTORS_DEFAULT, get_symbol_market_context, is_known_non_us_symbol
+from market_health.engine import (
+    SECTORS_DEFAULT,
+    get_symbol_market_context,
+    is_known_non_us_symbol,
+)
 
 
 def test_engine_resolves_japan_market_metadata_for_ewj() -> None:
