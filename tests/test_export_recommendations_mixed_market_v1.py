@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 
-def test_export_recommendations_forecast_mode_mixed_market_is_valid(tmp_path: Path) -> None:
+def test_export_recommendations_forecast_mode_mixed_market_is_valid(
+    tmp_path: Path,
+) -> None:
     repo_root = Path(__file__).resolve().parents[1]
 
     positions_p = tmp_path / "positions.v1.json"
@@ -80,9 +82,15 @@ def test_export_recommendations_forecast_mode_mixed_market_is_valid(tmp_path: Pa
     cache_dir = tmp_path / ".cache" / "jerboa"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    (cache_dir / "positions.v1.json").write_text(positions_p.read_text(encoding="utf-8"), encoding="utf-8")
-    (cache_dir / "forecast_scores.v1.json").write_text(forecast_p.read_text(encoding="utf-8"), encoding="utf-8")
-    (cache_dir / "market_health.sectors.json").write_text(sectors_p.read_text(encoding="utf-8"), encoding="utf-8")
+    (cache_dir / "positions.v1.json").write_text(
+        positions_p.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (cache_dir / "forecast_scores.v1.json").write_text(
+        forecast_p.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (cache_dir / "market_health.sectors.json").write_text(
+        sectors_p.read_text(encoding="utf-8"), encoding="utf-8"
+    )
 
     proc = subprocess.run(
         [
@@ -110,7 +118,10 @@ def test_export_recommendations_forecast_mode_mixed_market_is_valid(tmp_path: Pa
     doc = json.loads(out_p.read_text(encoding="utf-8"))
     assert doc["schema"] == "recommendations.v1"
     assert doc["recommendation"]["action"] in {"SWAP", "NOOP"}
-    assert isinstance(doc["recommendation"]["reason"], str) and doc["recommendation"]["reason"]
+    assert (
+        isinstance(doc["recommendation"]["reason"], str)
+        and doc["recommendation"]["reason"]
+    )
 
     diag = doc["recommendation"].get("diagnostics") or {}
     assert diag.get("mode") == "forecast"

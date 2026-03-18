@@ -19,7 +19,9 @@ def test_symbol_meta_dict_resolves_ewj() -> None:
     assert meta["taxonomy"] == "topix17"
 
 
-def test_attach_recommendation_symbol_meta_adds_only_known_global_symbol_metadata() -> None:
+def test_attach_recommendation_symbol_meta_adds_only_known_global_symbol_metadata() -> (
+    None
+):
     doc = {
         "schema": "recommendations.v1",
         "recommendation": {

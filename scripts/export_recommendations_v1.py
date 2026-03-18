@@ -348,7 +348,9 @@ def main() -> int:
                 if isinstance(forecast_doc, dict)
                 else None
             ),
-            "exposure_contexts": _build_exposure_contexts(score_rows, positions_for_rec),
+            "exposure_contexts": _build_exposure_contexts(
+                score_rows, positions_for_rec
+            ),
             "cooldown_history": [],
         },
     )

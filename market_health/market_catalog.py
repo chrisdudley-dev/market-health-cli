@@ -108,12 +108,16 @@ def validate_symbol_against_bridge(
     if entry is None:
         raise ValueError(f"{symbol.symbol}: bucket_id missing from taxonomy bridge")
     if symbol.family_id != entry.family_id:
-        raise ValueError(f"{symbol.symbol}: family_id mismatch for bucket {symbol.bucket_id}")
+        raise ValueError(
+            f"{symbol.symbol}: family_id mismatch for bucket {symbol.bucket_id}"
+        )
 
 
 @lru_cache(maxsize=1)
 def get_symbol_catalog() -> list[SymbolMeta]:
-    return load_symbol_catalog(_repo_root() / "config" / "symbols" / "global_markets.yaml")
+    return load_symbol_catalog(
+        _repo_root() / "config" / "symbols" / "global_markets.yaml"
+    )
 
 
 @lru_cache(maxsize=None)
