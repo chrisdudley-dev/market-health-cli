@@ -15,9 +15,7 @@ from market_health.engine import SECTORS_DEFAULT, safe_download
 
 def utc_now() -> str:
     return (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z")
+        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     )
 
 
@@ -87,7 +85,11 @@ def build_ohlcv_doc(
         if s and s not in order:
             order.append(s)
 
-    frames = data if data is not None else safe_download(order, period=period, interval=interval, ttl_sec=ttl_sec)
+    frames = (
+        data
+        if data is not None
+        else safe_download(order, period=period, interval=interval, ttl_sec=ttl_sec)
+    )
 
     rows: List[Dict[str, Any]] = []
     for sym in order:
@@ -117,8 +119,12 @@ def atomic_write_json(path: Path, obj: Dict[str, Any]) -> bool:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Export OHLCV cache for sector forecast inputs")
-    ap.add_argument("--out", default=os.path.expanduser("~/.cache/jerboa/ohlcv.sectors.v1.json"))
+    ap = argparse.ArgumentParser(
+        description="Export OHLCV cache for sector forecast inputs"
+    )
+    ap.add_argument(
+        "--out", default=os.path.expanduser("~/.cache/jerboa/ohlcv.sectors.v1.json")
+    )
     ap.add_argument("--period", default="1y")
     ap.add_argument("--interval", default="1d")
     ap.add_argument("--ttl-sec", type=int, default=300)
