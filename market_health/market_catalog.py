@@ -73,7 +73,9 @@ def validate_symbol_against_market(symbol: SymbolMeta, market: MarketProfile) ->
         raise ValueError(f"{symbol.symbol}: taxonomy mismatch")
 
 
-def load_market_profile_for_market(market: str, repo_root: Path | None = None) -> MarketProfile:
+def load_market_profile_for_market(
+    market: str, repo_root: Path | None = None
+) -> MarketProfile:
     root = repo_root or _repo_root()
     return load_market_profile(root / "config" / "markets" / f"{market.lower()}.yaml")
 
