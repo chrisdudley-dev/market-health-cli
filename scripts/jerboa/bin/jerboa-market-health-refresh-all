@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POSITIONS_REFRESH="${SCRIPT_DIR}/jerboa-market-health-positions-refresh"
+FORECAST_REFRESH="${SCRIPT_DIR}/jerboa-market-health-forecast-scores-refresh"
+RECOMMEND_REFRESH="${SCRIPT_DIR}/jerboa-market-health-recommendations-refresh"
 
 FORCE=0
 ARGS=()
@@ -128,15 +130,15 @@ PY
 # Update UI contract (React/web reads this single file)
 
   # Recommendations refresh (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-recommendations-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
+  if [ -x "${RECOMMEND_REFRESH}" ]; then
+    "${RECOMMEND_REFRESH}" --quiet >/dev/null || rec_rc=$?
   else
     rec_rc=127
   fi
 
   # Forecast scores (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" --quiet >/dev/null || true
+  if [ -x "${FORECAST_REFRESH}" ]; then
+    "${FORECAST_REFRESH}" --quiet >/dev/null || true
   fi
 
   "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
