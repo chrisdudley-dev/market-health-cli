@@ -13,6 +13,9 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any
+from market_health.engine import compute_scores
+from market_health.universe import get_default_scoring_symbols
+from market_health.inverse_universe_v1 import load_inverse_pairs
 import argparse
 from datetime import datetime, timezone
 
@@ -255,6 +258,32 @@ def parse_overview_totals(prefix_text: str) -> tuple[list[str], dict[str, float]
     return order, util
 
 
+def _merged_universe_order(primary: list[str] | tuple[str, ...] | None) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+
+    def _add(sym: object) -> None:
+        if not isinstance(sym, str):
+            return
+        s = sym.strip().upper()
+        if not s or s in seen:
+            return
+        seen.add(s)
+        merged.append(s)
+
+    if isinstance(primary, (list, tuple)):
+        for sym in primary:
+            _add(sym)
+
+    try:
+        for sym in get_default_scoring_symbols():
+            _add(sym)
+    except Exception:
+        pass
+
+    return merged
+
+
 def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
     if not _positions_doc_is_fresh(doc):
         return []
@@ -451,6 +480,59 @@ def fmt_u(u: float | None) -> str:
     return f"{u:.3f} / {u * 100:.1f}%"
 
 
+
+
+def _load_inverse_symbols_from_cache():
+    try:
+        inv_path = os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json")
+        loaded = load_inverse_pairs(inv_path)
+    except Exception:
+        return []
+
+    pairs = loaded[0] if isinstance(loaded, tuple) else loaded
+    if not isinstance(pairs, list):
+        return []
+
+    out = []
+    for item in pairs:
+        inv = None
+        if isinstance(item, dict):
+            inv = item.get("inverse")
+        else:
+            inv = getattr(item, "inverse", None)
+
+        if isinstance(inv, str) and inv.strip():
+            out.append(inv.strip().upper())
+
+    seen = set()
+    deduped = []
+    for sym in out:
+        if sym not in seen:
+            seen.add(sym)
+            deduped.append(sym)
+    return deduped
+
+def _expanded_overview_order(base_order, held_syms):
+    out = []
+    seen = set()
+
+    def _add(sym):
+        if not isinstance(sym, str):
+            return
+        s = sym.strip().upper()
+        if not s or s in seen:
+            return
+        seen.add(s)
+        out.append(s)
+
+    for seq in (base_order, held_syms, _load_inverse_symbols_from_cache(), get_default_scoring_symbols()):
+        if isinstance(seq, (list, tuple)):
+            for sym in seq:
+                _add(sym)
+
+    return out
+
+
 # COMPACT_TRISCORE_OVERVIEW_V1
 def render_overview_triscore(order, held_syms):
     NL = chr(10)
@@ -598,9 +680,24 @@ def render_overview_triscore(order, held_syms):
     table.add_column("Δ1", justify="right", no_wrap=True, width=4)
     table.add_column("Δ5", justify="right", no_wrap=True, width=4)
 
+    extras_map = {}
+    try:
+        missing_syms = [s for s in syms if s not in sector_map]
+        if missing_syms:
+            extra_rows, _ = _unpack_scores(
+                compute_scores(sectors=missing_syms, period="6mo", interval="1d")
+            )
+            for it in extra_rows:
+                if isinstance(it, dict):
+                    s2 = str(it.get("symbol") or "").strip().upper()
+                    if s2:
+                        extras_map[s2] = it
+    except Exception:
+        extras_map = {}
+
     rows = []
     for sym in syms:
-        row = sector_map.get(sym)
+        row = sector_map.get(sym) or extras_map.get(sym)
         if not isinstance(row, dict):
             continue
 
@@ -1558,6 +1655,7 @@ def main() -> int:
     core = run_core_ui(user_args)
     prefix, detail_blocks, _detail_order = split_core_output(core)
     order, util = parse_overview_totals(prefix)
+    order_all = _merged_universe_order(order)
 
     inv_syms = []
     # --- Inverse ETF augmentation (map-only; no score overrides) ---
@@ -1614,7 +1712,8 @@ def main() -> int:
             and isinstance(snap.get("data"), dict)
             and isinstance(snap["data"].get("sectors"), list)
         ):
-            order_all, util = _snapshot_order_util(snap)
+            snap_order, util = _snapshot_order_util(snap)
+            order_all = _merged_universe_order(snap_order)
 
             # keep inv_syms consistent for downstream sections that gate on it
 
@@ -1704,113 +1803,104 @@ def main() -> int:
     #             pass
     #
     # 1b) Overview (expanded universe, totals-only) removed
-    overview_order = list(order_all)
+    overview_order = _expanded_overview_order(order_all, held_syms)
     # 2) Pi Grid
-    # OVERVIEW_AE_FROM_SNAPSHOT_V2
-    # Rich bordered + colorized A–E totals table from the UI snapshot (cache-only; includes inverses)
+    # OVERVIEW_AE_FROM_COMPUTE_SCORES_V2
     try:
         from rich.console import Console
         from rich.table import Table
         from rich.text import Text
         from rich import box
 
-        ui_path2 = Path(
-            os.path.expanduser(
-                os.environ.get(
-                    "JERBOA_UI_JSON", "~/.cache/jerboa/market_health.ui.v1.json"
-                )
-            )
-        ).expanduser()
-        snap2 = read_json(ui_path2)
-        snap_order2, snap_util2 = _snapshot_order_util(snap2)
-        if snap_order2:
-            overview_order = snap_order2
-        data2 = snap2.get("data") if isinstance(snap2, dict) else None
-        sec2 = data2.get("sectors") if isinstance(data2, dict) else None
-        if isinstance(sec2, list):
-            by2 = {}
-            for it in sec2:
+        inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
+        period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
+        interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
+
+        rows2 = compute_scores(sectors=overview_order, period=period, interval=interval)
+        if isinstance(rows2, tuple) and len(rows2) == 2:
+            rows2 = rows2[0]
+
+        by2 = {}
+        if isinstance(rows2, list):
+            for it in rows2:
                 if isinstance(it, dict):
                     sym = str(it.get("symbol") or "").strip().upper()
                     if sym:
                         by2[sym] = it
 
-            def _cat_sum(row, cat):
-                cats = row.get("categories", {})
-                if not isinstance(cats, dict):
-                    return 0
-                node = cats.get(cat)
-                if not isinstance(node, dict):
-                    return 0
-                checks = node.get("checks")
-                if not isinstance(checks, list):
-                    return 0
-                total = 0
-                for chk in checks:
-                    if isinstance(chk, dict):
-                        sc = chk.get("score")
-                        try:
-                            total += int(sc)
-                        except Exception:
-                            pass
-                return total
+        def _cat_sum(row, cat):
+            cats = row.get("categories", {})
+            if not isinstance(cats, dict):
+                return 0
+            node = cats.get(cat)
+            if not isinstance(node, dict):
+                return 0
+            checks = node.get("checks")
+            if not isinstance(checks, list):
+                return 0
+            total = 0
+            for chk in checks:
+                if isinstance(chk, dict):
+                    sc = chk.get("score")
+                    try:
+                        total += int(sc)
+                    except Exception:
+                        pass
+            return total
 
-            def _style(val, denom):
-                # Traffic-light thresholds:
-                # /12: <4 red, <8 yellow, else green
-                # /60: <20 red, <40 yellow, else green
-                if denom == 12:
-                    if val >= 8:
-                        return "bold green"
-                    if val >= 4:
-                        return "bold yellow"
-                    return "bold red"
-                if denom == 60:
-                    if val >= 40:
-                        return "bold green"
-                    if val >= 20:
-                        return "bold yellow"
-                    return "bold red"
-                return "bold"
+        def _style(val, denom):
+            if denom == 12:
+                if val >= 8:
+                    return "bold green"
+                if val >= 4:
+                    return "bold yellow"
+                return "bold red"
+            if denom == 60:
+                if val >= 40:
+                    return "bold green"
+                if val >= 20:
+                    return "bold yellow"
+                return "bold red"
+            return "bold"
 
-            def _cell(val, denom):
-                t = Text(f"{val}/{denom}")
-                t.stylize(_style(val, denom))
-                return t
+        def _cell(val, denom):
+            t = Text(f"{val}/{denom}")
+            t.stylize(_style(val, denom))
+            return t
 
-            console2 = Console()
-            t = Table(
-                title="Overview (A–E totals per universe)",
-                box=box.HEAVY_HEAD,
-                header_style="bold cyan",
+        console2 = Console()
+        t = Table(
+            title="Overview (A–E totals per universe)",
+            box=box.HEAVY_HEAD,
+            header_style="bold cyan",
+        )
+        t.add_column("Sym", style="bold cyan", no_wrap=True)
+        for k in ("A", "B", "C", "D", "E"):
+            t.add_column(k, justify="right")
+        t.add_column("Total", justify="right")
+
+        for sym in overview_order:
+            r = by2.get(sym)
+            if not r:
+                continue
+            a = _cat_sum(r, "A")
+            b = _cat_sum(r, "B")
+            c0 = _cat_sum(r, "C")
+            d = _cat_sum(r, "D")
+            e = _cat_sum(r, "E")
+            total = a + b + c0 + d + e
+            t.add_row(
+                sym,
+                _cell(a, 12),
+                _cell(b, 12),
+                _cell(c0, 12),
+                _cell(d, 12),
+                _cell(e, 12),
+                _cell(total, 60),
             )
-            t.add_column("Sym", style="bold cyan", no_wrap=True)
-            for k in ("A", "B", "C", "D", "E"):
-                t.add_column(k, justify="right")
-            t.add_column("Total", justify="right")
 
-            for sym in order_all:
-                r = by2.get(sym)
-                if not r:
-                    continue
-                a = _cat_sum(r, "A")
-                b = _cat_sum(r, "B")
-                c0 = _cat_sum(r, "C")
-                d = _cat_sum(r, "D")
-                e = _cat_sum(r, "E")
-                total = a + b + c0 + d + e
-                t.add_row(
-                    sym,
-                    _cell(a, 12),
-                    _cell(b, 12),
-                    _cell(c0, 12),
-                    _cell(d, 12),
-                    _cell(e, 12),
-                    _cell(total, 60),
-                )
-
-            console2.print(t)
-            console2.print()
+        console2.print(t)
+        console2.print()
     except Exception:
         pass
     # --- end OVERVIEW_AE_FROM_SNAPSHOT_V2 ---
@@ -1865,21 +1955,11 @@ def main() -> int:
         )
 
     else:
-        try:
-            from market_health.ui_triscore_ascii import render_positions_triscore_ascii
+        for sym in held_syms:
+            blk = detail_blocks.get(sym)
 
-            sys.stdout.write(render_positions_triscore_ascii() + chr(10))
-
-        except Exception as e:
-            sys.stdout.write(
-                c("Tri-Score ASCII unavailable: %s" % (e,) + chr(10) + chr(10), YELLOW)
-            )
-
-            for sym in held_syms:
-                blk = detail_blocks.get(sym)
-
-                if blk:
-                    sys.stdout.write(blk.rstrip() + chr(10) + chr(10))
+            if blk:
+                sys.stdout.write(blk.rstrip() + chr(10) + chr(10))
 
     # 4) Recommendation + READY/BLOCKED table
     sys.stdout.write(render_reco(order, util, rec_doc, held_syms))

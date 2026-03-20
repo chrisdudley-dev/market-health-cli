@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from market_health.forecast_features import OHLCV
 from market_health.forecast_score_provider import compute_forecast_universe
+from market_health.universe import INVERSE_SYMBOLS, get_default_scoring_symbols
+import yfinance as yf
 
 Number = Union[int, float]
 
@@ -21,6 +23,53 @@ def utc_iso_from_epoch(epoch: int) -> str:
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z")
     )
+
+
+def _mtime_epoch(p: Path) -> Optional[int]:
+    try:
+        return int(p.stat().st_mtime)
+    except Exception:
+        return None
+
+
+def _is_path_fresh(p: Path, *, max_age_seconds: int) -> bool:
+    if max_age_seconds <= 0:
+        return True
+    ts = _mtime_epoch(p)
+    if ts is None:
+        return False
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    return (now_ts - ts) <= max_age_seconds
+
+
+def _parse_iso_utc(s: Optional[str]) -> Optional[datetime]:
+    if not isinstance(s, str) or not s:
+        return None
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _max_iso(a: Optional[str], b: Optional[str]) -> Optional[str]:
+    da = _parse_iso_utc(a)
+    db = _parse_iso_utc(b)
+    if da is None:
+        return b if db is not None else None
+    if db is None:
+        return a
+    return a if da >= db else b
+
+
+def _latest_source_file_asof(paths: List[str], current: Optional[str]) -> Optional[str]:
+    best = current
+    for raw in paths or []:
+        try:
+            mtime_iso = utc_iso_from_epoch(int(Path(raw).stat().st_mtime))
+        except Exception:
+            continue
+        best = _max_iso(best, mtime_iso) or best or mtime_iso
+    return best
 
 
 def _read_json(p: Path) -> Optional[Any]:
@@ -121,6 +170,8 @@ def _maybe_has_close_array(p: Path) -> bool:
 
 def discover_ohlcv(
     cache_dir: Path,
+    target_symbols: Optional[set[str]] = None,
+    max_source_age_seconds: int = 0,
 ) -> Tuple[Dict[str, OHLCV], Optional[str], List[str]]:
     sources: List[str] = []
     best: Dict[str, OHLCV] = {}
@@ -131,6 +182,10 @@ def discover_ohlcv(
     )
     for p in candidates:
         if not _maybe_has_close_array(p):
+            continue
+        if max_source_age_seconds > 0 and not _is_path_fresh(
+            p, max_age_seconds=max_source_age_seconds
+        ):
             continue
         obj = _read_json(p)
         if obj is None:
@@ -144,20 +199,22 @@ def discover_ohlcv(
 
         sources.append(str(p))
 
+        file_asof = utc_iso_from_epoch(int(p.stat().st_mtime))
         asof = None
         if isinstance(obj, dict):
             asof = obj.get("asof") or obj.get("generated_at") or obj.get("timestamp")
-        if not isinstance(asof, str) or not asof:
-            asof = utc_iso_from_epoch(int(p.stat().st_mtime))
+        asof = _max_iso(asof, file_asof) or file_asof
 
         for sym, blk in extracted.items():
             if sym not in best:
                 best[sym] = blk
 
-        if best_asof is None:
-            best_asof = asof
+        best_asof = _max_iso(best_asof, asof) or asof
 
-        if "SPY" in best and len(best) >= 8:
+        if target_symbols:
+            if target_symbols.issubset(set(best.keys())):
+                break
+        elif "SPY" in best and len(best) >= 8:
             break
 
     return best, best_asof, sources
@@ -186,6 +243,119 @@ def _parse_horizons(s: str) -> List[int]:
     return out
 
 
+def _download_missing_ohlcv(
+    symbols: List[str],
+    period: str = "6mo",
+    interval: str = "1d",
+) -> Dict[str, OHLCV]:
+    out: Dict[str, OHLCV] = {}
+    if not symbols:
+        return out
+
+    data = yf.download(
+        tickers=symbols,
+        period=period,
+        interval=interval,
+        auto_adjust=False,
+        progress=False,
+        threads=False,
+        group_by="ticker",
+    )
+
+    if data is None:
+        return out
+
+    if getattr(data.columns, "nlevels", 1) > 1:
+        for sym in symbols:
+            sym_u = sym.strip().upper()
+            try:
+                frame = data[sym_u]
+            except Exception:
+                continue
+
+            def _vals(col: str) -> Optional[List[float]]:
+                if col not in frame:
+                    return None
+                vals = [float(v) for v in frame[col].tolist() if v == v]
+                return vals or None
+
+            close = _vals("Close")
+            if not close:
+                continue
+
+            out[sym_u] = OHLCV(
+                close=close,
+                high=_vals("High"),
+                low=_vals("Low"),
+                volume=_vals("Volume"),
+            )
+        return out
+
+    sym_u = symbols[0].strip().upper()
+
+    def _vals_single(col: str) -> Optional[List[float]]:
+        if col not in data:
+            return None
+        vals = [float(v) for v in data[col].tolist() if v == v]
+        return vals or None
+
+    close = _vals_single("Close")
+    if close:
+        out[sym_u] = OHLCV(
+            close=close,
+            high=_vals_single("High"),
+            low=_vals_single("Low"),
+            volume=_vals_single("Volume"),
+        )
+
+    return out
+
+
+def _tail_trim(xs: Optional[List[float]], n: int) -> Optional[List[float]]:
+    if xs is None:
+        return None
+    if n <= 0:
+        return None
+    if len(xs) < n:
+        return None
+    return [float(v) for v in xs[-n:]]
+
+
+def _trim_ohlcv(ohlcv: OHLCV, n: int) -> Optional[OHLCV]:
+    close = _tail_trim(ohlcv.close, n)
+    if not close:
+        return None
+    high = _tail_trim(ohlcv.high, n) if ohlcv.high is not None else None
+    low = _tail_trim(ohlcv.low, n) if ohlcv.low is not None else None
+    volume = _tail_trim(ohlcv.volume, n) if ohlcv.volume is not None else None
+    return OHLCV(close=close, high=high, low=low, volume=volume)
+
+
+def _align_universe_lengths(
+    spy: OHLCV, universe: Dict[str, OHLCV]
+) -> Tuple[OHLCV, Dict[str, OHLCV]]:
+    lengths = [len(spy.close)]
+    for o in universe.values():
+        if getattr(o, "close", None):
+            lengths.append(len(o.close))
+    n = min(x for x in lengths if x > 0)
+
+    spy2 = _trim_ohlcv(spy, n)
+    if spy2 is None:
+        raise ValueError("could not align SPY series")
+
+    out: Dict[str, OHLCV] = {}
+    for sym, o in universe.items():
+        o2 = _trim_ohlcv(o, n)
+        if o2 is not None:
+            out[sym] = o2
+    return spy2, out
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Export forecast_scores.v1.json to ~/.cache/jerboa/"
@@ -201,6 +371,12 @@ def main() -> int:
     )
     ap.add_argument(
         "--horizons", default="1,5", help="Comma-separated horizons in trading days"
+    )
+    ap.add_argument(
+        "--max-source-age-minutes",
+        type=int,
+        default=int(os.environ.get("JERBOA_FORECAST_MAX_SOURCE_AGE_MINUTES", "20")),
+        help="Ignore cached OHLCV JSON sources older than this many minutes (0 disables the age check).",
     )
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
@@ -267,30 +443,50 @@ def main() -> int:
     if not horizons:
         horizons = [1, 5]
 
+    source_max_age_seconds = max(0, int(args.max_source_age_minutes or 0)) * 60
+
     sources: List[str] = []
     asof: Optional[str] = None
     ohlcv_map: Dict[str, OHLCV] = {}
 
     if args.source:
         src = Path(os.path.expanduser(str(args.source)))
-        obj = _read_json(src)
-        if obj is not None:
-            ohlcv_map = _extract_from_symbol_map(obj)
-            if not ohlcv_map:
-                ohlcv_map = _extract_from_rows(obj)
-            if isinstance(obj, dict):
-                asof = (
-                    obj.get("asof") or obj.get("generated_at") or obj.get("timestamp")
-                )
-            if not isinstance(asof, str) or not asof:
+        if src.exists() and _is_path_fresh(src, max_age_seconds=source_max_age_seconds):
+            obj = _read_json(src)
+            if obj is not None:
+                ohlcv_map = _extract_from_symbol_map(obj)
+                if not ohlcv_map:
+                    ohlcv_map = _extract_from_rows(obj)
+                if isinstance(obj, dict):
+                    asof = (
+                        obj.get("asof")
+                        or obj.get("generated_at")
+                        or obj.get("timestamp")
+                    )
                 try:
-                    asof = utc_iso_from_epoch(int(src.stat().st_mtime))
+                    file_asof = utc_iso_from_epoch(int(src.stat().st_mtime))
                 except Exception:
-                    asof = None
-            sources = [str(src)]
+                    file_asof = None
+                asof = _max_iso(asof, file_asof) or asof or file_asof
+                sources = [str(src)]
+
+    target_symbols = {"SPY", *get_default_scoring_symbols(), *INVERSE_SYMBOLS}
 
     if not ohlcv_map:
-        ohlcv_map, asof, sources = discover_ohlcv(cache_dir)
+        ohlcv_map, asof, sources = discover_ohlcv(
+            cache_dir,
+            target_symbols=set(target_symbols),
+            max_source_age_seconds=source_max_age_seconds,
+        )
+
+    missing_symbols = sorted(set(target_symbols) - set(ohlcv_map.keys()))
+    if missing_symbols:
+        downloaded = _download_missing_ohlcv(
+            missing_symbols, period="6mo", interval="1d"
+        )
+        if downloaded:
+            ohlcv_map.update(downloaded)
+            sources.append("yfinance:" + ",".join(sorted(downloaded.keys())))
 
     if not isinstance(asof, str) or not asof:
         try:
@@ -308,6 +504,7 @@ def main() -> int:
             return 2
 
     universe = {k: v for k, v in ohlcv_map.items() if k != "SPY"}
+    spy, universe = _align_universe_lengths(spy, universe)
 
     scores = compute_forecast_universe(
         universe=universe,
@@ -319,9 +516,14 @@ def main() -> int:
         iv_status=iv_meta.get("status"),
     )
 
+    export_now = utc_now_iso()
+
     doc: Dict[str, Any] = {
         "schema": "forecast_scores.v1",
-        "asof": asof,
+        "snapshot_asof": export_now,
+        "asof": export_now,
+        "generated_at": export_now,
+        "source_asof": _latest_source_file_asof(sources, asof),
         "horizons_trading_days": horizons,
         "scores": scores,
         "inputs": {
