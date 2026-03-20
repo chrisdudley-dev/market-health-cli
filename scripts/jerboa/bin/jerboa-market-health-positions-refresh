@@ -56,6 +56,13 @@ mkdir -p "$(dirname "$OUT")"
 mkdir -p "$POS_DIR"
 chmod 700 "$POS_DIR" 2>/dev/null || true
 
+RAW_SCHWAB_JSON="${HOME}/.cache/jerboa/schwab_accounts.live.json"
+
+if [ -z "$SCHWAB_JSON" ] && [ -z "$CSV" ] && [ -s "$RAW_SCHWAB_JSON" ]; then
+  echo "Using Schwab JSON: $RAW_SCHWAB_JSON"
+  exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --schwab-json "$RAW_SCHWAB_JSON" --out "$OUT"
+fi
+
 # Schwab JSON path (offline for now)
 if [ -n "$SCHWAB_JSON" ]; then
   if [ ! -f "$SCHWAB_JSON" ]; then
@@ -105,6 +112,11 @@ done
 if [ -n "$best" ]; then
   echo "Using ToS CSV: $best"
   exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$best" --out "$OUT"
+fi
+
+if [ -s "$OUT" ]; then
+  echo "Positions: keeping existing cache: $OUT"
+  exit 0
 fi
 
 # No CSV found: leave placeholder behavior consistent and helpful
