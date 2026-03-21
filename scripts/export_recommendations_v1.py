@@ -112,12 +112,98 @@ def _get_market_calendar_module():
 
 
 def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
+    from datetime import datetime, timezone, timedelta, time
+
     dt = _parse_iso_utc(value)
     if dt is None:
         return False
-    now_utc = datetime.now(timezone.utc)
-    return dt >= (now_utc - timedelta(minutes=max_age_minutes))
 
+    now_utc = datetime.now(timezone.utc)
+    ttl = timedelta(minutes=max_age_minutes)
+
+    try:
+        import pandas_market_calendars as mcal
+    except ModuleNotFoundError:
+        try:
+            from zoneinfo import ZoneInfo
+            et_tz = ZoneInfo("America/New_York")
+        except Exception:
+            et_tz = timezone(timedelta(hours=-5), "ET")
+
+        now_et = now_utc.astimezone(et_tz)
+        dt_et = dt.astimezone(et_tz)
+
+        def _last_weekday(d):
+            while d.weekday() >= 5:
+                d -= timedelta(days=1)
+            return d
+
+        def _next_weekday(d):
+            while d.weekday() >= 5:
+                d += timedelta(days=1)
+            return d
+
+        mins_now = now_et.hour * 60 + now_et.minute
+        open_mins = 9 * 60 + 30
+        close_mins = 16 * 60
+
+        if now_et.weekday() < 5 and open_mins <= mins_now <= close_mins:
+            return dt_et.date() == now_et.date() and dt >= (now_utc - ttl)
+
+        ref_date = now_et.date()
+        if now_et.weekday() < 5 and mins_now < open_mins:
+            ref_date -= timedelta(days=1)
+        ref_date = _last_weekday(ref_date)
+
+        if now_et.weekday() < 5 and mins_now < open_mins:
+            next_open_date = now_et.date()
+        else:
+            next_open_date = now_et.date() + timedelta(days=1)
+        next_open_date = _next_weekday(next_open_date)
+
+        last_close_et = datetime.combine(ref_date, time(16, 0), tzinfo=et_tz)
+        next_open_et = datetime.combine(next_open_date, time(9, 30), tzinfo=et_tz)
+
+        return dt_et.date() == ref_date or (last_close_et <= dt_et <= next_open_et)
+
+    cal = mcal.get_calendar("NYSE")
+    sched = cal.schedule(
+        start_date=(now_utc - timedelta(days=10)).date().isoformat(),
+        end_date=(now_utc + timedelta(days=5)).date().isoformat(),
+    )
+    if sched.empty:
+        return False
+
+    rows = []
+    for idx, row in sched.iterrows():
+        open_ts = row["market_open"].to_pydatetime().astimezone(timezone.utc)
+        close_ts = row["market_close"].to_pydatetime().astimezone(timezone.utc)
+        session_label = str(idx.date() if hasattr(idx, "date") else idx)
+        rows.append((session_label, open_ts, close_ts))
+
+    try:
+        from zoneinfo import ZoneInfo
+        session_tz = ZoneInfo("America/New_York")
+    except Exception:
+        session_tz = timezone(timedelta(hours=-5), "ET")
+
+    dt_session = dt.astimezone(session_tz).date().isoformat()
+
+    for session_label, open_ts, close_ts in rows:
+        if open_ts <= now_utc <= close_ts:
+            if dt_session != session_label:
+                return False
+            return dt >= (now_utc - ttl)
+
+    prior_rows = [r for r in rows if r[2] <= now_utc]
+    if not prior_rows:
+        return False
+
+    last_completed_session, _last_open, last_close = prior_rows[-1]
+    future_rows = [r for r in rows if r[1] > now_utc]
+    next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
+
+    return dt_session == last_completed_session or (last_close <= dt <= next_open)
 
 def _is_same_or_last_completed_session(value: Any):
     dt = _parse_iso_utc(value)
@@ -125,7 +211,13 @@ def _is_same_or_last_completed_session(value: Any):
         return False
 
     now_utc = datetime.now(timezone.utc)
-    dt_session = dt.astimezone(timezone.utc).date().isoformat()
+    try:
+        from zoneinfo import ZoneInfo
+        session_tz = ZoneInfo("America/New_York")
+    except Exception:
+        session_tz = timezone(timedelta(hours=-5), "ET")
+
+    dt_session = dt.astimezone(session_tz).date().isoformat()
     mcal = _get_market_calendar_module()
 
     if mcal is None:
@@ -452,7 +544,7 @@ def to_contract(rec_doc: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone, timedelta, time
 
     dt = _parse_iso_utc(value)
     if dt is None:
@@ -464,12 +556,8 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
     try:
         import pandas_market_calendars as mcal
     except ModuleNotFoundError:
-        # Graceful fallback when market-calendar dependency is unavailable.
-        # Keep intraday TTL behavior during live weekday hours, and otherwise
-        # treat the last completed weekday session as fresh.
         try:
             from zoneinfo import ZoneInfo
-
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -480,6 +568,11 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
         def _last_weekday(d):
             while d.weekday() >= 5:
                 d -= timedelta(days=1)
+            return d
+
+        def _next_weekday(d):
+            while d.weekday() >= 5:
+                d += timedelta(days=1)
             return d
 
         mins_now = now_et.hour * 60 + now_et.minute
@@ -493,12 +586,22 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
         if now_et.weekday() < 5 and mins_now < open_mins:
             ref_date -= timedelta(days=1)
         ref_date = _last_weekday(ref_date)
-        return dt_et.date() == ref_date
+
+        if now_et.weekday() < 5 and mins_now < open_mins:
+            next_open_date = now_et.date()
+        else:
+            next_open_date = now_et.date() + timedelta(days=1)
+        next_open_date = _next_weekday(next_open_date)
+
+        last_close_et = datetime.combine(ref_date, time(16, 0), tzinfo=et_tz)
+        next_open_et = datetime.combine(next_open_date, time(9, 30), tzinfo=et_tz)
+
+        return dt_et.date() == ref_date or (last_close_et <= dt_et <= next_open_et)
 
     cal = mcal.get_calendar("NYSE")
     sched = cal.schedule(
         start_date=(now_utc - timedelta(days=10)).date().isoformat(),
-        end_date=(now_utc + timedelta(days=2)).date().isoformat(),
+        end_date=(now_utc + timedelta(days=5)).date().isoformat(),
     )
     if sched.empty:
         return False
@@ -510,23 +613,29 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
         session_label = str(idx.date() if hasattr(idx, "date") else idx)
         rows.append((session_label, open_ts, close_ts))
 
-    dt_session = dt.astimezone(timezone.utc).date().isoformat()
+    try:
+        from zoneinfo import ZoneInfo
+        session_tz = ZoneInfo("America/New_York")
+    except Exception:
+        session_tz = timezone(timedelta(hours=-5), "ET")
 
-    # Live session: same session + within TTL
+    dt_session = dt.astimezone(session_tz).date().isoformat()
+
     for session_label, open_ts, close_ts in rows:
         if open_ts <= now_utc <= close_ts:
             if dt_session != session_label:
                 return False
             return dt >= (now_utc - ttl)
 
-    # Closed market: last completed session is still fresh
     prior_rows = [r for r in rows if r[2] <= now_utc]
     if not prior_rows:
         return False
 
-    last_completed_session = prior_rows[-1][0]
-    return dt_session == last_completed_session
+    last_completed_session, _last_open, last_close = prior_rows[-1]
+    future_rows = [r for r in rows if r[1] > now_utc]
+    next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
+    return dt_session == last_completed_session or (last_close <= dt <= next_open)
 
 def main() -> int:
     ap = argparse.ArgumentParser(

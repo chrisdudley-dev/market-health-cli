@@ -1,9 +1,9 @@
 [Unit]
-Description=Jerboa Market Health - refresh ALL caches every 30 minutes
+Description=Jerboa Market Health - refresh ALL caches every 15 minutes
 
 [Timer]
 OnBootSec=5m
-OnUnitActiveSec=30m
+OnUnitActiveSec=15m
 Persistent=true
 
 [Install]
