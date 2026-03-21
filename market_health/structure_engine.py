@@ -16,7 +16,7 @@ Tracked by:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from statistics import fmean, pstdev
@@ -45,6 +45,19 @@ class StructureZone:
     center: float | None = None
     upper: float | None = None
     weight: float | None = None
+
+
+@dataclass(frozen=True)
+class ClusteredZone:
+    kind: str
+    lower: float
+    center: float
+    upper: float
+    weight: float
+    count: int
+    labels: tuple[str, ...] = ()
+    sources: tuple[str, ...] = ()
+    timeframes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -574,3 +587,117 @@ def normalize_raw_levels(
         )
         for raw_level in raw_levels
     ]
+
+
+def _raw_level_weight(
+    raw_level: RawLevel,
+    *,
+    source_weights: Mapping[str, float] | None = None,
+    timeframe_weights: Mapping[str, float] | None = None,
+) -> float:
+    source_weight = (
+        1.0
+        if source_weights is None
+        else float(source_weights.get(raw_level.source, 1.0))
+    )
+    timeframe_weight = (
+        1.0
+        if timeframe_weights is None
+        else float(timeframe_weights.get(raw_level.timeframe, 1.0))
+    )
+    weight = source_weight * timeframe_weight
+    return weight if weight > 0 else 0.0
+
+
+def _finalize_cluster(
+    raw_levels: Sequence[RawLevel],
+    *,
+    source_weights: Mapping[str, float] | None = None,
+    timeframe_weights: Mapping[str, float] | None = None,
+) -> ClusteredZone:
+    if not raw_levels:
+        raise ValueError("raw_levels must not be empty")
+
+    weights = [
+        _raw_level_weight(
+            raw_level,
+            source_weights=source_weights,
+            timeframe_weights=timeframe_weights,
+        )
+        for raw_level in raw_levels
+    ]
+    total_weight = sum(weights)
+
+    if total_weight > 0:
+        center = (
+            sum(
+                raw_level.value * weight
+                for raw_level, weight in zip(raw_levels, weights, strict=False)
+            )
+            / total_weight
+        )
+        zone_weight = total_weight
+    else:
+        center = fmean(raw_level.value for raw_level in raw_levels)
+        zone_weight = float(len(raw_levels))
+
+    return ClusteredZone(
+        kind=raw_levels[0].kind,
+        lower=min(raw_level.value for raw_level in raw_levels),
+        center=center,
+        upper=max(raw_level.value for raw_level in raw_levels),
+        weight=zone_weight,
+        count=len(raw_levels),
+        labels=tuple(
+            sorted(raw_level.label for raw_level in raw_levels if raw_level.label)
+        ),
+        sources=tuple(sorted({raw_level.source for raw_level in raw_levels})),
+        timeframes=tuple(sorted({raw_level.timeframe for raw_level in raw_levels})),
+    )
+
+
+def cluster_raw_levels_into_zones(
+    raw_levels: Sequence[RawLevel],
+    *,
+    zone_width: float,
+    source_weights: Mapping[str, float] | None = None,
+    timeframe_weights: Mapping[str, float] | None = None,
+) -> list[ClusteredZone]:
+    if zone_width <= 0:
+        raise ValueError("zone_width must be positive")
+
+    zones: list[ClusteredZone] = []
+
+    for kind in ("support", "resistance"):
+        filtered = sorted(
+            (raw_level for raw_level in raw_levels if raw_level.kind == kind),
+            key=lambda raw_level: raw_level.value,
+        )
+        if not filtered:
+            continue
+
+        current_cluster: list[RawLevel] = [filtered[0]]
+
+        for raw_level in filtered[1:]:
+            current_upper = max(item.value for item in current_cluster)
+            if raw_level.value - current_upper <= zone_width:
+                current_cluster.append(raw_level)
+            else:
+                zones.append(
+                    _finalize_cluster(
+                        current_cluster,
+                        source_weights=source_weights,
+                        timeframe_weights=timeframe_weights,
+                    )
+                )
+                current_cluster = [raw_level]
+
+        zones.append(
+            _finalize_cluster(
+                current_cluster,
+                source_weights=source_weights,
+                timeframe_weights=timeframe_weights,
+            )
+        )
+
+    return zones
