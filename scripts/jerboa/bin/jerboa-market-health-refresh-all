@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 POSITIONS_REFRESH="${SCRIPT_DIR}/jerboa-market-health-positions-refresh"
 FORECAST_REFRESH="${SCRIPT_DIR}/jerboa-market-health-forecast-scores-refresh"
 RECOMMEND_REFRESH="${SCRIPT_DIR}/jerboa-market-health-recommendations-refresh"
