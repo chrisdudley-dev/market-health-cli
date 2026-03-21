@@ -32,14 +32,28 @@ def compute_b_checks(
     up_down_vol_ratio_20: Optional[float] = None,
     ext_z_20: Optional[float] = None,
     vol_rank_20: Optional[float] = None,
+    structure_support_cushion_atr: Optional[float] = None,
+    structure_overhead_resistance_atr: Optional[float] = None,
+    structure_breakout_quality_bucket: Optional[int] = None,
 ) -> List[ForecastCheck]:
     return [
         b1_trend_persistence(
             close=close, ema20=ema20, sma50=sma50, slope_close_10=slope_close_10
         ),
-        b2_follow_through_setup(close=close, hi20=hi20, clv=clv),
+        b2_follow_through_setup(
+            close=close,
+            hi20=hi20,
+            clv=clv,
+            structure_overhead_resistance_atr=structure_overhead_resistance_atr,
+            structure_breakout_quality_bucket=structure_breakout_quality_bucket,
+        ),
         b3_rs_momentum(rs_slope_10=rs_slope_10, rs_z_20=rs_z_20),
-        b4_support_cushion(close=close, ema20=ema20, atrp14=atrp14),
+        b4_support_cushion(
+            close=close,
+            ema20=ema20,
+            atrp14=atrp14,
+            structure_support_cushion_atr=structure_support_cushion_atr,
+        ),
         b5_participation_trend(
             up_down_vol_ratio_20=up_down_vol_ratio_20, rs_slope_10=rs_slope_10
         ),
@@ -85,7 +99,12 @@ def b1_trend_persistence(
 
 
 def b2_follow_through_setup(
-    *, close: Optional[float], hi20: Optional[float], clv: Optional[float]
+    *,
+    close: Optional[float],
+    hi20: Optional[float],
+    clv: Optional[float],
+    structure_overhead_resistance_atr: Optional[float] = None,
+    structure_breakout_quality_bucket: Optional[int] = None,
 ) -> ForecastCheck:
     meaning = "If a move just occurred, is it likely to follow through rather than fail quickly?"
     if close is None or hi20 is None:
@@ -94,7 +113,21 @@ def b2_follow_through_setup(
         )
     breakout = close >= hi20
     clv_val = clv if clv is not None else 0.0
-    if breakout and clv_val > 0.3:
+
+    if structure_breakout_quality_bucket is not None:
+        if structure_breakout_quality_bucket >= 2:
+            sc = 2
+        elif structure_breakout_quality_bucket >= 1:
+            sc = 1
+        else:
+            sc = 0
+    elif (
+        structure_overhead_resistance_atr is not None
+        and structure_overhead_resistance_atr <= 0.5
+        and clv_val > 0.0
+    ):
+        sc = 2
+    elif breakout and clv_val > 0.3:
         sc = 2
     elif breakout or clv_val > 0.0:
         sc = 1
@@ -104,7 +137,14 @@ def b2_follow_through_setup(
         "Follow-Through Setup",
         meaning,
         sc,
-        {"close": close, "hi20": hi20, "breakout": breakout, "clv": clv},
+        {
+            "close": close,
+            "hi20": hi20,
+            "breakout": breakout,
+            "clv": clv,
+            "structure_overhead_resistance_atr": structure_overhead_resistance_atr,
+            "structure_breakout_quality_bucket": structure_breakout_quality_bucket,
+        },
     )
 
 
@@ -132,22 +172,36 @@ def b3_rs_momentum(
 
 
 def b4_support_cushion(
-    *, close: Optional[float], ema20: Optional[float], atrp14: Optional[float]
+    *,
+    close: Optional[float],
+    ema20: Optional[float],
+    atrp14: Optional[float],
+    structure_support_cushion_atr: Optional[float] = None,
 ) -> ForecastCheck:
     meaning = "How much room exists before key support breaks (buffer against normal pullbacks)?"
-    if close is None or ema20 is None:
-        return neutral_check(
-            "Support Cushion", meaning, "Insufficient history; neutral."
-        )
-    dist_pct = ((close - ema20) / close) * 100.0 if close else 0.0
-    denom = atrp14 if (atrp14 is not None and atrp14 > 0) else 1.0
-    cushion_proxy = dist_pct / denom
-    if cushion_proxy >= 1.5:
-        sc = 2
-    elif cushion_proxy >= 0.5:
-        sc = 1
+    if structure_support_cushion_atr is not None:
+        cushion_proxy = structure_support_cushion_atr
+        dist_pct = None
+        if cushion_proxy >= 1.5:
+            sc = 2
+        elif cushion_proxy >= 0.5:
+            sc = 1
+        else:
+            sc = 0
     else:
-        sc = 0
+        if close is None or ema20 is None:
+            return neutral_check(
+                "Support Cushion", meaning, "Insufficient history; neutral."
+            )
+        dist_pct = ((close - ema20) / close) * 100.0 if close else 0.0
+        denom = atrp14 if (atrp14 is not None and atrp14 > 0) else 1.0
+        cushion_proxy = dist_pct / denom
+        if cushion_proxy >= 1.5:
+            sc = 2
+        elif cushion_proxy >= 0.5:
+            sc = 1
+        else:
+            sc = 0
     return ForecastCheck(
         "Support Cushion",
         meaning,
@@ -156,6 +210,7 @@ def b4_support_cushion(
             "dist_pct_to_ema20": dist_pct,
             "atrp14": atrp14,
             "cushion_proxy": cushion_proxy,
+            "structure_support_cushion_atr": structure_support_cushion_atr,
         },
     )
 
