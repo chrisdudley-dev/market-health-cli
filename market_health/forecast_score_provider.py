@@ -34,8 +34,96 @@ from .forecast_checks_b_backdrop import compute_b_checks
 from .forecast_checks_c_crowding import compute_c_checks
 from .forecast_checks_d_danger import compute_d_checks
 from .forecast_checks_e_environment import compute_e_checks
+from .structure_engine import compute_structure_summary, empty_structure_summary
 
 Number = Union[int, float]
+
+
+def _structure_context_for_ohlcv(
+    *,
+    close: Sequence[float],
+    ohlcv: OHLCV,
+    idx: int,
+    atrp14_now: Optional[float],
+) -> Dict[str, Any]:
+    context: Dict[str, Any] = {
+        "timeframe": "1d",
+        "closes": list(close),
+    }
+
+    if ohlcv.high is not None and ohlcv.low is not None:
+        highs = [float(x) for x in ohlcv.high]
+        lows = [float(x) for x in ohlcv.low]
+        if len(highs) == len(close) and len(lows) == len(close):
+            context["highs"] = highs
+            context["lows"] = lows
+            if idx >= 1:
+                context["previous_bar"] = {
+                    "high": highs[idx - 1],
+                    "low": lows[idx - 1],
+                    "close": close[idx - 1],
+                }
+
+    if ohlcv.volume is not None:
+        volumes = [float(v) for v in ohlcv.volume]
+        if len(volumes) == len(close):
+            context["prices"] = list(close)
+            context["volumes"] = volumes
+
+    if atrp14_now is not None:
+        atr_now = (float(close[idx]) * float(atrp14_now)) / 100.0
+        if atr_now > 0:
+            context["atr"] = atr_now
+
+    return context
+
+
+def _compute_structure_sidecar(
+    *,
+    symbol: str,
+    close: Sequence[float],
+    ohlcv: OHLCV,
+    idx: int,
+    atrp14_now: Optional[float],
+) -> Dict[str, Any]:
+    try:
+        return compute_structure_summary(
+            symbol,
+            price=float(close[idx]),
+            context=_structure_context_for_ohlcv(
+                close=close,
+                ohlcv=ohlcv,
+                idx=idx,
+                atrp14_now=atrp14_now,
+            ),
+        ).to_dict()
+    except Exception as exc:
+        fallback = empty_structure_summary(symbol, price=float(close[idx])).to_dict()
+        fallback["notes"] = [
+            *list(fallback.get("notes") or []),
+            f"error={exc.__class__.__name__}",
+        ]
+        return fallback
+
+
+def _has_zone_levels(zone: Any) -> bool:
+    return isinstance(zone, dict) and any(
+        zone.get(k) is not None for k in ("lower", "center", "upper")
+    )
+
+
+def _structure_explainability(structure_summary: Dict[str, Any]) -> Dict[str, Any]:
+    has_levels = _has_zone_levels(
+        structure_summary.get("nearest_support_zone")
+    ) or _has_zone_levels(structure_summary.get("nearest_resistance_zone"))
+
+    return {
+        "structure_sidecar_version": structure_summary.get("version"),
+        "structure_has_levels": has_levels,
+        "structure_no_edge": not has_levels,
+        "structure_state_tags": list(structure_summary.get("state_tags") or []),
+        "structure_notes": list(structure_summary.get("notes") or []),
+    }
 
 
 def compute_forecast_universe(
@@ -164,6 +252,15 @@ def compute_forecast_universe(
             else None
         )
 
+        structure_summary = _compute_structure_sidecar(
+            symbol=sym_u,
+            close=close,
+            ohlcv=ohlcv,
+            idx=idx,
+            atrp14_now=atrp14_now,
+        )
+        explainability = _structure_explainability(structure_summary)
+
         results[sym_u] = {}
 
         for H in horizons:
@@ -281,6 +378,8 @@ def compute_forecast_universe(
                 "max_points": total_max,
                 "categories": categories,
                 "diagnostics": diagnostics,
+                "structure_summary": structure_summary,
+                "explainability": explainability,
             }
 
     return results

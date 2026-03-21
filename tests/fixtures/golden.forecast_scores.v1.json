@@ -149,9 +149,33 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ]
+        },
         "forecast_score": 0.583333,
         "max_points": 60,
-        "points": 35
+        "points": 35,
+        "structure_summary": {
+          "breakdown_risk_bucket": 1,
+          "breakout_quality_bucket": 2,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.203256,
+          "state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ],
+          "support_cushion_atr": 0.6,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -296,9 +320,33 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ]
+        },
         "forecast_score": 0.583333,
         "max_points": 60,
-        "points": 35
+        "points": 35,
+        "structure_summary": {
+          "breakdown_risk_bucket": 1,
+          "breakout_quality_bucket": 2,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.203256,
+          "state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ],
+          "support_cushion_atr": 0.6,
+          "version": "v1"
+        }
       }
     },
     "XLB": {
@@ -445,9 +493,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -592,9 +662,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLC": {
@@ -741,9 +833,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -888,9 +1002,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLE": {
@@ -1037,9 +1173,33 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ]
+        },
         "forecast_score": 0.7,
         "max_points": 60,
-        "points": 42
+        "points": 42,
+        "structure_summary": {
+          "breakdown_risk_bucket": 1,
+          "breakout_quality_bucket": 2,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.3,
+          "state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ],
+          "support_cushion_atr": 0.7,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -1184,9 +1344,33 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ]
+        },
         "forecast_score": 0.7,
         "max_points": 60,
-        "points": 42
+        "points": 42,
+        "structure_summary": {
+          "breakdown_risk_bucket": 1,
+          "breakout_quality_bucket": 2,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.3,
+          "state_tags": [
+            "overhead_heavy",
+            "breakout_ready"
+          ],
+          "support_cushion_atr": 0.7,
+          "version": "v1"
+        }
       }
     },
     "XLF": {
@@ -1333,9 +1517,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 20
+        "points": 20,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.625,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.25407,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -1480,9 +1686,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 20
+        "points": 20,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.625,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.25407,
+          "version": "v1"
+        }
       }
     },
     "XLI": {
@@ -1629,9 +1857,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -1776,9 +2026,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 22
+        "points": 22,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLK": {
@@ -1925,9 +2197,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 20
+        "points": 20,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.625,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.25407,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -2072,9 +2366,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 20
+        "points": 20,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.625,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.25407,
+          "version": "v1"
+        }
       }
     },
     "XLP": {
@@ -2221,9 +2537,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -2368,9 +2706,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLRE": {
@@ -2517,9 +2877,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -2664,9 +3046,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLU": {
@@ -2813,9 +3217,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -2960,9 +3386,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLV": {
@@ -3109,9 +3557,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -3256,9 +3726,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     },
     "XLY": {
@@ -3405,9 +3897,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       },
       "5": {
         "categories": {
@@ -3552,9 +4066,31 @@
             ]
           }
         },
+        "explainability": {
+          "structure_has_levels": true,
+          "structure_no_edge": false,
+          "structure_sidecar_version": "v1",
+          "structure_state_tags": [
+            "near_damage_zone"
+          ]
+        },
         "forecast_score": 0.35,
         "max_points": 60,
-        "points": 21
+        "points": 21,
+        "structure_summary": {
+          "breakdown_risk_bucket": 2,
+          "breakout_quality_bucket": 1,
+          "notes": [
+            "raw_levels=25",
+            "normalized_levels=25"
+          ],
+          "overhead_resistance_atr": 0.55,
+          "state_tags": [
+            "near_damage_zone"
+          ],
+          "support_cushion_atr": 0.101628,
+          "version": "v1"
+        }
       }
     }
   },

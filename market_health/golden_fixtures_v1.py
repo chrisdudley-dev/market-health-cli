@@ -50,6 +50,14 @@ def _sanitize_forecast(
             cats = payload.get("categories")
             cats = cats if isinstance(cats, dict) else {}
 
+            structure = payload.get("structure_summary")
+            structure = structure if isinstance(structure, dict) else {}
+
+            explainability = payload.get("explainability")
+            explainability = (
+                explainability if isinstance(explainability, dict) else {}
+            )
+
             slim_cats: Dict[str, Any] = {}
             for k in ("A", "B", "C", "D", "E"):
                 cat = cats.get(k)
@@ -74,6 +82,37 @@ def _sanitize_forecast(
                 "points": int(payload.get("points", 0) or 0),
                 "max_points": int(payload.get("max_points", 0) or 0),
                 "categories": slim_cats,
+                "structure_summary": {
+                    "version": str(structure.get("version", "")),
+                    "support_cushion_atr": _round_f(
+                        structure.get("support_cushion_atr")
+                    ),
+                    "overhead_resistance_atr": _round_f(
+                        structure.get("overhead_resistance_atr")
+                    ),
+                    "breakout_quality_bucket": structure.get(
+                        "breakout_quality_bucket"
+                    ),
+                    "breakdown_risk_bucket": structure.get(
+                        "breakdown_risk_bucket"
+                    ),
+                    "state_tags": list(structure.get("state_tags") or []),
+                    "notes": list(structure.get("notes") or []),
+                },
+                "explainability": {
+                    "structure_sidecar_version": explainability.get(
+                        "structure_sidecar_version"
+                    ),
+                    "structure_has_levels": bool(
+                        explainability.get("structure_has_levels", False)
+                    ),
+                    "structure_no_edge": bool(
+                        explainability.get("structure_no_edge", False)
+                    ),
+                    "structure_state_tags": list(
+                        explainability.get("structure_state_tags") or []
+                    ),
+                },
             }
 
         if sym_out:
