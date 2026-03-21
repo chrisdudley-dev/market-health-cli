@@ -129,16 +129,16 @@ PY
 # JERBOA_UI_EXPORT_V1
 # Update UI contract (React/web reads this single file)
 
+  # Forecast scores (fail-soft)
+  if [ -x "${FORECAST_REFRESH}" ]; then
+    "${FORECAST_REFRESH}" --quiet >/dev/null || true
+  fi
+
   # Recommendations refresh (fail-soft)
   if [ -x "${RECOMMEND_REFRESH}" ]; then
     "${RECOMMEND_REFRESH}" --quiet >/dev/null || rec_rc=$?
   else
     rec_rc=127
-  fi
-
-  # Forecast scores (fail-soft)
-  if [ -x "${FORECAST_REFRESH}" ]; then
-    "${FORECAST_REFRESH}" --quiet >/dev/null || true
   fi
 
   "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
