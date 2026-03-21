@@ -334,6 +334,7 @@ def d5_drawdown_vulnerability(
         },
     )
 
+
 def d6_risk_reward_feasibility(
     *,
     atrp14: Optional[float] = None,
