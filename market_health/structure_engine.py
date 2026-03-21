@@ -131,12 +131,124 @@ class StructureSummary:
         }
 
 
+def _structure_zone_from_cluster(zone: ClusteredZone | None) -> StructureZone:
+    if zone is None:
+        return StructureZone()
+    return StructureZone(
+        lower=zone.lower,
+        center=zone.center,
+        upper=zone.upper,
+        weight=zone.weight,
+    )
+
+
+def _select_nearest_support_zone(
+    zones: Sequence[ClusteredZone], *, price: float | None
+) -> ClusteredZone | None:
+    supports = [zone for zone in zones if zone.kind == "support"]
+    if not supports:
+        return None
+    if price is None:
+        return max(supports, key=lambda zone: zone.center)
+    eligible = [zone for zone in supports if zone.center <= price]
+    if eligible:
+        return min(eligible, key=lambda zone: abs(price - zone.center))
+    return max(supports, key=lambda zone: zone.center)
+
+
+def _select_nearest_resistance_zone(
+    zones: Sequence[ClusteredZone], *, price: float | None
+) -> ClusteredZone | None:
+    resistances = [zone for zone in zones if zone.kind == "resistance"]
+    if not resistances:
+        return None
+    if price is None:
+        return min(resistances, key=lambda zone: zone.center)
+    eligible = [zone for zone in resistances if zone.center >= price]
+    if eligible:
+        return min(eligible, key=lambda zone: abs(zone.center - price))
+    return min(resistances, key=lambda zone: zone.center)
+
+
+def _infer_zone_width(
+    *,
+    price: float | None,
+    atr: float | None,
+    realized_vol: float | None,
+    explicit_zone_width: float | None = None,
+) -> float:
+    if explicit_zone_width is not None and explicit_zone_width > 0:
+        return float(explicit_zone_width)
+
+    atr_component = 0.25 * float(atr) if atr is not None and atr > 0 else 0.0
+    sigma_component = (
+        0.5 * float(price) * float(realized_vol)
+        if price is not None
+        and realized_vol is not None
+        and price > 0
+        and realized_vol > 0
+        else 0.0
+    )
+    return max(atr_component, sigma_component, 0.01)
+
+
+def _breakout_quality_bucket(
+    *,
+    support_cushion_atr: float | None,
+    overhead_resistance_atr: float | None,
+) -> int:
+    if overhead_resistance_atr is None:
+        return 0
+    if overhead_resistance_atr <= 0.5 and (
+        support_cushion_atr is None or support_cushion_atr >= 0.5
+    ):
+        return 2
+    if overhead_resistance_atr <= 1.5:
+        return 1
+    return 0
+
+
+def _breakdown_risk_bucket(*, support_cushion_atr: float | None) -> int:
+    if support_cushion_atr is None:
+        return 0
+    if support_cushion_atr <= 0.5:
+        return 2
+    if support_cushion_atr <= 1.5:
+        return 1
+    return 0
+
+
+def _state_tags(
+    *,
+    price: float | None,
+    support_zone: ClusteredZone | None,
+    support_cushion_atr: float | None,
+    overhead_resistance_atr: float | None,
+    breakout_quality_bucket: int,
+) -> tuple[str, ...]:
+    tags: list[str] = []
+
+    if support_cushion_atr is not None and support_cushion_atr <= 0.5:
+        tags.append("near_damage_zone")
+    if overhead_resistance_atr is not None and overhead_resistance_atr <= 0.5:
+        tags.append("overhead_heavy")
+    if breakout_quality_bucket == 2:
+        tags.append("breakout_ready")
+    if price is not None and support_zone is not None and support_zone.upper >= price:
+        tags.append("reclaim_ready")
+
+    return tuple(tags)
+
+
 def empty_structure_summary(
-    symbol: str, price: float | None = None
+    symbol: str,
+    price: float | None = None,
+    *,
+    as_of: str | None = None,
 ) -> StructureSummary:
     return StructureSummary(
         symbol=symbol,
-        as_of=datetime.now(timezone.utc).isoformat(),
+        as_of=as_of or datetime.now(timezone.utc).isoformat(),
         price=price,
     )
 
@@ -147,9 +259,230 @@ def compute_structure_summary(
     price: float | None = None,
     context: dict[str, Any] | None = None,
 ) -> StructureSummary:
-    """Return a placeholder structure summary."""
-    _ = context
-    return empty_structure_summary(symbol=symbol, price=price)
+    """Compute a minimal structure summary artifact from existing helpers."""
+    context = context or {}
+    timeframe = str(context.get("timeframe", "1d"))
+    as_of = context.get("as_of")
+
+    previous_bar = context.get("previous_bar") or {}
+    highs = context.get("highs") or []
+    lows = context.get("lows") or []
+    closes = context.get("closes") or []
+    prices = context.get("prices") or closes
+    volumes = context.get("volumes") or []
+
+    if price is None:
+        price = context.get("price")
+    if price is None and closes:
+        price = float(closes[-1])
+
+    atr = context.get("atr")
+    realized_vol = context.get("realized_vol")
+    close_for_sigma = context.get("close_for_sigma", price)
+
+    raw_levels: list[RawLevel] = []
+
+    prev_high = previous_bar.get("high")
+    prev_low = previous_bar.get("low")
+    prev_close = previous_bar.get("close")
+
+    if prev_high is not None and prev_low is not None:
+        raw_levels.extend(
+            generate_previous_bar_levels(
+                high=float(prev_high),
+                low=float(prev_low),
+                timeframe=timeframe,
+            )
+        )
+
+    if prev_high is not None and prev_low is not None and prev_close is not None:
+        raw_levels.extend(
+            generate_classic_pivot_levels(
+                high=float(prev_high),
+                low=float(prev_low),
+                close=float(prev_close),
+                timeframe=timeframe,
+            )
+        )
+
+    if highs and lows:
+        raw_levels.extend(
+            generate_rolling_high_low_levels(
+                highs=highs,
+                lows=lows,
+                windows=tuple(context.get("rolling_windows", (5, 10, 20))),
+                timeframe=timeframe,
+            )
+        )
+        raw_levels.extend(
+            generate_swing_levels(
+                highs=highs,
+                lows=lows,
+                left=int(context.get("swing_left", 2)),
+                right=int(context.get("swing_right", 2)),
+                timeframe=timeframe,
+            )
+        )
+        raw_levels.extend(
+            generate_donchian_levels(
+                highs=highs,
+                lows=lows,
+                period=int(context.get("donchian_period", 20)),
+                timeframe=timeframe,
+            )
+        )
+
+    if closes:
+        raw_levels.extend(
+            generate_moving_average_levels(
+                closes=closes,
+                sma_periods=tuple(context.get("sma_periods", (50,))),
+                ema_periods=tuple(context.get("ema_periods", (20,))),
+                timeframe=timeframe,
+            )
+        )
+        raw_levels.extend(
+            generate_bollinger_band_levels(
+                closes=closes,
+                period=int(context.get("bollinger_period", 20)),
+                num_std=float(context.get("bollinger_num_std", 2.0)),
+                timeframe=timeframe,
+            )
+        )
+
+    if prices and volumes and len(prices) == len(volumes):
+        raw_levels.extend(
+            generate_anchored_vwap_levels(
+                prices=prices,
+                volumes=volumes,
+                anchor_index=int(context.get("anchor_index", 0)),
+                timeframe=timeframe,
+            )
+        )
+
+    if price is not None and atr is not None:
+        raw_levels.extend(
+            generate_atr_band_levels(
+                price=float(price),
+                atr=float(atr),
+                multiples=tuple(context.get("atr_multiples", (1.0,))),
+                timeframe=timeframe,
+            )
+        )
+
+    normalized_levels = normalize_raw_levels(
+        raw_levels,
+        price=price,
+        atr=atr,
+        close=close_for_sigma,
+        realized_vol=realized_vol,
+    )
+
+    zones = cluster_raw_levels_into_zones(
+        raw_levels,
+        zone_width=_infer_zone_width(
+            price=price,
+            atr=atr,
+            realized_vol=realized_vol,
+            explicit_zone_width=context.get("zone_width"),
+        ),
+        source_weights=context.get("source_weights"),
+        timeframe_weights=context.get("timeframe_weights"),
+    )
+
+    support_zone = _select_nearest_support_zone(zones, price=price)
+    resistance_zone = _select_nearest_resistance_zone(zones, price=price)
+
+    support_edge = support_zone.upper if support_zone is not None else None
+    resistance_edge = resistance_zone.lower if resistance_zone is not None else None
+
+    support_cushion_atr = normalize_distance_atr(
+        price=price,
+        level=support_edge,
+        atr=atr,
+    )
+    overhead_resistance_atr = (
+        None
+        if resistance_edge is None
+        else -normalize_distance_atr(
+            price=price,
+            level=resistance_edge,
+            atr=atr,
+        )
+        if normalize_distance_atr(price=price, level=resistance_edge, atr=atr)
+        is not None
+        else None
+    )
+
+    support_cushion_sigma = normalize_distance_sigma(
+        price=price,
+        level=support_edge,
+        close=close_for_sigma,
+        realized_vol=realized_vol,
+    )
+    overhead_resistance_sigma = (
+        None
+        if resistance_edge is None
+        else -normalize_distance_sigma(
+            price=price,
+            level=resistance_edge,
+            close=close_for_sigma,
+            realized_vol=realized_vol,
+        )
+        if normalize_distance_sigma(
+            price=price,
+            level=resistance_edge,
+            close=close_for_sigma,
+            realized_vol=realized_vol,
+        )
+        is not None
+        else None
+    )
+
+    breakout_quality_bucket = _breakout_quality_bucket(
+        support_cushion_atr=support_cushion_atr,
+        overhead_resistance_atr=overhead_resistance_atr,
+    )
+    breakdown_risk_bucket = _breakdown_risk_bucket(
+        support_cushion_atr=support_cushion_atr,
+    )
+
+    return StructureSummary(
+        symbol=symbol,
+        as_of=as_of or datetime.now(timezone.utc).isoformat(),
+        price=price,
+        nearest_support_zone=_structure_zone_from_cluster(support_zone),
+        nearest_resistance_zone=_structure_zone_from_cluster(resistance_zone),
+        support_cushion_atr=support_cushion_atr,
+        overhead_resistance_atr=overhead_resistance_atr,
+        breakout_trigger=None if resistance_zone is None else resistance_zone.upper,
+        breakdown_trigger=None if support_zone is None else support_zone.lower,
+        reclaim_trigger=None if support_zone is None else support_zone.upper,
+        breakout_quality_bucket=breakout_quality_bucket,
+        breakdown_risk_bucket=breakdown_risk_bucket,
+        catastrophic_stop_candidate=None
+        if support_zone is None
+        else support_zone.lower,
+        state_tags=_state_tags(
+            price=price,
+            support_zone=support_zone,
+            support_cushion_atr=support_cushion_atr,
+            overhead_resistance_atr=overhead_resistance_atr,
+            breakout_quality_bucket=breakout_quality_bucket,
+        ),
+        tactical_stop_candidate=None if support_zone is None else support_zone.lower,
+        stop_buy_candidate=None if resistance_zone is None else resistance_zone.upper,
+        support_cushion_sigma=support_cushion_sigma,
+        overhead_resistance_sigma=overhead_resistance_sigma,
+        support_confluence_count=None if support_zone is None else support_zone.count,
+        resistance_confluence_count=None
+        if resistance_zone is None
+        else resistance_zone.count,
+        notes=(
+            f"raw_levels={len(raw_levels)}",
+            f"normalized_levels={len(normalized_levels)}",
+        ),
+    )
 
 
 def generate_previous_bar_levels(
