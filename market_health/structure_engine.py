@@ -5,19 +5,31 @@ Deterministic structure sidecar scaffolding for floor/ceiling work.
 This module is introduced as a non-invasive first step:
 - define the canonical structure summary types
 - provide a stable entrypoint for future integration
-- avoid changing current engine/recommendation behavior until later issues
+- add pure raw level generators without wiring them into engine/recommendations yet
 
 Tracked by:
 - #229 Create structure_engine.py module skeleton
+- #230 Implement raw candidate level generators for v1
 - #226 Freeze v1 structure fields and semantics
 - #227 Resolve engine module naming and import paths
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from statistics import fmean, pstdev
 from typing import Any
+
+
+@dataclass(frozen=True)
+class RawLevel:
+    value: float
+    kind: str
+    source: str
+    timeframe: str = "1d"
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -115,11 +127,368 @@ def compute_structure_summary(
     price: float | None = None,
     context: dict[str, Any] | None = None,
 ) -> StructureSummary:
-    """Return a placeholder structure summary.
-
-    This intentionally does not compute any real levels yet.
-    Follow-up issues will add candidate generation, normalization,
-    clustering, and downstream integration.
-    """
+    """Return a placeholder structure summary."""
     _ = context
     return empty_structure_summary(symbol=symbol, price=price)
+
+
+def generate_previous_bar_levels(
+    *, high: float, low: float, timeframe: str = "1d"
+) -> list[RawLevel]:
+    return [
+        RawLevel(
+            value=low,
+            kind="support",
+            source="previous_bar",
+            timeframe=timeframe,
+            label="prev_low",
+        ),
+        RawLevel(
+            value=high,
+            kind="resistance",
+            source="previous_bar",
+            timeframe=timeframe,
+            label="prev_high",
+        ),
+    ]
+
+
+def generate_rolling_high_low_levels(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    *,
+    windows: Sequence[int] = (5, 10, 20),
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if len(highs) != len(lows):
+        raise ValueError("highs and lows must have the same length")
+
+    levels: list[RawLevel] = []
+    for window in windows:
+        if window <= 0 or len(highs) < window:
+            continue
+        levels.extend(
+            [
+                RawLevel(
+                    value=min(lows[-window:]),
+                    kind="support",
+                    source="rolling_high_low",
+                    timeframe=timeframe,
+                    label=f"rolling_low_{window}",
+                ),
+                RawLevel(
+                    value=max(highs[-window:]),
+                    kind="resistance",
+                    source="rolling_high_low",
+                    timeframe=timeframe,
+                    label=f"rolling_high_{window}",
+                ),
+            ]
+        )
+    return levels
+
+
+def generate_classic_pivot_levels(
+    *, high: float, low: float, close: float, timeframe: str = "1d"
+) -> list[RawLevel]:
+    pivot = (high + low + close) / 3.0
+    r1 = 2 * pivot - low
+    s1 = 2 * pivot - high
+    r2 = pivot + (high - low)
+    s2 = pivot - (high - low)
+    r3 = high + 2 * (pivot - low)
+    s3 = low - 2 * (high - pivot)
+
+    return [
+        RawLevel(
+            value=pivot,
+            kind="reference",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="pivot",
+        ),
+        RawLevel(
+            value=s1,
+            kind="support",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="s1",
+        ),
+        RawLevel(
+            value=s2,
+            kind="support",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="s2",
+        ),
+        RawLevel(
+            value=s3,
+            kind="support",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="s3",
+        ),
+        RawLevel(
+            value=r1,
+            kind="resistance",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="r1",
+        ),
+        RawLevel(
+            value=r2,
+            kind="resistance",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="r2",
+        ),
+        RawLevel(
+            value=r3,
+            kind="resistance",
+            source="classic_pivot",
+            timeframe=timeframe,
+            label="r3",
+        ),
+    ]
+
+
+def _ema(values: Sequence[float], period: int) -> float:
+    alpha = 2.0 / (period + 1.0)
+    ema = float(values[0])
+    for value in values[1:]:
+        ema = alpha * float(value) + (1.0 - alpha) * ema
+    return ema
+
+
+def generate_moving_average_levels(
+    closes: Sequence[float],
+    *,
+    sma_periods: Sequence[int] = (50,),
+    ema_periods: Sequence[int] = (20,),
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if not closes:
+        return []
+
+    levels: list[RawLevel] = []
+
+    for period in sma_periods:
+        if period > 0 and len(closes) >= period:
+            levels.append(
+                RawLevel(
+                    value=fmean(closes[-period:]),
+                    kind="reference",
+                    source="moving_average",
+                    timeframe=timeframe,
+                    label=f"sma_{period}",
+                )
+            )
+
+    for period in ema_periods:
+        if period > 0 and len(closes) >= period:
+            levels.append(
+                RawLevel(
+                    value=_ema(closes, period),
+                    kind="reference",
+                    source="moving_average",
+                    timeframe=timeframe,
+                    label=f"ema_{period}",
+                )
+            )
+
+    return levels
+
+
+def generate_anchored_vwap_levels(
+    prices: Sequence[float],
+    volumes: Sequence[float],
+    *,
+    anchor_index: int = 0,
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if len(prices) != len(volumes):
+        raise ValueError("prices and volumes must have the same length")
+    if not prices:
+        return []
+    if anchor_index < 0 or anchor_index >= len(prices):
+        raise ValueError("anchor_index out of range")
+
+    anchored_prices = prices[anchor_index:]
+    anchored_volumes = volumes[anchor_index:]
+    total_volume = float(sum(anchored_volumes))
+    if total_volume <= 0:
+        return []
+
+    vwap = (
+        sum(
+            float(price) * float(volume)
+            for price, volume in zip(anchored_prices, anchored_volumes, strict=False)
+        )
+        / total_volume
+    )
+
+    return [
+        RawLevel(
+            value=vwap,
+            kind="reference",
+            source="anchored_vwap",
+            timeframe=timeframe,
+            label=f"anchored_vwap_{anchor_index}",
+        )
+    ]
+
+
+def generate_atr_band_levels(
+    *,
+    price: float,
+    atr: float,
+    multiples: Sequence[float] = (1.0,),
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if atr <= 0:
+        return []
+
+    levels: list[RawLevel] = []
+    for multiple in multiples:
+        if multiple <= 0:
+            continue
+        levels.extend(
+            [
+                RawLevel(
+                    value=price - multiple * atr,
+                    kind="support",
+                    source="atr_band",
+                    timeframe=timeframe,
+                    label=f"atr_lower_{multiple:g}x",
+                ),
+                RawLevel(
+                    value=price + multiple * atr,
+                    kind="resistance",
+                    source="atr_band",
+                    timeframe=timeframe,
+                    label=f"atr_upper_{multiple:g}x",
+                ),
+            ]
+        )
+    return levels
+
+
+def generate_swing_levels(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    *,
+    left: int = 2,
+    right: int = 2,
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if len(highs) != len(lows):
+        raise ValueError("highs and lows must have the same length")
+    if left < 1 or right < 1 or len(highs) < (left + right + 1):
+        return []
+
+    levels: list[RawLevel] = []
+    for idx in range(left, len(highs) - right):
+        high = highs[idx]
+        low = lows[idx]
+
+        left_highs = highs[idx - left : idx]
+        right_highs = highs[idx + 1 : idx + right + 1]
+        left_lows = lows[idx - left : idx]
+        right_lows = lows[idx + 1 : idx + right + 1]
+
+        if all(high > value for value in left_highs) and all(
+            high >= value for value in right_highs
+        ):
+            levels.append(
+                RawLevel(
+                    value=high,
+                    kind="resistance",
+                    source="swing",
+                    timeframe=timeframe,
+                    label=f"swing_high_{idx}",
+                )
+            )
+
+        if all(low < value for value in left_lows) and all(
+            low <= value for value in right_lows
+        ):
+            levels.append(
+                RawLevel(
+                    value=low,
+                    kind="support",
+                    source="swing",
+                    timeframe=timeframe,
+                    label=f"swing_low_{idx}",
+                )
+            )
+
+    return levels
+
+
+def generate_donchian_levels(
+    highs: Sequence[float],
+    lows: Sequence[float],
+    *,
+    period: int = 20,
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if len(highs) != len(lows):
+        raise ValueError("highs and lows must have the same length")
+    if period <= 0 or len(highs) < period:
+        return []
+
+    return [
+        RawLevel(
+            value=min(lows[-period:]),
+            kind="support",
+            source="donchian",
+            timeframe=timeframe,
+            label=f"donchian_lower_{period}",
+        ),
+        RawLevel(
+            value=max(highs[-period:]),
+            kind="resistance",
+            source="donchian",
+            timeframe=timeframe,
+            label=f"donchian_upper_{period}",
+        ),
+    ]
+
+
+def generate_bollinger_band_levels(
+    closes: Sequence[float],
+    *,
+    period: int = 20,
+    num_std: float = 2.0,
+    timeframe: str = "1d",
+) -> list[RawLevel]:
+    if period <= 0 or len(closes) < period:
+        return []
+
+    window = [float(value) for value in closes[-period:]]
+    mid = fmean(window)
+    std = pstdev(window) if len(window) > 1 else 0.0
+
+    return [
+        RawLevel(
+            value=mid - num_std * std,
+            kind="support",
+            source="bollinger",
+            timeframe=timeframe,
+            label=f"bollinger_lower_{period}",
+        ),
+        RawLevel(
+            value=mid,
+            kind="reference",
+            source="bollinger",
+            timeframe=timeframe,
+            label=f"bollinger_mid_{period}",
+        ),
+        RawLevel(
+            value=mid + num_std * std,
+            kind="resistance",
+            source="bollinger",
+            timeframe=timeframe,
+            label=f"bollinger_upper_{period}",
+        ),
+    ]
