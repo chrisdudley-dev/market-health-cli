@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${REPO:?export REPO=OWNER/REPO first}"
+BRANCH="$(git branch --show-current)"
 
-echo "Repo:   $REPO"
-echo "Branch: $(git branch --show-current)"
+echo "Repo:   ${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo current-repo)}"
+echo "Branch: $BRANCH"
 echo
 
 echo "PR status:"
-gh pr status --repo "$REPO" || true
+gh pr status || true
 echo
 
 echo "PR checks:"
 set +e
-gh pr checks --repo "$REPO"
+gh pr checks
 rc=$?
 set -e
 
@@ -23,14 +23,14 @@ if [ "$rc" -eq 0 ]; then
 elif [ "$rc" -eq 8 ]; then
   echo
   echo "CI is still pending."
-  run_id="$(gh run list --repo "$REPO" --branch "$(git branch --show-current)" --limit 1 --json databaseId --jq '.[0].databaseId')"
+  run_id="$(gh run list --branch "$BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId')"
   if [ -n "${run_id:-}" ] && [ "$run_id" != "null" ]; then
-    gh run watch --repo "$REPO" "$run_id" --compact
+    gh run watch "$run_id" --compact
   else
     echo "No workflow run found for this branch yet."
   fi
 else
   echo
-  echo "CI has failures or no PR is connected yet."
+  echo "CI has failures."
   exit "$rc"
 fi
