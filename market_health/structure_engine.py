@@ -33,6 +33,13 @@ class RawLevel:
 
 
 @dataclass(frozen=True)
+class NormalizedLevel:
+    raw_level: RawLevel
+    distance_atr: float | None = None
+    distance_sigma: float | None = None
+
+
+@dataclass(frozen=True)
 class StructureZone:
     lower: float | None = None
     center: float | None = None
@@ -491,4 +498,79 @@ def generate_bollinger_band_levels(
             timeframe=timeframe,
             label=f"bollinger_upper_{period}",
         ),
+    ]
+
+
+def normalize_distance_atr(
+    *, price: float | None, level: float | None, atr: float | None
+) -> float | None:
+    if price is None or level is None or atr is None or atr <= 0:
+        return None
+    return (float(price) - float(level)) / float(atr)
+
+
+def normalize_distance_sigma(
+    *,
+    price: float | None,
+    level: float | None,
+    close: float | None,
+    realized_vol: float | None,
+) -> float | None:
+    if (
+        price is None
+        or level is None
+        or close is None
+        or realized_vol is None
+        or close <= 0
+        or realized_vol <= 0
+    ):
+        return None
+
+    denom = float(close) * float(realized_vol)
+    if denom <= 0:
+        return None
+    return (float(price) - float(level)) / denom
+
+
+def normalize_raw_level(
+    raw_level: RawLevel,
+    *,
+    price: float | None,
+    atr: float | None,
+    close: float | None,
+    realized_vol: float | None,
+) -> NormalizedLevel:
+    return NormalizedLevel(
+        raw_level=raw_level,
+        distance_atr=normalize_distance_atr(
+            price=price,
+            level=raw_level.value,
+            atr=atr,
+        ),
+        distance_sigma=normalize_distance_sigma(
+            price=price,
+            level=raw_level.value,
+            close=close,
+            realized_vol=realized_vol,
+        ),
+    )
+
+
+def normalize_raw_levels(
+    raw_levels: Sequence[RawLevel],
+    *,
+    price: float | None,
+    atr: float | None,
+    close: float | None,
+    realized_vol: float | None,
+) -> list[NormalizedLevel]:
+    return [
+        normalize_raw_level(
+            raw_level,
+            price=price,
+            atr=atr,
+            close=close,
+            realized_vol=realized_vol,
+        )
+        for raw_level in raw_levels
     ]
