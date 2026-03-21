@@ -2,6 +2,13 @@
 PY="/root/market-health-cli/.venv/bin/python"
 set -Eeuo pipefail
 
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+POSITIONS_REFRESH="${BIN_DIR}/jerboa-market-health-positions-refresh"
+MARKET_REFRESH="${BIN_DIR}/jerboa-market-health-refresh"
+RECOMMENDATIONS_REFRESH="${BIN_DIR}/jerboa-market-health-recommendations-refresh"
+FORECAST_REFRESH="${BIN_DIR}/jerboa-market-health-forecast-scores-refresh"
+UI_EXPORT="${BIN_DIR}/jerboa-market-health-ui-export"
+
 FORCE=0
 ARGS=()
 while [ $# -gt 0 ]; do
@@ -59,9 +66,9 @@ rec_rc=0
 
 # Positions refresh (prefer existing positions.v1.json unless forced or CSV provided)
 if [ "${ARGS[0]:-}" = "--csv" ] && [ -n "${ARGS[1]:-}" ]; then
-  "${HOME}/bin/jerboa-market-health-positions-refresh" --csv "${ARGS[1]}" || pos_rc=$?
+  "$POSITIONS_REFRESH" --csv "${ARGS[1]}" || pos_rc=$?
 elif [ "$FORCE" -eq 1 ] || [ ! -s "$POS_JSON" ] || [ "${JERBOA_POSITIONS_ALWAYS_REFRESH:-0}" = "1" ]; then
-  "${HOME}/bin/jerboa-market-health-positions-refresh" || pos_rc=$?
+  "$POSITIONS_REFRESH" || pos_rc=$?
 else
   # positions.v1.json already exists and is non-empty; skip noisy discovery refresh
   pos_rc=0
@@ -69,9 +76,9 @@ fi
 
 # Market refresh (safe arg passing)
 if [ "$FORCE" -eq 1 ]; then
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "$MARKET_REFRESH" --force "${ARGS[@]}" || mkt_rc=$?
 else
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "$MARKET_REFRESH" "${ARGS[@]}" || mkt_rc=$?
 fi
 
 a_env="$(mtime "$ENV_JSON")"
@@ -127,19 +134,19 @@ PY
 # Update UI contract (React/web reads this single file)
 
   # Recommendations refresh (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-recommendations-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-recommendations-refresh" --quiet >/dev/null || rec_rc=$?
+  if [ -x "$RECOMMENDATIONS_REFRESH" ]; then
+    "$RECOMMENDATIONS_REFRESH" --quiet >/dev/null || rec_rc=$?
   else
     rec_rc=127
   fi
 
 
   # Forecast scores (fail-soft)
-  if [ -x "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" ]; then
-    "${HOME}/bin/jerboa-market-health-forecast-scores-refresh" --quiet >/dev/null || true
+  if [ -x "$FORECAST_REFRESH" ]; then
+    "$FORECAST_REFRESH" --quiet >/dev/null || true
   fi
 
-  "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
+  "$UI_EXPORT" --quiet >/dev/null || true
 
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$status" = "error" ]; then
@@ -151,26 +158,49 @@ else
   echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec rec_rc=$rec_rc"
 fi
 
-# Exit non-zero only if a subcommand failed
-if [ "$status" = "error" ]; then
-  exit 1
-fi
-exit 0
 # JERBOA_REC_ASOF_SYNC_V1
 # Keep recommendations "asof" coherent with the UI snapshot "asof".
 # This does NOT hit Schwab; it only edits the local JSON file.
 UI_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
 if [ -s "$UI_JSON" ] && [ -s "$REC_JSON" ]; then
-  ui_asof="$("$PY" - <<'PYASOF'
+  ui_asof="$(
+    UI_JSON="$UI_JSON" "$PY" - <<'PYASOF'
 import json
+import os
 from pathlib import Path
-d=json.loads(Path("/root/.cache/jerboa/market_health.ui.v1.json").read_text())
-print(d.get("asof",""))
+
+p = Path(os.environ["UI_JSON"])
+d = json.loads(p.read_text(encoding="utf-8"))
+print(d.get("asof", ""))
 PYASOF
   )"
   if [ -n "$ui_asof" ]; then
-    REC_JSON="$REC_JSON" UI_ASOF="$ui_asof" "$PY" -c 'import os,json; from pathlib import Path; ui=os.environ.get("UI_ASOF",""); rp=Path(os.environ["REC_JSON"]); d=json.loads(rp.read_text(encoding="utf-8")); d["asof"]=ui; rec=d.get("recommendation"); (isinstance(rec,dict) and rec.__setitem__("asof",ui)); ("generated_at" in d and d.__setitem__("generated_at",ui)); rp.write_text(json.dumps(d, indent=2, sort_keys=True)+chr(10), encoding="utf-8")+chr(10), encoding="utf-8")'
+    REC_JSON="$REC_JSON" UI_ASOF="$ui_asof" "$PY" - <<'PYREC'
+import json
+import os
+from pathlib import Path
+
+ui = os.environ.get("UI_ASOF", "")
+rp = Path(os.environ["REC_JSON"])
+d = json.loads(rp.read_text(encoding="utf-8"))
+
+d["asof"] = ui
+
+rec = d.get("recommendation")
+if isinstance(rec, dict):
+    rec["asof"] = ui
+
+if "generated_at" in d:
+    d["generated_at"] = ui
+
+rp.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PYREC
   fi
 fi
 # --- end JERBOA_REC_ASOF_SYNC_V1 ---
 
+# Exit non-zero only if a subcommand failed
+if [ "$status" = "error" ]; then
+  exit 1
+fi
+exit 0
