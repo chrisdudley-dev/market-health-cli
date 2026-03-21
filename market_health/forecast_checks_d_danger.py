@@ -38,6 +38,8 @@ def compute_d_checks(
     iv_rank_1y: Optional[float] = None,
     iv_percentile_1y: Optional[float] = None,
     iv_status: Optional[str] = None,
+    structure_support_cushion_atr: Optional[float] = None,
+    structure_breakdown_risk_bucket: Optional[int] = None,
 ) -> List[ForecastCheck]:
     return [
         d1_volatility_trend(
@@ -52,9 +54,19 @@ def compute_d_checks(
         d2_tail_gap_risk(H=H, returns=returns, calendar=calendar, atrp14=atrp14),
         d3_market_coupling_trend(corr5=corr5, corr20=corr20),
         d4_liquidity_stress(returns=returns, volume=volume),
-        d5_drawdown_vulnerability(close=close, lo20=lo20, atrp14=atrp14),
+        d5_drawdown_vulnerability(
+            close=close,
+            lo20=lo20,
+            atrp14=atrp14,
+            structure_support_cushion_atr=structure_support_cushion_atr,
+            structure_breakdown_risk_bucket=structure_breakdown_risk_bucket,
+        ),
         d6_risk_reward_feasibility(
-            atrp14=atrp14, support_cushion_proxy=support_cushion_proxy, corr20=corr20
+            atrp14=atrp14,
+            support_cushion_proxy=support_cushion_proxy,
+            corr20=corr20,
+            structure_support_cushion_atr=structure_support_cushion_atr,
+            structure_breakdown_risk_bucket=structure_breakdown_risk_bucket,
         ),
     ]
 
@@ -249,12 +261,17 @@ def d4_liquidity_stress(
 
 
 def d5_drawdown_vulnerability(
-    *, close: Optional[float], lo20: Optional[float], atrp14: Optional[float]
+    *,
+    close: Optional[float],
+    lo20: Optional[float],
+    atrp14: Optional[float],
+    structure_support_cushion_atr: Optional[float] = None,
+    structure_breakdown_risk_bucket: Optional[int] = None,
 ) -> ForecastCheck:
     meaning = (
         "Is the sector close to damage levels where a small drop breaks structure?"
     )
-    if close is None or lo20 is None:
+    if structure_support_cushion_atr is None and (close is None or lo20 is None):
         return neutral_check(
             "Drawdown Vulnerability", meaning, "Insufficient history; neutral."
         )
@@ -300,6 +317,9 @@ def d6_risk_reward_feasibility(
         {
             "atrp14": atrp14,
             "support_cushion_proxy": support_cushion_proxy,
+            "effective_cushion": effective_cushion,
+            "structure_support_cushion_atr": structure_support_cushion_atr,
+            "structure_breakdown_risk_bucket": structure_breakdown_risk_bucket,
             "corr20": corr20,
         },
     )
