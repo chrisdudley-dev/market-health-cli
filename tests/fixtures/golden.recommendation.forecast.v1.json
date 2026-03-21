@@ -26,16 +26,16 @@
     "constraints_triggered": [],
     "diagnostics": {
       "decision_metric": "robust_edge",
-      "edge": 0.35,
+      "edge": 0.366667,
       "edges_by_h": {
-        "1": 0.35,
-        "5": 0.35
+        "1": 0.366667,
+        "5": 0.366667
       },
       "mode": "forecast",
-      "robust_edge": 0.35
+      "robust_edge": 0.366667
     },
     "from_symbol": "XLF",
-    "reason": "Forecast robust edge 0.350 clears threshold 0.120.",
+    "reason": "Forecast robust edge 0.367 clears threshold 0.120.",
     "to_symbol": "XLE"
   },
   "schema": "golden.recommendation.forecast.v1"

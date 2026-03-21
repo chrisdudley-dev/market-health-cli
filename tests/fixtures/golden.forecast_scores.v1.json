@@ -112,11 +112,11 @@
               },
               {
                 "label": "Drawdown Vulnerability",
-                "score": 2
+                "score": 1
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 1
               }
             ]
           },
@@ -149,9 +149,9 @@
             ]
           }
         },
-        "forecast_score": 0.616667,
+        "forecast_score": 0.583333,
         "max_points": 60,
-        "points": 37
+        "points": 35
       },
       "5": {
         "categories": {
@@ -259,11 +259,11 @@
               },
               {
                 "label": "Drawdown Vulnerability",
-                "score": 2
+                "score": 1
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 1
               }
             ]
           },
@@ -296,9 +296,9 @@
             ]
           }
         },
-        "forecast_score": 0.616667,
+        "forecast_score": 0.583333,
         "max_points": 60,
-        "points": 37
+        "points": 35
       }
     },
     "XLB": {
@@ -412,7 +412,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -445,9 +445,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       },
       "5": {
         "categories": {
@@ -559,7 +559,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -592,9 +592,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       }
     },
     "XLC": {
@@ -708,7 +708,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -741,9 +741,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       },
       "5": {
         "categories": {
@@ -855,7 +855,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -888,9 +888,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       }
     },
     "XLE": {
@@ -1300,7 +1300,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 1
+                "score": 0
               }
             ]
           },
@@ -1333,9 +1333,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 21
+        "points": 20
       },
       "5": {
         "categories": {
@@ -1447,7 +1447,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 1
+                "score": 0
               }
             ]
           },
@@ -1480,9 +1480,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 21
+        "points": 20
       }
     },
     "XLI": {
@@ -1596,7 +1596,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -1629,9 +1629,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       },
       "5": {
         "categories": {
@@ -1743,7 +1743,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -1776,9 +1776,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 24
+        "points": 22
       }
     },
     "XLK": {
@@ -1892,7 +1892,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 1
+                "score": 0
               }
             ]
           },
@@ -1925,9 +1925,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 21
+        "points": 20
       },
       "5": {
         "categories": {
@@ -2039,7 +2039,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 1
+                "score": 0
               }
             ]
           },
@@ -2072,9 +2072,9 @@
             ]
           }
         },
-        "forecast_score": 0.35,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 21
+        "points": 20
       }
     },
     "XLP": {
@@ -2188,7 +2188,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2221,9 +2221,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       },
       "5": {
         "categories": {
@@ -2335,7 +2335,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2368,9 +2368,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       }
     },
     "XLRE": {
@@ -2484,7 +2484,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2517,9 +2517,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       },
       "5": {
         "categories": {
@@ -2631,7 +2631,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2664,9 +2664,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       }
     },
     "XLU": {
@@ -2780,7 +2780,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2813,9 +2813,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       },
       "5": {
         "categories": {
@@ -2927,7 +2927,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -2960,9 +2960,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       }
     },
     "XLV": {
@@ -3076,7 +3076,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -3109,9 +3109,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       },
       "5": {
         "categories": {
@@ -3223,7 +3223,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -3256,9 +3256,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       }
     },
     "XLY": {
@@ -3372,7 +3372,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -3405,9 +3405,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       },
       "5": {
         "categories": {
@@ -3519,7 +3519,7 @@
               },
               {
                 "label": "Risk/Reward Feasibility",
-                "score": 2
+                "score": 0
               }
             ]
           },
@@ -3552,9 +3552,9 @@
             ]
           }
         },
-        "forecast_score": 0.383333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 23
+        "points": 21
       }
     }
   },
