@@ -1,4 +1,8 @@
-from market_health.structure_engine import StructureSummary, StructureZone, compute_structure_summary
+from market_health.structure_engine import (
+    StructureSummary,
+    StructureZone,
+    compute_structure_summary,
+)
 
 
 def test_structure_summary_defaults_are_stable() -> None:

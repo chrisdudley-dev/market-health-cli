@@ -99,7 +99,9 @@ class StructureSummary:
         }
 
 
-def empty_structure_summary(symbol: str, price: float | None = None) -> StructureSummary:
+def empty_structure_summary(
+    symbol: str, price: float | None = None
+) -> StructureSummary:
     return StructureSummary(
         symbol=symbol,
         as_of=datetime.now(timezone.utc).isoformat(),
