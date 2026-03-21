@@ -168,6 +168,194 @@ def recommend_forecast_mode(
     )
     best = ranked[0]
 
+    def _score_node(sym: str, h):
+        by_sym = scores.get(sym) if isinstance(scores, dict) else None
+        if not isinstance(by_sym, dict):
+            return {}
+        node = by_sym.get(str(h))
+        if not isinstance(node, dict):
+            node = by_sym.get(h)
+        return node if isinstance(node, dict) else {}
+
+    def _f(val):
+        try:
+            if val is None:
+                return None
+            return float(val)
+        except Exception:
+            return None
+
+    def _structure_summary(sym: str):
+        node = _score_node(sym, 5)
+        ss = node.get("structure_summary")
+        return ss if isinstance(ss, dict) else {}
+
+    current_utilities = constraints.get("current_utilities") or {}
+    utility_weights = constraints.get("utility_weights") or {
+        "c": 0.50,
+        "h1": 0.25,
+        "h5": 0.25,
+    }
+
+    def _current_score(sym: str):
+        cu = current_utilities.get(sym) if isinstance(current_utilities, dict) else None
+        if isinstance(cu, dict):
+            val = _f(cu.get("utility"))
+            if val is not None:
+                return val
+
+        by_sym = scores.get(sym) if isinstance(scores, dict) else None
+        if not isinstance(by_sym, dict):
+            return None
+
+        search_order = ("0", 0, "1", 1, "5", 5)
+        keys = (
+            "current_score",
+            "spot_score",
+            "base_score",
+            "health_score_current",
+            "current_health_score",
+            "current",
+            "c",
+        )
+        for h in search_order:
+            node = _score_node(sym, h)
+            if not isinstance(node, dict):
+                continue
+            for key in keys:
+                val = _f(node.get(key))
+                if val is not None:
+                    return val
+        return None
+
+    def _forecast_score(sym: str, h: int):
+        node = _score_node(sym, h)
+        if not isinstance(node, dict):
+            return None
+        for key in ("forecast_score", "health_score", "score"):
+            val = _f(node.get(key))
+            if val is not None:
+                return val
+        return None
+
+    def _blend(c, h1, h5):
+        weighted = []
+        for key, val in (("c", c), ("h1", h1), ("h5", h5)):
+            n = _f(val)
+            w = _f(utility_weights.get(key))
+            if n is None or w is None or w <= 0:
+                continue
+            weighted.append((n, w))
+
+        if weighted:
+            num = sum(v * w for v, w in weighted)
+            den = sum(w for _, w in weighted)
+            return None if den <= 0 else (num / den)
+
+        vals = [v for v in (c, h1, h5) if v is not None]
+        if not vals:
+            return None
+        return sum(vals) / len(vals)
+
+    def _state_tags(sym: str):
+        ss = _structure_summary(sym)
+        tags = ss.get("state_tags")
+        if isinstance(tags, (list, tuple)):
+            return [str(t) for t in tags]
+        return []
+
+    def _component_map(sym: str):
+        c = _current_score(sym)
+        h1 = _forecast_score(sym, 1)
+        h5 = _forecast_score(sym, 5)
+        blend = _blend(c, h1, h5)
+        ss = _structure_summary(sym)
+        sup = _f(ss.get("support_cushion_atr"))
+        res = _f(ss.get("overhead_resistance_atr"))
+        tags = _state_tags(sym)
+
+        return {
+            "symbol": sym,
+            "blend": blend,
+            "blended": blend,
+            "c": c,
+            "current": c,
+            "h1": h1,
+            "h5": h5,
+            "delta_1": None if c is None or h1 is None else (h1 - c),
+            "delta_5": None if c is None or h5 is None else (h5 - c),
+            "support_cushion_atr": sup,
+            "overhead_resistance_atr": res,
+            "state_tags": tags,
+        }
+
+    held_components = {sym: _component_map(sym) for sym in held_present}
+    candidate_components = {sym: _component_map(sym) for sym in candidates}
+
+    weakest_components = held_components.get(weakest) or _component_map(weakest)
+    weakest_blend = _f(weakest_components.get("blended"))
+
+    def _pair_row(row):
+        from_comp = held_components.get(weakest) or _component_map(weakest)
+        to_comp = candidate_components.get(row.to_symbol) or _component_map(
+            row.to_symbol
+        )
+        weighted = _f(getattr(row, "weighted_robust_edge", None))
+        if weighted is None:
+            weighted = _f(row.robust_edge)
+
+        return {
+            "from_symbol": weakest,
+            "to_symbol": row.to_symbol,
+            "from_blend": _f(from_comp.get("blended")),
+            "to_blend": _f(to_comp.get("blended")),
+            "robust_edge": _f(row.robust_edge),
+            "weighted_robust_edge": weighted,
+            "avg_edge": _f(row.avg_edge),
+            "edges_by_h": {str(h): row.edges_by_h.get(h) for h in horizons},
+            "vetoed": bool(row.vetoed),
+            "veto_reason": row.veto_reason,
+        }
+
+    candidate_pairs = [_pair_row(row) for row in ranked]
+    selected_pair = candidate_pairs[0] if candidate_pairs else {}
+
+    candidate_rows = []
+    for row in ranked:
+        comp = candidate_components.get(row.to_symbol) or _component_map(row.to_symbol)
+        cand_blend = _f(comp.get("blended"))
+        delta_blend = None
+        if weakest_blend is not None and cand_blend is not None:
+            delta_blend = cand_blend - weakest_blend
+
+        robust_edge = _f(row.robust_edge)
+        vetoed = bool(row.vetoed)
+        status = (
+            "BLOCKED" if vetoed or robust_edge is None or robust_edge < thr else "READY"
+        )
+
+        candidate_rows.append(
+            {
+                "symbol": row.to_symbol,
+                "blend": cand_blend,
+                "blended": cand_blend,
+                "c": _f(comp.get("current")),
+                "current": _f(comp.get("current")),
+                "h1": _f(comp.get("h1")),
+                "h5": _f(comp.get("h5")),
+                "delta_blend": delta_blend,
+                "delta_utility": robust_edge,
+                "edge": robust_edge,
+                "threshold": thr,
+                "status": status,
+                "vetoed": vetoed,
+                "veto_reason": row.veto_reason,
+                "support_cushion_atr": _f(comp.get("support_cushion_atr")),
+                "overhead_resistance_atr": _f(comp.get("overhead_resistance_atr")),
+                "state_tags": list(comp.get("state_tags") or []),
+            }
+        )
+
     diagnostics = {
         "mode": "forecast",
         "threshold": thr,
@@ -185,6 +373,12 @@ def recommend_forecast_mode(
         "disagreement_veto_edge": veto_edge,
         "vetoed": best.vetoed,
         "veto_reason": best.veto_reason,
+        "utility_weights": utility_weights,
+        "held_components": held_components,
+        "candidate_components": candidate_components,
+        "candidate_rows": candidate_rows,
+        "candidate_pairs": candidate_pairs,
+        "selected_pair": selected_pair,
     }
 
     if best.vetoed:

@@ -1048,10 +1048,10 @@ def render_reco(order, util, rec_doc, held_syms):
             status_rank = 0 if str(r.get("status", "")).upper() == "READY" else 1
             delta_rank = -(_num(r.get("delta_blended")) or -999.0)
             blend_rank = -(_num(r.get("blended")) or -999.0)
-            return (status_rank, delta_rank, blend_rank, str(r.get("sym", "")))
+            return (status_rank, delta_rank, blend_rank, str(r.get("symbol", "")))
 
         for row in sorted(rows, key=_sort_key):
-            sym = str(row.get("sym") or "")
+            sym = str(row.get("symbol") or "")
             is_best = sym == best
             sym_text = Text(
                 sym + (" ★" if is_best else ""),
@@ -1064,8 +1064,8 @@ def render_reco(order, util, rec_doc, held_syms):
                 Text(_fmt(row.get("h1")), style=_score_style(row.get("h1"))),
                 Text(_fmt(row.get("h5")), style=_score_style(row.get("h5"))),
                 Text(
-                    _fmt(row.get("delta_blended")),
-                    style=_delta_style(row.get("delta_blended"), thr),
+                    _fmt(row.get("delta_blend")),
+                    style=_delta_style(row.get("delta_blend"), thr),
                 ),
                 Text(_fmt(row.get("threshold")), style="cyan"),
                 Text(

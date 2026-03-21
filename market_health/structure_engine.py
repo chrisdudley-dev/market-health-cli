@@ -396,47 +396,58 @@ def compute_structure_summary(
     support_edge = support_zone.upper if support_zone is not None else None
     resistance_edge = resistance_zone.lower if resistance_zone is not None else None
 
-    support_cushion_atr = normalize_distance_atr(
+    support_cushion_atr_raw = normalize_distance_atr(
         price=price,
         level=support_edge,
         atr=atr,
     )
-    overhead_resistance_atr = (
+    support_cushion_atr = (
+        None
+        if support_cushion_atr_raw is None
+        else max(float(support_cushion_atr_raw), 0.0)
+    )
+
+    overhead_resistance_atr_raw = (
         None
         if resistance_edge is None
-        else -normalize_distance_atr(
+        else normalize_distance_atr(
             price=price,
             level=resistance_edge,
             atr=atr,
         )
-        if normalize_distance_atr(price=price, level=resistance_edge, atr=atr)
-        is not None
-        else None
+    )
+    overhead_resistance_atr = (
+        None
+        if overhead_resistance_atr_raw is None
+        else max(float(overhead_resistance_atr_raw), 0.0)
     )
 
-    support_cushion_sigma = normalize_distance_sigma(
+    support_cushion_sigma_raw = normalize_distance_sigma(
         price=price,
         level=support_edge,
         close=close_for_sigma,
         realized_vol=realized_vol,
     )
-    overhead_resistance_sigma = (
+    support_cushion_sigma = (
+        None
+        if support_cushion_sigma_raw is None
+        else max(float(support_cushion_sigma_raw), 0.0)
+    )
+
+    overhead_resistance_sigma_raw = (
         None
         if resistance_edge is None
-        else -normalize_distance_sigma(
+        else normalize_distance_sigma(
             price=price,
             level=resistance_edge,
             close=close_for_sigma,
             realized_vol=realized_vol,
         )
-        if normalize_distance_sigma(
-            price=price,
-            level=resistance_edge,
-            close=close_for_sigma,
-            realized_vol=realized_vol,
-        )
-        is not None
-        else None
+    )
+    overhead_resistance_sigma = (
+        None
+        if overhead_resistance_sigma_raw is None
+        else max(float(overhead_resistance_sigma_raw), 0.0)
     )
 
     breakout_quality_bucket = _breakout_quality_bucket(

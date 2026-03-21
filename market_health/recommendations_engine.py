@@ -129,7 +129,12 @@ def recommend(
         if any(str(h).upper() in fs for h in held_syms):
             from market_health.forecast_recommendations import recommend_forecast_mode
 
-            return recommend_forecast_mode(positions=positions, constraints=constraints)
+            fc_constraints = dict(constraints)
+            fc_constraints["current_utilities"] = utility_from_scores(scores)
+            return recommend_forecast_mode(
+                positions=positions,
+                constraints=fc_constraints,
+            )
     max_swaps = int(constraints.get("max_swaps_per_day", 1) or 1)
     swaps_today = int(constraints.get("swaps_today", 0) or 0)
 
