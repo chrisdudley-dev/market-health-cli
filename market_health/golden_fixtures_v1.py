@@ -54,9 +54,7 @@ def _sanitize_forecast(
             structure = structure if isinstance(structure, dict) else {}
 
             explainability = payload.get("explainability")
-            explainability = (
-                explainability if isinstance(explainability, dict) else {}
-            )
+            explainability = explainability if isinstance(explainability, dict) else {}
 
             slim_cats: Dict[str, Any] = {}
             for k in ("A", "B", "C", "D", "E"):
@@ -90,12 +88,8 @@ def _sanitize_forecast(
                     "overhead_resistance_atr": _round_f(
                         structure.get("overhead_resistance_atr")
                     ),
-                    "breakout_quality_bucket": structure.get(
-                        "breakout_quality_bucket"
-                    ),
-                    "breakdown_risk_bucket": structure.get(
-                        "breakdown_risk_bucket"
-                    ),
+                    "breakout_quality_bucket": structure.get("breakout_quality_bucket"),
+                    "breakdown_risk_bucket": structure.get("breakdown_risk_bucket"),
                     "state_tags": list(structure.get("state_tags") or []),
                     "notes": list(structure.get("notes") or []),
                 },
