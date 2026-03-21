@@ -262,64 +262,147 @@ def d4_liquidity_stress(
 
 def d5_drawdown_vulnerability(
     *,
-    close: Optional[float],
-    lo20: Optional[float],
-    atrp14: Optional[float],
+    close: Optional[float] = None,
+    lo20: Optional[float] = None,
+    atrp14: Optional[float] = None,
     structure_support_cushion_atr: Optional[float] = None,
     structure_breakdown_risk_bucket: Optional[int] = None,
 ) -> ForecastCheck:
-    meaning = (
-        "Is the sector close to damage levels where a small drop breaks structure?"
-    )
-    if structure_support_cushion_atr is None and (close is None or lo20 is None):
-        return neutral_check(
-            "Drawdown Vulnerability", meaning, "Insufficient history; neutral."
-        )
-    dist_pct = ((close - lo20) / close) * 100.0 if close else 0.0
-    denom = atrp14 if (atrp14 is not None and atrp14 > 0) else 1.0
-    vuln_proxy = dist_pct / denom
-    if vuln_proxy <= 0.8:
-        sc = 0
-    elif vuln_proxy <= 1.6:
-        sc = 1
-    else:
-        sc = 2
-    return ForecastCheck(
-        "Drawdown Vulnerability",
-        meaning,
-        sc,
-        {"dist_pct_to_20d_low": dist_pct, "atrp14": atrp14, "vuln_proxy": vuln_proxy},
-    )
+    if (
+        structure_support_cushion_atr is not None
+        and structure_breakdown_risk_bucket is not None
+    ):
+        effective_cushion = structure_support_cushion_atr
+        bucket = max(0, min(2, int(structure_breakdown_risk_bucket)))
 
+        if bucket >= 2 or effective_cushion < 0.5:
+            score = 0
+        elif bucket == 1 or effective_cushion < 1.0:
+            score = 1
+        else:
+            score = 2
+
+        return ForecastCheck(
+            label="Drawdown Vulnerability",
+            meaning="Is the sector close to damage levels where a small drop breaks structure?",
+            score=score,
+            metrics={
+                "effective_cushion": effective_cushion,
+                "structure_support_cushion_atr": structure_support_cushion_atr,
+                "structure_breakdown_risk_bucket": structure_breakdown_risk_bucket,
+            },
+        )
+
+    dist_pct_to_20d_low = None
+    vuln_proxy = None
+    if (
+        close is not None
+        and lo20 is not None
+        and atrp14 is not None
+        and close > 0
+        and atrp14 > 0
+    ):
+        dist_pct_to_20d_low = 100.0 * (close - lo20) / close
+        vuln_proxy = dist_pct_to_20d_low / atrp14
+    if vuln_proxy is None:
+        return ForecastCheck(
+            label="Drawdown Vulnerability",
+            meaning="Is the sector close to damage levels where a small drop breaks structure?",
+            score=1,
+            metrics={"dist_pct_to_20d_low": None, "atrp14": atrp14, "vuln_proxy": None},
+        )
+
+    if vuln_proxy <= 1.0:
+        score = 0
+    elif vuln_proxy <= 2.0:
+        score = 1
+    else:
+        score = 2
+
+    dist_pct_to_20d_low = None
+    if close is not None and lo20 is not None and close > 0:
+        dist_pct_to_20d_low = 100.0 * (close - lo20) / close
+
+    return ForecastCheck(
+        label="Drawdown Vulnerability",
+        meaning="Is the sector close to damage levels where a small drop breaks structure?",
+        score=score,
+        metrics={
+            "dist_pct_to_20d_low": dist_pct_to_20d_low,
+            "atrp14": atrp14,
+            "vuln_proxy": vuln_proxy,
+        },
+    )
 
 def d6_risk_reward_feasibility(
     *,
-    atrp14: Optional[float],
-    support_cushion_proxy: Optional[float],
-    corr20: Optional[float],
+    atrp14: Optional[float] = None,
+    support_cushion_proxy: Optional[float] = None,
+    corr20: Optional[float] = None,
+    structure_support_cushion_atr: Optional[float] = None,
+    structure_breakdown_risk_bucket: Optional[int] = None,
 ) -> ForecastCheck:
-    meaning = "Given forecast risk, can you size it and still have acceptable risk/reward feasibility?"
-    if atrp14 is None or support_cushion_proxy is None:
-        return neutral_check(
-            "Risk/Reward Feasibility", meaning, "Insufficient risk inputs; neutral."
+    effective_cushion = (
+        structure_support_cushion_atr
+        if structure_support_cushion_atr is not None
+        else support_cushion_proxy
+    )
+
+    if (
+        structure_support_cushion_atr is not None
+        and structure_breakdown_risk_bucket is not None
+    ):
+        bucket = max(0, min(2, int(structure_breakdown_risk_bucket)))
+
+        if bucket >= 2 or (effective_cushion is not None and effective_cushion < 0.5):
+            score = 0
+        elif bucket == 1 or (effective_cushion is not None and effective_cushion < 1.0):
+            score = 1
+        else:
+            score = 2
+
+        return ForecastCheck(
+            label="Risk/Reward Feasibility",
+            meaning="Is there enough room versus nearby damage levels to justify the setup?",
+            score=score,
+            metrics={
+                "atrp14": atrp14,
+                "support_cushion_proxy": support_cushion_proxy,
+                "effective_cushion": effective_cushion,
+                "structure_support_cushion_atr": structure_support_cushion_atr,
+                "structure_breakdown_risk_bucket": structure_breakdown_risk_bucket,
+                "corr20": corr20,
+            },
         )
-    c = corr20 if corr20 is not None else 0.5
-    if atrp14 >= 3.0 and support_cushion_proxy < 0.5 and c >= 0.85:
-        sc = 0
-    elif atrp14 >= 2.5 and support_cushion_proxy < 0.8:
-        sc = 1
+
+    if effective_cushion is None:
+        return ForecastCheck(
+            label="Risk/Reward Feasibility",
+            meaning="Is there enough room versus nearby damage levels to justify the setup?",
+            score=1,
+            metrics={
+                "atrp14": atrp14,
+                "support_cushion_proxy": support_cushion_proxy,
+                "effective_cushion": effective_cushion,
+                "corr20": corr20,
+            },
+        )
+
+    if effective_cushion < 0.5:
+        score = 0
+    elif effective_cushion < 1.0:
+        score = 1
     else:
-        sc = 2
+        score = 2
+
     return ForecastCheck(
-        "Risk/Reward Feasibility",
-        meaning,
-        sc,
-        {
+        label="Risk/Reward Feasibility",
+        meaning="Is there enough room versus nearby damage levels to justify the setup?",
+        score=score,
+        metrics={
             "atrp14": atrp14,
             "support_cushion_proxy": support_cushion_proxy,
             "effective_cushion": effective_cushion,
-            "structure_support_cushion_atr": structure_support_cushion_atr,
-            "structure_breakdown_risk_bucket": structure_breakdown_risk_bucket,
             "corr20": corr20,
         },
     )
