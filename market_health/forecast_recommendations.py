@@ -16,6 +16,12 @@ from typing import Any, Dict, List, Tuple
 from market_health.forecast_policy import rank_candidates_by_robust_edge
 from market_health.diversity_constraints import apply_swap, check_diversity
 from market_health.cooldown_policy import SwapEvent, check_cooldown
+from market_health.recommendation_weighting import (
+    DEFAULT_UTILITY_WEIGHTS,
+    DEFAULT_WEIGHTING_PROFILE,
+    infer_symbol_family,
+    resolve_utility_weights,
+)
 
 # Import types/helpers from legacy engine (safe: imported lazily by recommend()).
 from market_health.recommendations_engine import (
@@ -191,11 +197,57 @@ def recommend_forecast_mode(
         return ss if isinstance(ss, dict) else {}
 
     current_utilities = constraints.get("current_utilities") or {}
-    utility_weights = constraints.get("utility_weights") or {
-        "c": 0.50,
-        "h1": 0.25,
-        "h5": 0.25,
-    }
+    calibration_doc = constraints.get("calibration")
+    weighting_profile = (
+        constraints.get("weighting")
+        or (
+            calibration_doc.get("weighting")
+            if isinstance(calibration_doc, dict)
+            else None
+        )
+        or DEFAULT_WEIGHTING_PROFILE
+    )
+    base_utility_weights = (
+        constraints.get("utility_weights")
+        or (
+            weighting_profile.get("base_utility_weights")
+            if isinstance(weighting_profile, dict)
+            else None
+        )
+        or DEFAULT_UTILITY_WEIGHTS
+    )
+    regime_key = (
+        constraints.get("regime_key")
+        or (
+            calibration_doc.get("regime_key")
+            if isinstance(calibration_doc, dict)
+            else None
+        )
+        or "neutral"
+    )
+    symbol_family_by_symbol = constraints.get("symbol_family_by_symbol") or {}
+    weighting_source = (
+        constraints.get("calibration_source")
+        or (
+            calibration_doc.get("source") if isinstance(calibration_doc, dict) else None
+        )
+        or "defaults"
+    )
+
+    def _weight_context(sym: str):
+        explicit_family = None
+        if isinstance(symbol_family_by_symbol, dict):
+            raw_family = symbol_family_by_symbol.get(sym)
+            if isinstance(raw_family, str) and raw_family.strip():
+                explicit_family = raw_family.strip().lower()
+
+        family = explicit_family or infer_symbol_family(sym)
+        return resolve_utility_weights(
+            base_weights=base_utility_weights,
+            weighting_profile=weighting_profile,
+            regime_key=regime_key,
+            symbol_family=family,
+        )
 
     def _current_score(sym: str):
         cu = current_utilities.get(sym) if isinstance(current_utilities, dict) else None
@@ -238,11 +290,12 @@ def recommend_forecast_mode(
                 return val
         return None
 
-    def _blend(c, h1, h5):
+    def _blend(sym: str, c, h1, h5):
+        resolved_weights = _weight_context(sym).get("weights") or {}
         weighted = []
         for key, val in (("c", c), ("h1", h1), ("h5", h5)):
             n = _f(val)
-            w = _f(utility_weights.get(key))
+            w = _f(resolved_weights.get(key))
             if n is None or w is None or w <= 0:
                 continue
             weighted.append((n, w))
@@ -268,7 +321,7 @@ def recommend_forecast_mode(
         c = _current_score(sym)
         h1 = _forecast_score(sym, 1)
         h5 = _forecast_score(sym, 5)
-        blend = _blend(c, h1, h5)
+        blend = _blend(sym, c, h1, h5)
         ss = _structure_summary(sym)
         sup = _f(ss.get("support_cushion_atr"))
         res = _f(ss.get("overhead_resistance_atr"))
@@ -287,6 +340,8 @@ def recommend_forecast_mode(
             "support_cushion_atr": sup,
             "overhead_resistance_atr": res,
             "state_tags": tags,
+            "effective_utility_weights": _weight_context(sym).get("weights"),
+            "symbol_family": _weight_context(sym).get("symbol_family"),
         }
 
     held_components = {sym: _component_map(sym) for sym in held_present}
@@ -373,7 +428,17 @@ def recommend_forecast_mode(
         "disagreement_veto_edge": veto_edge,
         "vetoed": best.vetoed,
         "veto_reason": best.veto_reason,
-        "utility_weights": utility_weights,
+        "utility_weights": base_utility_weights,
+        "weighting_regime": regime_key,
+        "weighting_profile_source": weighting_source,
+        "symbol_families": {
+            sym: _weight_context(sym).get("symbol_family")
+            for sym in sorted(set(held_present + candidates), key=stable_tiebreak_key)
+        },
+        "effective_utility_weights_by_symbol": {
+            sym: _weight_context(sym).get("weights")
+            for sym in sorted(set(held_present + candidates), key=stable_tiebreak_key)
+        },
         "held_components": held_components,
         "candidate_components": candidate_components,
         "candidate_rows": candidate_rows,
