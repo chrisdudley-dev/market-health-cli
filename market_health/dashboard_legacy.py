@@ -623,6 +623,45 @@ def _fmt_state_tags(tags: Any) -> str:
     return ", ".join(str(x) for x in tags)
 
 
+def _render_execution_guidance_widget(
+    console, fs_doc: dict[str, Any], sym: str
+) -> None:
+    from rich import box
+    from rich.panel import Panel
+    from rich.table import Table
+
+    if not isinstance(sym, str) or not sym:
+        return
+
+    payload = _forecast_payload_for_symbol(fs_doc, sym, preferred_horizon=5)
+    structure = payload.get("structure_summary") if isinstance(payload, dict) else {}
+    if not isinstance(structure, dict) or not structure:
+        return
+
+    tactical_stop = structure.get("tactical_stop_candidate")
+    stop_buy = structure.get("stop_buy_candidate")
+    if not isinstance(tactical_stop, (int, float)) and not isinstance(
+        stop_buy, (int, float)
+    ):
+        return
+
+    tbl = Table.grid(padding=(0, 2))
+    tbl.add_column(style="bold cyan", no_wrap=True)
+    tbl.add_column(no_wrap=False)
+
+    tbl.add_row("tactical stop", _fmt_price(tactical_stop))
+    tbl.add_row("stop-buy", _fmt_price(stop_buy))
+
+    console.print(
+        Panel(
+            tbl,
+            title=f"Optional Execution Guidance — {sym}",
+            border_style="yellow",
+            box=box.ROUNDED,
+        )
+    )
+
+
 def _render_watch_levels_widget(console, fs_doc: dict[str, Any], sym: str) -> None:
     from rich import box
     from rich.panel import Panel
@@ -972,6 +1011,7 @@ def render_reco(order, util, rec_doc, held_syms):
 
     watch_sym = str(weakest or (held_syms[0] if held_syms else "") or "")
     _render_watch_levels_widget(console, fs_doc, watch_sym)
+    _render_execution_guidance_widget(console, fs_doc, watch_sym)
 
     pair_rows = d.get("candidate_pairs") or []
     stale_positions = "stale_positions_cache" in str(reason)
