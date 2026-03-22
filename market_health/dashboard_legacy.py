@@ -600,6 +600,68 @@ def _state_tag_short(tags: Any) -> str:
     return "-"
 
 
+def _fmt_price(v: Any) -> str:
+    if not isinstance(v, (int, float)):
+        return "-"
+    return f"{float(v):.2f}"
+
+
+def _fmt_zone_triplet(z: Any) -> str:
+    if not isinstance(z, dict):
+        return "-"
+    lower = z.get("lower")
+    center = z.get("center")
+    upper = z.get("upper")
+    if not any(isinstance(x, (int, float)) for x in (lower, center, upper)):
+        return "-"
+    return f"{_fmt_price(lower)} / {_fmt_price(center)} / {_fmt_price(upper)}"
+
+
+def _fmt_state_tags(tags: Any) -> str:
+    if not isinstance(tags, list) or not tags:
+        return "-"
+    return ", ".join(str(x) for x in tags)
+
+
+def _render_watch_levels_widget(console, fs_doc: dict[str, Any], sym: str) -> None:
+    from rich import box
+    from rich.panel import Panel
+    from rich.table import Table
+
+    if not isinstance(sym, str) or not sym:
+        return
+
+    payload = _forecast_payload_for_symbol(fs_doc, sym, preferred_horizon=5)
+    structure = payload.get("structure_summary") if isinstance(payload, dict) else {}
+    if not isinstance(structure, dict) or not structure:
+        return
+
+    support_zone = structure.get("nearest_support_zone")
+    resistance_zone = structure.get("nearest_resistance_zone")
+
+    tbl = Table.grid(padding=(0, 2))
+    tbl.add_column(style="bold cyan", no_wrap=True)
+    tbl.add_column(no_wrap=False)
+
+    tbl.add_row("support", _fmt_zone_triplet(support_zone))
+    tbl.add_row("resistance", _fmt_zone_triplet(resistance_zone))
+    tbl.add_row("breakout", _fmt_price(structure.get("breakout_trigger")))
+    tbl.add_row("breakdown", _fmt_price(structure.get("breakdown_trigger")))
+    tbl.add_row("reclaim", _fmt_price(structure.get("reclaim_trigger")))
+    tbl.add_row("cushion", _fmt_atr_short(structure.get("support_cushion_atr")))
+    tbl.add_row("overhead", _fmt_atr_short(structure.get("overhead_resistance_atr")))
+    tbl.add_row("state", _fmt_state_tags(structure.get("state_tags")))
+
+    console.print(
+        Panel(
+            tbl,
+            title=f"Watch Levels / Structure — {sym}",
+            border_style="bright_blue",
+            box=box.ROUNDED,
+        )
+    )
+
+
 def _pair_reason_tag(
     from_structure: dict[str, Any], to_structure: dict[str, Any]
 ) -> str:
@@ -907,6 +969,9 @@ def render_reco(order, util, rec_doc, held_syms):
             box=box.ROUNDED,
         )
     )
+
+    watch_sym = str(weakest or (held_syms[0] if held_syms else "") or "")
+    _render_watch_levels_widget(console, fs_doc, watch_sym)
 
     pair_rows = d.get("candidate_pairs") or []
     stale_positions = "stale_positions_cache" in str(reason)
