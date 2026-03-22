@@ -613,20 +613,31 @@ def _pair_reason_tag(
 
     if "near_damage_zone" in from_tags and "breakout_ready" in to_tags:
         return "damage→breakout"
+
     if (
         isinstance(from_sup, (int, float))
         and isinstance(to_sup, (int, float))
         and to_sup > from_sup
     ):
         return "better cushion"
+
     if (
         isinstance(from_res, (int, float))
         and isinstance(to_res, (int, float))
         and to_res < from_res
     ):
         return "less overhead"
+
+    if "near_damage_zone" in to_tags and "reclaim_ready" not in to_tags:
+        return "damage risk"
+    if "reclaim_ready" in to_tags:
+        return "reclaim-ready"
+    if "breakout_ready" in to_tags:
+        return "breakout-ready"
+
     if "near_damage_zone" in from_tags:
         return "damage risk"
+
     return ""
 
 
@@ -959,9 +970,9 @@ def render_reco(order, util, rec_doc, held_syms):
             to_structure = _structure_summary_for_symbol(
                 fs_doc, to, preferred_horizon=5
             )
-            why = _pair_reason_tag(from_structure, to_structure) or _short_reason(
-                row.get("veto_reason")
-            )
+            structure_why = _pair_reason_tag(from_structure, to_structure)
+            veto_why = _short_reason(row.get("veto_reason"))
+            why = structure_why or veto_why
             is_selected = frm == sel_from and to == sel_to
 
             frm_text = Text(
