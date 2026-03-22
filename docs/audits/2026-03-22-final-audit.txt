@@ -1,0 +1,83 @@
+=== BRANCH SYNC ===
+branch: floor-ceiling-rfc
+ahead/behind:
+0	0
+
+status:
+
+recent commits:
+464fe6d (HEAD -> floor-ceiling-rfc, origin/floor-ceiling-rfc) ui: remove delta columns from compact structure overview
+4bc1464 test: lock forecast dashboard candidate row contract
+03d731c forecast: align diagnostics blend contract with dashboard
+79f6b55 wip: restore isolated mh_dev RFC workspace after stable/dev split
+a1f63c8 ui: add structure fields to compact tri-score overview
+
+=== REMAINING OPEN MILESTONES ===
+#9 M4x Blocked: Schwab account validation | state=open | open=0 | closed=0 | created=2026-02-10T20:41:59Z | updated=2026-02-15T19:41:42Z | closed_at=-
+#36 M3 — Structure in Recommendations and CLI | state=open | open=3 | closed=2 | created=2026-03-21T09:48:36Z | updated=2026-03-22T02:06:38Z | closed_at=-
+#37 M4 — Risk Overlay | state=open | open=3 | closed=0 | created=2026-03-21T09:48:38Z | updated=2026-03-21T09:55:55Z | closed_at=-
+#38 M5 — Calibration and Advanced Sources | state=open | open=3 | closed=0 | created=2026-03-21T09:48:41Z | updated=2026-03-21T09:56:07Z | closed_at=-
+
+=== OPEN ISSUES BY ACTIVE MILESTONE ===
+
+--- #9 M4x Blocked: Schwab account validation ---
+{"closed_at":null,"closed_issues":0,"created_at":"2026-02-10T20:41:59Z","description":"External dependency. Waiting on Schwab developer/account validation + usable client credentials/tokens. Keep open until unblocked.","number":9,"open_issues":0,"state":"open","title":"M4x Blocked: Schwab account validation","updated_at":"2026-02-15T19:41:42Z"}
+
+------------------------------------------------------------
+M3 — Structure in Recommendations and CLI
+#241 | OPEN | updated=2026-03-22T02:13:43Z | labels=[recommendations,ui,cli]
+  Add short structure reason tags to candidate-pair rows
+  https://github.com/chrisdudley-dev/market-health-cli/issues/241
+#240 | OPEN | updated=2026-03-22T02:13:26Z | labels=[ui,cli]
+  Add Optional Execution Guidance widget to held-position details
+  https://github.com/chrisdudley-dev/market-health-cli/issues/240
+#239 | OPEN | updated=2026-03-22T02:13:24Z | labels=[ui,cli]
+  Add Watch Levels / Structure widget to held-position details
+  https://github.com/chrisdudley-dev/market-health-cli/issues/239
+
+------------------------------------------------------------
+M4 — Risk Overlay
+#244 | OPEN | updated=2026-03-22T02:18:35Z | labels=[ui,risk,cli]
+  Add risk overlay state to mh detail view
+  https://github.com/chrisdudley-dev/market-health-cli/issues/244
+#243 | OPEN | updated=2026-03-22T02:18:34Z | labels=[backend,risk]
+  Implement catastrophic stop candidate selection and breach confirmation
+  https://github.com/chrisdudley-dev/market-health-cli/issues/243
+#242 | OPEN | updated=2026-03-22T02:18:32Z | labels=[backend,risk]
+  Create risk_overlay.py for catastrophic invalidation logic
+  https://github.com/chrisdudley-dev/market-health-cli/issues/242
+
+------------------------------------------------------------
+M5 — Calibration and Advanced Sources
+#247 | OPEN | updated=2026-03-22T02:20:31Z | labels=[research,backlog]
+  Evaluate volume confirmation and advanced level families for v2
+  https://github.com/chrisdudley-dev/market-health-cli/issues/247
+#246 | OPEN | updated=2026-03-22T02:20:29Z | labels=[backend,research]
+  Add regime-conditioned and symbol-family-specific weighting
+  https://github.com/chrisdudley-dev/market-health-cli/issues/246
+#245 | OPEN | updated=2026-03-22T02:20:27Z | labels=[research,calibration]
+  Backtest structure contribution against hold/swap outcomes
+  https://github.com/chrisdudley-dev/market-health-cli/issues/245
+
+=== CLOSED MILESTONE PROOF SNAPSHOT ===
+#15 A-E Canonical Refactor | state=closed | open=0 | closed=7 | closed_at=2026-03-22T01:50:03Z
+#16 Recommendation Validation and Tuning | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:08Z
+#17 Welcome UX Stabilization (Termux/proot) | state=closed | open=0 | closed=4 | closed_at=2026-03-22T01:50:12Z
+#18 M10 Forecast Mode v1: A–E×6 checklist + scoring provider | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:17Z
+#19 M11 Forecast Mode v1: Policy guardrails + multi-horizon stability | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:22Z
+#20 M12 Forecast Mode v1: Integration into recommendations engine | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:27Z
+#21 M13 Forecast Mode v1: Tests + calibration | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:32Z
+#22 M14 Forecast Mode v1: Real inputs (calendar/news/flow/IV) integration | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:36Z
+#23 PM1 - Allocator Rules Freeze | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:41Z
+#24 PM2 - Multi-Asset Scoring Framework | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:46Z
+#25 PM3 - Precious Metals Universe | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:50Z
+#26 PM4 - Precious Metals Scoring | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:50:55Z
+#27 PM5 - Recommendation Engine Integration | state=closed | open=0 | closed=4 | closed_at=2026-03-22T01:51:00Z
+#28 PM6 - Position Mapping and Constraints | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:51:05Z
+#29 PM7 - UI and Export Contract Updates | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:51:09Z
+#30 PM8 - Tests and Calibration | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:51:14Z
+#31 Sprint 1 - Global Backbone + Japan Broad Market | state=closed | open=0 | closed=8 | closed_at=2026-03-22T01:51:18Z
+#32 Sprint 2 - Japan Sectors + Diversity v1 | state=closed | open=0 | closed=6 | closed_at=2026-03-22T01:51:23Z
+#33 E0 — RFC and Contract Freeze | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:56:27Z
+#34 M1 — Structure Engine v1 | state=closed | open=0 | closed=5 | closed_at=2026-03-22T01:51:27Z
+#35 M2 — Structure-Aware Forecast Checks | state=closed | open=0 | closed=3 | closed_at=2026-03-22T01:51:32Z
