@@ -469,8 +469,6 @@ def render_overview_triscore(order, held_syms):
     table.add_column("SupATR", justify="right", no_wrap=True, width=6)
     table.add_column("ResATR", justify="right", no_wrap=True, width=6)
     table.add_column("State", justify="left", no_wrap=True, width=5)
-    table.add_column("Δ1", justify="right", no_wrap=True, width=4)
-    table.add_column("Δ5", justify="right", no_wrap=True, width=4)
 
     rows = []
     for sym in syms:
@@ -481,9 +479,6 @@ def render_overview_triscore(order, held_syms):
         c_pct = _sum_cat_pct(row)
         h1_pct = _forecast_pct(scores, sym, 1)
         h5_pct = _forecast_pct(scores, sym, 5)
-
-        d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
-        d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
 
         structure = _structure_summary_for_symbol(fs_doc, sym, preferred_horizon=5)
         sup_atr = _fmt_atr_short(structure.get("support_cushion_atr"))
@@ -504,8 +499,6 @@ def render_overview_triscore(order, held_syms):
         c_txt = f"[{_pct_style(c_pct)}]{_fmt_pct(c_pct)}[/]"
         h1_txt = f"[{_pct_style(h1_pct)}]{_fmt_pct(h1_pct)}[/]"
         h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
-        d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
-        d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
 
         rows.append(
             {
@@ -519,8 +512,6 @@ def render_overview_triscore(order, held_syms):
                 "sup_atr": sup_atr,
                 "res_atr": res_atr,
                 "state_txt": state_txt,
-                "d1_txt": d1_txt,
-                "d5_txt": d5_txt,
             }
         )
 
@@ -542,8 +533,6 @@ def render_overview_triscore(order, held_syms):
             r["sup_atr"],
             r["res_atr"],
             r["state_txt"],
-            r["d1_txt"],
-            r["d5_txt"],
         )
 
     console.print()
