@@ -64,3 +64,68 @@ def build_risk_overlay_state(
         status="DISARMED",
         reason="Catastrophic stop candidate exists, but overlay is not armed.",
     )
+
+
+def confirm_overlay_breach(
+    *,
+    overlay: RiskOverlayState,
+    close_price: float | None,
+    prior_close_price: float | None = None,
+    confirm_closes: int = 2,
+) -> bool:
+    if not overlay.armed:
+        return False
+    if overlay.breach_level is None:
+        return False
+    if not isinstance(close_price, (int, float)):
+        return False
+
+    level = float(overlay.breach_level)
+    latest_breach = float(close_price) < level
+    if not latest_breach:
+        return False
+
+    if confirm_closes <= 1:
+        return True
+
+    if not isinstance(prior_close_price, (int, float)):
+        return False
+
+    return float(prior_close_price) < level
+
+
+def build_confirmed_risk_overlay_state(
+    *,
+    symbol: str,
+    structure_summary: dict[str, Any] | None,
+    close_price: float | None,
+    prior_close_price: float | None = None,
+    confirm_closes: int = 2,
+) -> RiskOverlayState:
+    base = build_risk_overlay_state(
+        symbol=symbol,
+        structure_summary=structure_summary,
+    )
+
+    if not base.armed:
+        return base
+
+    breached = confirm_overlay_breach(
+        overlay=base,
+        close_price=close_price,
+        prior_close_price=prior_close_price,
+        confirm_closes=confirm_closes,
+    )
+
+    if not breached:
+        return base
+
+    return RiskOverlayState(
+        symbol=base.symbol,
+        armed=True,
+        catastrophic_stop=base.catastrophic_stop,
+        breach_level=base.breach_level,
+        status="BREACHED",
+        reason="Confirmed catastrophic breach below overlay level.",
+        source=base.source,
+    )
