@@ -112,7 +112,64 @@ def _get_market_calendar_module():
 
 
 def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
-    return _intraday_fresh_or_last_completed_session(value, max_age_minutes)
+    dt = _parse_iso_utc(value)
+    if dt is None:
+        return False
+
+    now_utc = datetime.now(timezone.utc)
+    ttl_seconds = max_age_minutes * 60
+
+    try:
+        from zoneinfo import ZoneInfo
+
+        session_tz = ZoneInfo("America/New_York")
+    except Exception:
+        session_tz = timezone(timedelta(hours=-5), "ET")
+
+    mcal = _get_market_calendar_module()
+
+    if mcal is None:
+        now_et = now_utc.astimezone(session_tz)
+        dt_et = dt.astimezone(session_tz)
+
+        open_mins = 9 * 60 + 30
+        close_mins = 16 * 60
+        now_mins = now_et.hour * 60 + now_et.minute
+
+        in_live_session = (
+            now_et.weekday() < 5
+            and open_mins <= now_mins <= close_mins
+        )
+
+        if in_live_session:
+            return (
+                dt_et.date() == now_et.date()
+                and 0 <= (now_utc - dt).total_seconds() <= ttl_seconds
+            )
+
+        return _is_same_or_last_completed_session(value)
+
+    sched = mcal.get_calendar("NYSE").schedule(
+        start_date=(now_utc - timedelta(days=10)).date().isoformat(),
+        end_date=(now_utc + timedelta(days=2)).date().isoformat(),
+    )
+    if sched.empty:
+        return False
+
+    rows = []
+    for _, row in sched.iterrows():
+        open_ts = row["market_open"].to_pydatetime().astimezone(timezone.utc)
+        close_ts = row["market_close"].to_pydatetime().astimezone(timezone.utc)
+        rows.append((open_ts, close_ts))
+
+    for open_ts, close_ts in rows:
+        if open_ts <= now_utc <= close_ts:
+            return (
+                open_ts <= dt <= close_ts
+                and 0 <= (now_utc - dt).total_seconds() <= ttl_seconds
+            )
+
+    return _is_same_or_last_completed_session(value)
 
 
 def _is_same_or_last_completed_session(value: Any):
