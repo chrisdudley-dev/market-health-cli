@@ -119,6 +119,10 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
     now_utc = datetime.now(timezone.utc)
     ttl_seconds = max_age_minutes * 60
 
+    def _within_ttl() -> bool:
+        age = (now_utc - dt).total_seconds()
+        return 0 <= age <= ttl_seconds
+
     try:
         from zoneinfo import ZoneInfo
 
@@ -135,14 +139,14 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
         open_mins = 9 * 60 + 30
         close_mins = 16 * 60
         now_mins = now_et.hour * 60 + now_et.minute
+        is_weekday = now_et.weekday() < 5
 
-        in_live_session = now_et.weekday() < 5 and open_mins <= now_mins <= close_mins
+        if is_weekday and open_mins <= now_mins <= close_mins:
+            return dt_et.date() == now_et.date() and _within_ttl()
 
-        if in_live_session:
-            return (
-                dt_et.date() == now_et.date()
-                and 0 <= (now_utc - dt).total_seconds() <= ttl_seconds
-            )
+        if is_weekday and now_mins < open_mins:
+            if dt_et.date() == now_et.date() and _within_ttl():
+                return True
 
         return _is_same_or_last_completed_session(value)
 
@@ -154,17 +158,26 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
         return False
 
     rows = []
-    for _, row in sched.iterrows():
+    for idx, row in sched.iterrows():
         open_ts = row["market_open"].to_pydatetime().astimezone(timezone.utc)
         close_ts = row["market_close"].to_pydatetime().astimezone(timezone.utc)
-        rows.append((open_ts, close_ts))
+        session_label = str(idx.date() if hasattr(idx, "date") else idx)
+        rows.append((session_label, open_ts, close_ts))
 
-    for open_ts, close_ts in rows:
+    for _, open_ts, close_ts in rows:
         if open_ts <= now_utc <= close_ts:
-            return (
-                open_ts <= dt <= close_ts
-                and 0 <= (now_utc - dt).total_seconds() <= ttl_seconds
-            )
+            return open_ts <= dt <= close_ts and _within_ttl()
+
+    future_rows = [r for r in rows if r[1] > now_utc]
+    if future_rows:
+        next_open = future_rows[0][1]
+        now_local = now_utc.astimezone(session_tz)
+        dt_local = dt.astimezone(session_tz)
+        next_open_local = next_open.astimezone(session_tz)
+
+        if now_utc < next_open and now_local.date() == next_open_local.date():
+            if dt_local.date() == now_local.date() and _within_ttl():
+                return True
 
     return _is_same_or_last_completed_session(value)
 
