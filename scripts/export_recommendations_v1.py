@@ -112,64 +112,47 @@ def _get_market_calendar_module():
 
 
 def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
-    from datetime import datetime, timezone, timedelta, time
-
     dt = _parse_iso_utc(value)
     if dt is None:
         return False
 
     now_utc = datetime.now(timezone.utc)
-    ttl = timedelta(minutes=max_age_minutes)
+    ttl_seconds = max_age_minutes * 60
+
+    def _within_ttl() -> bool:
+        age = (now_utc - dt).total_seconds()
+        return 0 <= age <= ttl_seconds
 
     try:
-        import pandas_market_calendars as mcal
-    except ModuleNotFoundError:
-        try:
-            from zoneinfo import ZoneInfo
-            et_tz = ZoneInfo("America/New_York")
-        except Exception:
-            et_tz = timezone(timedelta(hours=-5), "ET")
+        from zoneinfo import ZoneInfo
 
-        now_et = now_utc.astimezone(et_tz)
-        dt_et = dt.astimezone(et_tz)
+        session_tz = ZoneInfo("America/New_York")
+    except Exception:
+        session_tz = timezone(timedelta(hours=-5), "ET")
 
-        def _last_weekday(d):
-            while d.weekday() >= 5:
-                d -= timedelta(days=1)
-            return d
+    mcal = _get_market_calendar_module()
 
-        def _next_weekday(d):
-            while d.weekday() >= 5:
-                d += timedelta(days=1)
-            return d
+    if mcal is None:
+        now_et = now_utc.astimezone(session_tz)
+        dt_et = dt.astimezone(session_tz)
 
-        mins_now = now_et.hour * 60 + now_et.minute
         open_mins = 9 * 60 + 30
         close_mins = 16 * 60
+        now_mins = now_et.hour * 60 + now_et.minute
+        is_weekday = now_et.weekday() < 5
 
-        if now_et.weekday() < 5 and open_mins <= mins_now <= close_mins:
-            return dt_et.date() == now_et.date() and dt >= (now_utc - ttl)
+        if is_weekday and open_mins <= now_mins <= close_mins:
+            return dt_et.date() == now_et.date() and _within_ttl()
 
-        ref_date = now_et.date()
-        if now_et.weekday() < 5 and mins_now < open_mins:
-            ref_date -= timedelta(days=1)
-        ref_date = _last_weekday(ref_date)
+        if is_weekday and now_mins < open_mins:
+            if dt_et.date() == now_et.date() and _within_ttl():
+                return True
 
-        if now_et.weekday() < 5 and mins_now < open_mins:
-            next_open_date = now_et.date()
-        else:
-            next_open_date = now_et.date() + timedelta(days=1)
-        next_open_date = _next_weekday(next_open_date)
+        return _is_same_or_last_completed_session(value)
 
-        last_close_et = datetime.combine(ref_date, time(16, 0), tzinfo=et_tz)
-        next_open_et = datetime.combine(next_open_date, time(9, 30), tzinfo=et_tz)
-
-        return dt_et.date() == ref_date or (last_close_et <= dt_et <= next_open_et)
-
-    cal = mcal.get_calendar("NYSE")
-    sched = cal.schedule(
+    sched = mcal.get_calendar("NYSE").schedule(
         start_date=(now_utc - timedelta(days=10)).date().isoformat(),
-        end_date=(now_utc + timedelta(days=5)).date().isoformat(),
+        end_date=(now_utc + timedelta(days=2)).date().isoformat(),
     )
     if sched.empty:
         return False
@@ -181,29 +164,23 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
         session_label = str(idx.date() if hasattr(idx, "date") else idx)
         rows.append((session_label, open_ts, close_ts))
 
-    try:
-        from zoneinfo import ZoneInfo
-        session_tz = ZoneInfo("America/New_York")
-    except Exception:
-        session_tz = timezone(timedelta(hours=-5), "ET")
-
-    dt_session = dt.astimezone(session_tz).date().isoformat()
-
-    for session_label, open_ts, close_ts in rows:
+    for _, open_ts, close_ts in rows:
         if open_ts <= now_utc <= close_ts:
-            if dt_session != session_label:
-                return False
-            return dt >= (now_utc - ttl)
+            return open_ts <= dt <= close_ts and _within_ttl()
 
-    prior_rows = [r for r in rows if r[2] <= now_utc]
-    if not prior_rows:
-        return False
-
-    last_completed_session, _last_open, last_close = prior_rows[-1]
     future_rows = [r for r in rows if r[1] > now_utc]
-    next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
+    if future_rows:
+        next_open = future_rows[0][1]
+        now_local = now_utc.astimezone(session_tz)
+        dt_local = dt.astimezone(session_tz)
+        next_open_local = next_open.astimezone(session_tz)
 
-    return dt_session == last_completed_session or (last_close <= dt <= next_open)
+        if now_utc < next_open and now_local.date() == next_open_local.date():
+            if dt_local.date() == now_local.date() and _within_ttl():
+                return True
+
+    return _is_same_or_last_completed_session(value)
+
 
 def _is_same_or_last_completed_session(value: Any):
     dt = _parse_iso_utc(value)
@@ -213,6 +190,7 @@ def _is_same_or_last_completed_session(value: Any):
     now_utc = datetime.now(timezone.utc)
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -558,6 +536,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
     except ModuleNotFoundError:
         try:
             from zoneinfo import ZoneInfo
+
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -615,6 +594,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
 
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -636,6 +616,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
     next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(
