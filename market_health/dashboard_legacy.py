@@ -652,8 +652,6 @@ def render_overview_triscore(order, util, held_syms):
     H1, H5 = _forecast_horizons(fs)
 
     display_rows = []
-    util_map = util if isinstance(util, dict) else {}
-
     extras_map = {}
     try:
         missing_syms = [
@@ -687,18 +685,12 @@ def render_overview_triscore(order, util, held_syms):
         if ps:
             canonical_syms.add(ps)
 
-    canonical_rows = {}  # disabled: overview must not recompute live scores
-
     for sym in sorted(universe):
         proxy_sym = _proxy_for_symbol(sym, inv_to_long)
         row = rows.get(sym, {})
         proxy_row = rows.get(proxy_sym, {})
         score_row = extras_map.get(sym) or row
         proxy_score_row = extras_map.get(proxy_sym) or proxy_row
-
-        canonical_row = (
-            canonical_rows.get(sym) or canonical_rows.get(proxy_sym) or row or proxy_row
-        )
 
         c_val = _first_pct(
             _sum_cat_pct(score_row),
@@ -2601,6 +2593,37 @@ def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
 
 
+def _fmt_price(x):
+    try:
+        return f"{float(x):.2f}"
+    except (TypeError, ValueError):
+        return "-"
+
+
+def _fmt_atr_short(x):
+    return _fmt_price(x)
+
+
+def _fmt_zone_triplet(zone):
+    if isinstance(zone, dict):
+        for cand in (
+            [zone.get("low"), zone.get("mid"), zone.get("high")],
+            [zone.get("lower"), zone.get("center"), zone.get("upper")],
+            [zone.get("min"), zone.get("pivot"), zone.get("max")],
+            [zone.get("start"), zone.get("mid"), zone.get("end")],
+        ):
+            vals = [v for v in cand if isinstance(v, (int, float))]
+            if vals:
+                return " / ".join(_fmt_price(v) for v in vals)
+        return "-"
+    if isinstance(zone, (list, tuple)):
+        vals = [v for v in zone[:3] if isinstance(v, (int, float))]
+        return " / ".join(_fmt_price(v) for v in vals) if vals else "-"
+    if isinstance(zone, (int, float)):
+        return _fmt_price(zone)
+    return "-"
+
+
 def main() -> int:
     user_args = sys.argv[1:]
 
@@ -2796,6 +2819,10 @@ def main() -> int:
         _h5 = int(_hs[1]) if isinstance(_hs, (list, tuple)) and len(_hs) > 1 else 5
     except Exception:
         _h5 = 5
+
+    inv_to_long = _load_inverse_map_from_cache()
+    if not isinstance(inv_to_long, dict):
+        inv_to_long = {}
 
     def _resolved_fs_symbol(_sym):
         _s = str(_sym or "").upper().strip()
