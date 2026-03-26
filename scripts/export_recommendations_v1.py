@@ -136,10 +136,7 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
         close_mins = 16 * 60
         now_mins = now_et.hour * 60 + now_et.minute
 
-        in_live_session = (
-            now_et.weekday() < 5
-            and open_mins <= now_mins <= close_mins
-        )
+        in_live_session = now_et.weekday() < 5 and open_mins <= now_mins <= close_mins
 
         if in_live_session:
             return (
