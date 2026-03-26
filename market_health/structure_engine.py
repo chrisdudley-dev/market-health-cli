@@ -440,7 +440,8 @@ def compute_structure_summary(
             or close_for_sigma <= 0
             or realized_vol <= 0
         )
-        else (float(resistance_edge) - float(price)) / (float(close_for_sigma) * float(realized_vol))
+        else (float(resistance_edge) - float(price))
+        / (float(close_for_sigma) * float(realized_vol))
     )
     overhead_resistance_sigma = (
         None

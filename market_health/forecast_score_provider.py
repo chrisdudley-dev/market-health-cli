@@ -110,7 +110,6 @@ def _calendar_ctx_for_symbol(calendar: object, sym: str, H: int) -> object:
     return ctx
 
 
-
 Number = Union[int, float]
 
 
