@@ -1824,12 +1824,8 @@ def render_reco(order, util, rec_doc, held_syms):
             frm_comp = _blend_components(frm) or {}
             to_comp = _blend_components(to) or {}
             vetoed = bool(row.get("vetoed"))
-            from_structure = _structure_summary_for_symbol(
-                fs_doc, frm, preferred_horizon=5
-            )
-            to_structure = _structure_summary_for_symbol(
-                fs_doc, to, preferred_horizon=5
-            )
+            from_structure = _structure_summary_for_symbol(fs_doc, frm, horizon=5)
+            to_structure = _structure_summary_for_symbol(fs_doc, to, horizon=5)
             structure_why = _pair_reason_tag(from_structure, to_structure)
             veto_why = _short_reason(row.get("veto_reason"))
             why = structure_why or veto_why
