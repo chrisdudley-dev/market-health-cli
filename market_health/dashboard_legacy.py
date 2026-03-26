@@ -190,7 +190,6 @@ def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
     return out
 
 
-
 def _strip_prefix_sections(text: str) -> str:
     if not isinstance(text, str):
         return text
@@ -211,6 +210,7 @@ def _strip_prefix_sections(text: str) -> str:
 
     cut = min(starts)
     return text[:cut].rstrip() + "\n\n"
+
 
 def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> list[str]:
     # 1) real positions cache (if it exists)
@@ -344,11 +344,6 @@ def fmt_u(u: float | None) -> str:
     return f"{u:.3f} / {u * 100:.1f}%"
 
 
-
-
-
-
-
 def render_overview_triscore(order, util, held_syms):
     import io
     import json
@@ -457,11 +452,11 @@ def render_overview_triscore(order, util, held_syms):
         out = {}
 
         allowed = set()
-        for s in (order or []):
+        for s in order or []:
             ns = _norm(s)
             if ns:
                 allowed.add(ns)
-        for s in (held_syms or []):
+        for s in held_syms or []:
             ns = _norm(s)
             if ns:
                 allowed.add(ns)
@@ -606,7 +601,9 @@ def render_overview_triscore(order, util, held_syms):
 
     data = ui.get("data") if isinstance(ui, dict) else {}
     sector_rows = _rowmaps_from_any(sectors)
-    ui_sector_rows = _rowmaps_from_any(data.get("sectors") if isinstance(data, dict) else {})
+    ui_sector_rows = _rowmaps_from_any(
+        data.get("sectors") if isinstance(data, dict) else {}
+    )
     state_rows = _rowmaps_from_any(data.get("state") if isinstance(data, dict) else {})
 
     rows = {}
@@ -648,8 +645,7 @@ def render_overview_triscore(order, util, held_syms):
     universe.update(inv_to_long.keys())
 
     universe = {
-        s for s in universe
-        if s and (s in rows or s in score_keys or s in inv_to_long)
+        s for s in universe if s and (s in rows or s in score_keys or s in inv_to_long)
     }
     universe = {s for s in universe if s not in {"XLV", "CSWC"}}
 
@@ -661,8 +657,10 @@ def render_overview_triscore(order, util, held_syms):
     extras_map = {}
     try:
         missing_syms = [
-            s for s in sorted(universe)
-            if s and (
+            s
+            for s in sorted(universe)
+            if s
+            and (
                 not isinstance(rows.get(s), dict)
                 or not isinstance((rows.get(s) or {}).get("categories"), dict)
             )
@@ -699,10 +697,7 @@ def render_overview_triscore(order, util, held_syms):
         proxy_score_row = extras_map.get(proxy_sym) or proxy_row
 
         canonical_row = (
-            canonical_rows.get(sym)
-            or canonical_rows.get(proxy_sym)
-            or row
-            or proxy_row
+            canonical_rows.get(sym) or canonical_rows.get(proxy_sym) or row or proxy_row
         )
 
         c_val = _first_pct(
@@ -760,7 +755,10 @@ def render_overview_triscore(order, util, held_syms):
             proxy_row.get("state")
             or proxy_row.get("risk_state")
             or proxy_row.get("overlay_state")
-            or _walk_find(proxy_row, ["state", "risk_state", "overlay_state", "structure_state", "regime"])
+            or _walk_find(
+                proxy_row,
+                ["state", "risk_state", "overlay_state", "structure_state", "regime"],
+            )
             or "-"
         )
         stop = _first_num(
@@ -775,7 +773,10 @@ def render_overview_triscore(order, util, held_syms):
             proxy_row.get("buy_px"),
             proxy_row.get("entry"),
             proxy_row.get("entry_price"),
-            _walk_find(proxy_row, ["buy", "buy_price", "buy_px", "entry", "entry_price", "buy_trigger"]),
+            _walk_find(
+                proxy_row,
+                ["buy", "buy_price", "buy_px", "entry", "entry_price", "buy_trigger"],
+            ),
         )
 
         ss = _structure_summary_for_symbol(fs, sym, horizon=H5)
@@ -794,7 +795,9 @@ def render_overview_triscore(order, util, held_syms):
                 ss.get("overhead_resistance_atr"),
                 ss.get("resistance_atr"),
                 ss.get("res_atr"),
-                _walk_find(ss, ["overhead_resistance_atr", "resistance_atr", "res_atr"]),
+                _walk_find(
+                    ss, ["overhead_resistance_atr", "resistance_atr", "res_atr"]
+                ),
                 res,
             )
             tags = ss.get("state_tags")
@@ -814,7 +817,15 @@ def render_overview_triscore(order, util, held_syms):
                 ss.get("catastrophic_stop_candidate"),
                 ss.get("stop"),
                 ss.get("stop_candidate"),
-                _walk_find(ss, ["tactical_stop_candidate", "catastrophic_stop_candidate", "stop", "stop_candidate"]),
+                _walk_find(
+                    ss,
+                    [
+                        "tactical_stop_candidate",
+                        "catastrophic_stop_candidate",
+                        "stop",
+                        "stop_candidate",
+                    ],
+                ),
                 stop,
             )
             buy = _first_num(
@@ -822,7 +833,10 @@ def render_overview_triscore(order, util, held_syms):
                 ss.get("breakout_trigger"),
                 ss.get("buy"),
                 ss.get("buy_candidate"),
-                _walk_find(ss, ["stop_buy_candidate", "breakout_trigger", "buy", "buy_candidate"]),
+                _walk_find(
+                    ss,
+                    ["stop_buy_candidate", "breakout_trigger", "buy", "buy_candidate"],
+                ),
                 buy,
             )
 
@@ -875,7 +889,10 @@ def render_overview_triscore(order, util, held_syms):
             Text(_fmt_pct(r["h5"]), style=_score_style(r["h5"])),
             Text(_fmt_num(r["sup"]), style=_num_style(r["sup"])),
             Text(_fmt_num(r["res"]), style=_num_style(r["res"])),
-            Text(_compact_state_tags(r["state"] if r["state"] else "-"), style=_state_style(r["state"])),
+            Text(
+                _compact_state_tags(r["state"] if r["state"] else "-"),
+                style=_state_style(r["state"]),
+            ),
             Text(_fmt_num(r["stop"]), style=_num_style(r["stop"])),
             Text(_fmt_num(r["buy"]), style=_num_style(r["buy"])),
         )
@@ -889,6 +906,7 @@ def render_overview_triscore(order, util, held_syms):
         )
     )
     return console.export_text(styles=True) + NL
+
 
 def _forecast_scores_doc() -> dict[str, Any]:
     doc = read_json(CACHE_DIR / "forecast_scores.v1.json")
@@ -913,7 +931,6 @@ def _proxy_for_symbol(sym: str, inv_to_long: dict[str, str] | None = None) -> st
         if mapped:
             return str(mapped).upper().strip()
     return s
-
 
 
 def _load_inverse_map_from_cache():
@@ -946,6 +963,7 @@ def _load_inverse_map_from_cache():
 
     return out
 
+
 def _forecast_payload_for_symbol(
     scores_doc: dict[str, Any], sym: str, preferred_horizon: int = 5
 ) -> dict[str, Any]:
@@ -962,9 +980,6 @@ def _forecast_payload_for_symbol(
         if isinstance(node, dict):
             return node
     return {}
-
-
-
 
 
 def _structure_summary_for_symbol(
@@ -1039,9 +1054,7 @@ def _structure_summary_for_symbol(
     return out
 
 
-def _fmt_state_tags(
-
-tags: Any) -> str:
+def _fmt_state_tags(tags: Any) -> str:
     if not isinstance(tags, list) or not tags:
         return "-"
     return ", ".join(str(x) for x in tags)
@@ -1211,8 +1224,11 @@ def _file_mtime_iso(path):
     try:
         from pathlib import Path
         from datetime import datetime, timezone
+
         ts = Path(path).stat().st_mtime
-        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
     except Exception:
         return None
 
@@ -1220,6 +1236,7 @@ def _file_mtime_iso(path):
 def _parse_iso_utc(s):
     try:
         from datetime import datetime, timezone
+
         s = str(s or "").strip()
         if not s:
             return None
@@ -1290,14 +1307,14 @@ def _fallback_freshness_bundle(rec_doc, cache_dir):
 
     freshness = {
         "positions": freshness.get("positions")
-            if isinstance(freshness.get("positions"), bool)
-            else _fresh_bool_from_age(pos_age, 86400),
+        if isinstance(freshness.get("positions"), bool)
+        else _fresh_bool_from_age(pos_age, 86400),
         "forecast": freshness.get("forecast")
-            if isinstance(freshness.get("forecast"), bool)
-            else _fresh_bool_from_age(fc_age, 86400),
+        if isinstance(freshness.get("forecast"), bool)
+        else _fresh_bool_from_age(fc_age, 86400),
         "snapshot": freshness.get("snapshot")
-            if isinstance(freshness.get("snapshot"), bool)
-            else _fresh_bool_from_age(snap_age, 86400),
+        if isinstance(freshness.get("snapshot"), bool)
+        else _fresh_bool_from_age(snap_age, 86400),
     }
 
     ages = {
@@ -1307,6 +1324,7 @@ def _fallback_freshness_bundle(rec_doc, cache_dir):
     }
 
     return source_ts, freshness, ages
+
 
 def render_reco(order, util, rec_doc, held_syms):
     import io
@@ -1527,8 +1545,14 @@ def render_reco(order, util, rec_doc, held_syms):
         fp = fp[:12]
 
     computed_at = rec_doc.get("computed_at") or rec_doc.get("generated_at") or "-"
-    source_ts = rec_doc.get("source_timestamps") if isinstance(rec_doc.get("source_timestamps"), dict) else {}
-    freshness = rec_doc.get("freshness") if isinstance(rec_doc.get("freshness"), dict) else {}
+    source_ts = (
+        rec_doc.get("source_timestamps")
+        if isinstance(rec_doc.get("source_timestamps"), dict)
+        else {}
+    )
+    freshness = (
+        rec_doc.get("freshness") if isinstance(rec_doc.get("freshness"), dict) else {}
+    )
 
     snapshot_ts = (
         source_ts.get("snapshot_asof")
@@ -1556,11 +1580,14 @@ def render_reco(order, util, rec_doc, held_syms):
         try:
             from datetime import datetime, timezone
             from zoneinfo import ZoneInfo
+
             s = str(v).strip().replace("Z", "+00:00")
             dt = datetime.fromisoformat(s)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p %Z")
+            return dt.astimezone(ZoneInfo("America/New_York")).strftime(
+                "%Y-%m-%d %I:%M:%S %p %Z"
+            )
         except Exception:
             return str(v)
 
@@ -1577,26 +1604,48 @@ def render_reco(order, util, rec_doc, held_syms):
         h, m = divmod(m, 60)
         return f"{h}h {m:02d}m"
 
-    rendered_now = _fmt_dt_et(__import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat())
+    rendered_now = _fmt_dt_et(
+        __import__("datetime")
+        .datetime.now(__import__("datetime").timezone.utc)
+        .isoformat()
+    )
     snapshot_display = _fmt_dt_et(snapshot_ts)
     positions_display = _fmt_dt_et(positions_ts)
     forecast_display = _fmt_dt_et(forecast_ts)
     computed_display = _fmt_dt_et(computed_at)
 
-    p_fresh = freshness.get("positions") if "positions" in freshness else freshness.get("positions_is_fresh")
-    f_fresh = freshness.get("forecast") if "forecast" in freshness else freshness.get("forecast_is_fresh")
+    p_fresh = (
+        freshness.get("positions")
+        if "positions" in freshness
+        else freshness.get("positions_is_fresh")
+    )
+    f_fresh = (
+        freshness.get("forecast")
+        if "forecast" in freshness
+        else freshness.get("forecast_is_fresh")
+    )
     s_fresh = freshness.get("snapshot")
     if s_fresh is None:
         s_fresh = freshness.get("sectors_is_fresh")
 
-    fresh_line = ", ".join([
-        f"p={'yes' if p_fresh else 'no'}" if p_fresh is not None else "p=-",
-        f"f={'yes' if f_fresh else 'no'}" if f_fresh is not None else "f=-",
-        f"s={'yes' if s_fresh else 'no'}" if s_fresh is not None else "s=-",
-    ])
+    fresh_line = ", ".join(
+        [
+            f"p={'yes' if p_fresh else 'no'}" if p_fresh is not None else "p=-",
+            f"f={'yes' if f_fresh else 'no'}" if f_fresh is not None else "f=-",
+            f"s={'yes' if s_fresh else 'no'}" if s_fresh is not None else "s=-",
+        ]
+    )
 
-    positions_age = freshness.get("positions_age") if "positions_age" in freshness else freshness.get("positions_age_seconds")
-    forecast_age = freshness.get("forecast_age") if "forecast_age" in freshness else freshness.get("forecast_age_seconds")
+    positions_age = (
+        freshness.get("positions_age")
+        if "positions_age" in freshness
+        else freshness.get("positions_age_seconds")
+    )
+    forecast_age = (
+        freshness.get("forecast_age")
+        if "forecast_age" in freshness
+        else freshness.get("forecast_age_seconds")
+    )
     snapshot_age = freshness.get("snapshot_age")
     if snapshot_age is None:
         snapshot_age = freshness.get("sectors_age_seconds")
@@ -1654,14 +1703,14 @@ def render_reco(order, util, rec_doc, held_syms):
         freshness = {}
     freshness = {
         "positions": freshness.get("positions")
-            if isinstance(freshness.get("positions"), bool)
-            else fb_freshness.get("positions"),
+        if isinstance(freshness.get("positions"), bool)
+        else fb_freshness.get("positions"),
         "forecast": freshness.get("forecast")
-            if isinstance(freshness.get("forecast"), bool)
-            else fb_freshness.get("forecast"),
+        if isinstance(freshness.get("forecast"), bool)
+        else fb_freshness.get("forecast"),
         "snapshot": freshness.get("snapshot")
-            if isinstance(freshness.get("snapshot"), bool)
-            else fb_freshness.get("snapshot"),
+        if isinstance(freshness.get("snapshot"), bool)
+        else fb_freshness.get("snapshot"),
     }
 
     def _blankish(v):
@@ -1867,7 +1916,12 @@ def render_reco(order, util, rec_doc, held_syms):
             status_rank = 0 if str(r.get("status", "")).upper() == "READY" else 1
             delta_rank = -(_num(r.get("delta_blended")) or -999.0)
             blend_rank = -(_num(r.get("blended")) or -999.0)
-            return (status_rank, delta_rank, blend_rank, str(r.get("symbol") or r.get("sym") or r.get("ticker") or ""))
+            return (
+                status_rank,
+                delta_rank,
+                blend_rank,
+                str(r.get("symbol") or r.get("sym") or r.get("ticker") or ""),
+            )
 
         for row in sorted(rows, key=_sort_key):
             sym = str(row.get("symbol") or row.get("sym") or row.get("ticker") or "")
@@ -1905,7 +1959,6 @@ def render_reco(order, util, rec_doc, held_syms):
     return console.export_text(styles=True) + NL
 
 
-
 def _backfill_sector_proxy_view_text(text):
     if not isinstance(text, str) or not text.strip():
         return text
@@ -1925,19 +1978,19 @@ def _backfill_sector_proxy_view_text(text):
         H5 = 5
 
     row_re = re.compile(
-        r'^(?P<lead>\s*│\s*│)'
-        r'(?P<sym>[^│]+)│'
-        r'(?P<b>[^│]+)│'
-        r'(?P<c>[^│]+)│'
-        r'(?P<h1>[^│]+)│'
-        r'(?P<h5>[^│]+)│'
-        r'(?P<sup>[^│]+)│'
-        r'(?P<res>[^│]+)│'
-        r'(?P<ov>[^│]+)│'
-        r'(?P<state>[^│]+)│'
-        r'(?P<stop>[^│]+)│'
-        r'(?P<buy>[^│]+)'
-        r'(?P<trail>│\s*│\s*)$'
+        r"^(?P<lead>\s*│\s*│)"
+        r"(?P<sym>[^│]+)│"
+        r"(?P<b>[^│]+)│"
+        r"(?P<c>[^│]+)│"
+        r"(?P<h1>[^│]+)│"
+        r"(?P<h5>[^│]+)│"
+        r"(?P<sup>[^│]+)│"
+        r"(?P<res>[^│]+)│"
+        r"(?P<ov>[^│]+)│"
+        r"(?P<state>[^│]+)│"
+        r"(?P<stop>[^│]+)│"
+        r"(?P<buy>[^│]+)"
+        r"(?P<trail>│\s*│\s*)$"
     )
 
     def _fmt_num(v):
@@ -2006,27 +2059,37 @@ def _backfill_sector_proxy_view_text(text):
                         buy = ss.get("breakout_trigger")
                     state = _state_short(ss.get("state_tags") or [])
 
-                    line = "".join([
-                        m.group("lead"),
-                        m.group("sym"), "│",
-                        m.group("b"), "│",
-                        m.group("c"), "│",
-                        m.group("h1"), "│",
-                        m.group("h5"), "│",
-                        _fit(_fmt_num(sup), len(m.group("sup")), right=True), "│",
-                        _fit(_fmt_num(res), len(m.group("res")), right=True), "│",
-                        m.group("ov"), "│",
-                        _fit(state, len(m.group("state")), right=False), "│",
-                        _fit(_fmt_num(stop), len(m.group("stop")), right=True), "│",
-                        _fit(_fmt_num(buy), len(m.group("buy")), right=True),
-                        m.group("trail"),
-                    ])
+                    line = "".join(
+                        [
+                            m.group("lead"),
+                            m.group("sym"),
+                            "│",
+                            m.group("b"),
+                            "│",
+                            m.group("c"),
+                            "│",
+                            m.group("h1"),
+                            "│",
+                            m.group("h5"),
+                            "│",
+                            _fit(_fmt_num(sup), len(m.group("sup")), right=True),
+                            "│",
+                            _fit(_fmt_num(res), len(m.group("res")), right=True),
+                            "│",
+                            m.group("ov"),
+                            "│",
+                            _fit(state, len(m.group("state")), right=False),
+                            "│",
+                            _fit(_fmt_num(stop), len(m.group("stop")), right=True),
+                            "│",
+                            _fit(_fmt_num(buy), len(m.group("buy")), right=True),
+                            m.group("trail"),
+                        ]
+                    )
 
         out.append(line)
 
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
-
-
 
 
 def _compact_state_tags(value):
@@ -2055,6 +2118,7 @@ def _compact_state_tags(value):
 def _backfill_overview_state_compact_text(text):
     return text
 
+
 def _extract_overview_row_map(text):
     import re
 
@@ -2064,16 +2128,16 @@ def _extract_overview_row_map(text):
     clean = re.sub(r"\x1b\[[0-9;]*m", "", text)
 
     row_re = re.compile(
-        r'^\s*│\s*(?P<sym>[A-Z]{2,5})\s+'
-        r'(?P<blend>-|\d+%)\s+'
-        r'(?P<c>-|\d+%)\s+'
-        r'(?P<h1>-|\d+%)\s+'
-        r'(?P<h5>-|\d+%)\s+'
-        r'(?P<sup>-|\d+\.\d{2})\s+'
-        r'(?P<res>-|\d+\.\d{2})\s+'
-        r'(?P<state>.*?)\s+'
-        r'(?P<stop>-|\d+\.\d{2})\s+'
-        r'(?P<buy>-|\d+\.\d{2})\s*│\s*$'
+        r"^\s*│\s*(?P<sym>[A-Z]{2,5})\s+"
+        r"(?P<blend>-|\d+%)\s+"
+        r"(?P<c>-|\d+%)\s+"
+        r"(?P<h1>-|\d+%)\s+"
+        r"(?P<h5>-|\d+%)\s+"
+        r"(?P<sup>-|\d+\.\d{2})\s+"
+        r"(?P<res>-|\d+\.\d{2})\s+"
+        r"(?P<state>.*?)\s+"
+        r"(?P<stop>-|\d+\.\d{2})\s+"
+        r"(?P<buy>-|\d+\.\d{2})\s*│\s*$"
     )
 
     out = {}
@@ -2096,6 +2160,7 @@ def _extract_overview_row_map(text):
         }
     return out
 
+
 def _backfill_sector_proxy_view_current_text(text, canonical_rows, inv_to_long):
     if not isinstance(text, str) or not text.strip():
         return text
@@ -2105,19 +2170,19 @@ def _backfill_sector_proxy_view_current_text(text, canonical_rows, inv_to_long):
         inv_to_long = {}
 
     row_re = re.compile(
-        r'^(?P<lead>\s*│\s*│)'
-        r'(?P<sym>[^│]+)│'
-        r'(?P<b>[^│]+)│'
-        r'(?P<c>[^│]+)│'
-        r'(?P<h1>[^│]+)│'
-        r'(?P<h5>[^│]+)│'
-        r'(?P<sup>[^│]+)│'
-        r'(?P<res>[^│]+)│'
-        r'(?P<ov>[^│]+)│'
-        r'(?P<state>[^│]+)│'
-        r'(?P<stop>[^│]+)│'
-        r'(?P<buy>[^│]+)'
-        r'(?P<trail>│\s*│\s*)$'
+        r"^(?P<lead>\s*│\s*│)"
+        r"(?P<sym>[^│]+)│"
+        r"(?P<b>[^│]+)│"
+        r"(?P<c>[^│]+)│"
+        r"(?P<h1>[^│]+)│"
+        r"(?P<h5>[^│]+)│"
+        r"(?P<sup>[^│]+)│"
+        r"(?P<res>[^│]+)│"
+        r"(?P<ov>[^│]+)│"
+        r"(?P<state>[^│]+)│"
+        r"(?P<stop>[^│]+)│"
+        r"(?P<buy>[^│]+)"
+        r"(?P<trail>│\s*│\s*)$"
     )
 
     def _fit(s, width, *, right=False):
@@ -2167,32 +2232,54 @@ def _backfill_sector_proxy_view_current_text(text, canonical_rows, inv_to_long):
                 src = canonical_rows.get(proxy_sym)
 
                 if isinstance(src, dict) and src:
-                    line = "".join([
-                        m.group("lead"),
-                        m.group("sym"), "│",
-                        _fit(src.get("blend", "-"), len(m.group("b")), right=True), "│",
-                        _fit(src.get("c", "-"), len(m.group("c")), right=True), "│",
-                        _fit(src.get("h1", "-"), len(m.group("h1")), right=True), "│",
-                        _fit(src.get("h5", "-"), len(m.group("h5")), right=True), "│",
-                        _fit(src.get("sup", "-"), len(m.group("sup")), right=True), "│",
-                        _fit(src.get("res", "-"), len(m.group("res")), right=True), "│",
-                        _fit(m.group("ov"), len(m.group("ov")), right=False), "│",
-                        _fit(_compact_state(src.get("state", "-")), min(len(m.group("state")), 11), right=False), "│",
-                        _fit(src.get("stop", "-"), len(m.group("stop")), right=True), "│",
-                        _fit(src.get("buy", "-"), len(m.group("buy")), right=True),
-                        m.group("trail"),
-                    ])
+                    line = "".join(
+                        [
+                            m.group("lead"),
+                            m.group("sym"),
+                            "│",
+                            _fit(src.get("blend", "-"), len(m.group("b")), right=True),
+                            "│",
+                            _fit(src.get("c", "-"), len(m.group("c")), right=True),
+                            "│",
+                            _fit(src.get("h1", "-"), len(m.group("h1")), right=True),
+                            "│",
+                            _fit(src.get("h5", "-"), len(m.group("h5")), right=True),
+                            "│",
+                            _fit(src.get("sup", "-"), len(m.group("sup")), right=True),
+                            "│",
+                            _fit(src.get("res", "-"), len(m.group("res")), right=True),
+                            "│",
+                            _fit(m.group("ov"), len(m.group("ov")), right=False),
+                            "│",
+                            _fit(
+                                _compact_state(src.get("state", "-")),
+                                min(len(m.group("state")), 11),
+                                right=False,
+                            ),
+                            "│",
+                            _fit(
+                                src.get("stop", "-"), len(m.group("stop")), right=True
+                            ),
+                            "│",
+                            _fit(src.get("buy", "-"), len(m.group("buy")), right=True),
+                            m.group("trail"),
+                        ]
+                    )
 
         out.append(line)
 
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
 
+
 def _file_mtime_iso(path):
     try:
         from pathlib import Path
         from datetime import datetime, timezone
+
         ts = Path(path).stat().st_mtime
-        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
     except Exception:
         return None
 
@@ -2200,6 +2287,7 @@ def _file_mtime_iso(path):
 def _parse_iso_utc_local(s):
     try:
         from datetime import datetime, timezone
+
         s = str(s or "").strip()
         if not s:
             return None
@@ -2250,7 +2338,9 @@ def _fmt_ts_et(value, *, default="n/a"):
             if dt is None:
                 return default if value in (None, "", "-") else str(value)
 
-        return dt.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %I:%M:%S %p ET")
+        return dt.astimezone(ZoneInfo("America/New_York")).strftime(
+            "%Y-%m-%d %I:%M:%S %p ET"
+        )
     except Exception:
         return default if value in (None, "", "-") else str(value)
 
@@ -2259,6 +2349,7 @@ def _banner_now_et():
     try:
         from datetime import datetime
         from zoneinfo import ZoneInfo
+
         return datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET")
     except Exception:
         return "ET"
@@ -2272,7 +2363,12 @@ def _backfill_header_time_text(text):
     out = []
 
     for line in text.splitlines():
-        if "Market Health – Sector Union" in line and "•" in line and line.startswith("╭") and line.endswith("╮"):
+        if (
+            "Market Health – Sector Union" in line
+            and "•" in line
+            and line.startswith("╭")
+            and line.endswith("╮")
+        ):
             inner_width = max(10, len(line) - 2)
             label = f" Market Health – Sector Union  •  {stamp} "
             if len(label) > inner_width:
@@ -2285,13 +2381,18 @@ def _backfill_header_time_text(text):
 
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
 
+
 def _build_display_freshness_bundle(rec_doc, cache_dir):
     from datetime import datetime, timezone
 
     rec_doc = rec_doc if isinstance(rec_doc, dict) else {}
 
     # Normalize fallback return shape.
-    fb = _fallback_freshness_bundle(rec_doc, cache_dir) if "_fallback_freshness_bundle" in globals() else ({}, {}, {})
+    fb = (
+        _fallback_freshness_bundle(rec_doc, cache_dir)
+        if "_fallback_freshness_bundle" in globals()
+        else ({}, {}, {})
+    )
     if isinstance(fb, tuple) and len(fb) == 3:
         fb_source_ts, fb_freshness, fb_ages = fb
     elif isinstance(fb, dict):
@@ -2331,9 +2432,15 @@ def _build_display_freshness_bundle(rec_doc, cache_dir):
 
     # Preserve upstream truth exactly; fill only missing keys from fallback.
     freshness = {
-        "positions": real_freshness["positions"] if "positions" in real_freshness else fb_freshness.get("positions"),
-        "forecast": real_freshness["forecast"] if "forecast" in real_freshness else fb_freshness.get("forecast"),
-        "snapshot": real_freshness["snapshot"] if "snapshot" in real_freshness else fb_freshness.get("snapshot"),
+        "positions": real_freshness["positions"]
+        if "positions" in real_freshness
+        else fb_freshness.get("positions"),
+        "forecast": real_freshness["forecast"]
+        if "forecast" in real_freshness
+        else fb_freshness.get("forecast"),
+        "snapshot": real_freshness["snapshot"]
+        if "snapshot" in real_freshness
+        else fb_freshness.get("snapshot"),
     }
 
     now = datetime.now(timezone.utc)
@@ -2360,6 +2467,7 @@ def _build_display_freshness_bundle(rec_doc, cache_dir):
         "derived": False,
     }
 
+
 def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
     if not isinstance(text, str) or not text.strip():
         return text
@@ -2368,8 +2476,14 @@ def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
     bundle = _build_display_freshness_bundle(rec_doc, cache_dir)
     bundle = bundle if isinstance(bundle, dict) else {}
 
-    source_ts = bundle.get("source_timestamps") if isinstance(bundle.get("source_timestamps"), dict) else {}
-    freshness = bundle.get("freshness") if isinstance(bundle.get("freshness"), dict) else {}
+    source_ts = (
+        bundle.get("source_timestamps")
+        if isinstance(bundle.get("source_timestamps"), dict)
+        else {}
+    )
+    freshness = (
+        bundle.get("freshness") if isinstance(bundle.get("freshness"), dict) else {}
+    )
     ages = bundle.get("ages") if isinstance(bundle.get("ages"), dict) else {}
     derived = bool(bundle.get("derived"))
 
@@ -2390,6 +2504,7 @@ def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
 
     def _short_json(v, default="n/a"):
         import json
+
         if v in (None, "", "-", {}, []):
             return default
         if isinstance(v, (dict, list, tuple)):
@@ -2450,7 +2565,7 @@ def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
         ),
     }
 
-    ansi_re = re.compile(r'\x1b\[[0-9;]*m')
+    ansi_re = re.compile(r"\x1b\[[0-9;]*m")
     in_panel = False
     out = []
 
@@ -2484,6 +2599,7 @@ def _backfill_recommendation_panel_text(text, rec_doc, cache_dir):
         out.append(line)
 
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
 
 def main() -> int:
     user_args = sys.argv[1:]
@@ -2641,8 +2757,7 @@ def main() -> int:
         return str(_sym or "").upper().strip()
 
     detail_blocks = [
-        _blk for _blk in detail_blocks
-        if _detail_block_sym(_blk) not in {"CSWC"}
+        _blk for _blk in detail_blocks if _detail_block_sym(_blk) not in {"CSWC"}
     ]
 
     for _blk in detail_blocks:
@@ -2732,13 +2847,24 @@ def main() -> int:
         if not isinstance(dst, dict) or not isinstance(proxy_row, dict):
             return
         for k in (
-            "blend", "b", "current", "c",
-            "h1", "h5",
-            "current_health", "current_score",
-            "forecast_h1", "forecast_h5",
-            "score_h1", "score_h5",
+            "blend",
+            "b",
+            "current",
+            "c",
+            "h1",
+            "h5",
+            "current_health",
+            "current_score",
+            "forecast_h1",
+            "forecast_h5",
+            "score_h1",
+            "score_h5",
         ):
-            if dst.get(k) in (None, "", "-") and proxy_row.get(k) not in (None, "", "-"):
+            if dst.get(k) in (None, "", "-") and proxy_row.get(k) not in (
+                None,
+                "",
+                "-",
+            ):
                 dst[k] = proxy_row.get(k)
 
     for _sym, _row in list(util.items()):
@@ -2816,7 +2942,7 @@ def main() -> int:
     canonical_overview_rows = _extract_overview_row_map(overview_text_raw)
     overview_text = _backfill_overview_state_compact_text(overview_text_raw)
     sys.stdout.write(overview_text + "\n")
-# 3) Details for positions (TRI-SCORE ASCII prototype)
+    # 3) Details for positions (TRI-SCORE ASCII prototype)
 
     #             # --- Snapshot widgets (cache-only) ---
     #     try:
@@ -2872,7 +2998,10 @@ def main() -> int:
 
             raw_panel = None
             try:
-                from market_health.ui_positions_compact_rich import _render_actual_holdings_panel
+                from market_health.ui_positions_compact_rich import (
+                    _render_actual_holdings_panel,
+                )
+
                 pos_doc = read_json(CACHE_DIR / "positions.v1.json")
                 raw_panel = _render_actual_holdings_panel(pos_doc)
             except Exception:
@@ -2884,7 +3013,10 @@ def main() -> int:
 
             compact_panel = None
             try:
-                from market_health.ui_positions_unified_rich import render_positions_unified_panel
+                from market_health.ui_positions_unified_rich import (
+                    render_positions_unified_panel,
+                )
+
                 compact_panel = render_positions_unified_panel()
             except Exception:
                 compact_panel = None
@@ -2905,12 +3037,14 @@ def main() -> int:
                 inv_to_long_local = _load_inverse_map_from_cache()
 
                 compact_text = _backfill_sector_proxy_view_current_text(
-                        compact_text,
-                        canonical_overview_rows,
-                        inv_to_long_local,
-                    )
+                    compact_text,
+                    canonical_overview_rows,
+                    inv_to_long_local,
+                )
                 sys.stdout.write(
-                    compact_text if compact_text.endswith(chr(10)) else compact_text + chr(10)
+                    compact_text
+                    if compact_text.endswith(chr(10))
+                    else compact_text + chr(10)
                 )
                 sys.stdout.write(chr(10))
             else:
@@ -2920,9 +3054,9 @@ def main() -> int:
                 c("Tri-Score ASCII unavailable: %s" % (e,) + chr(10) + chr(10), YELLOW)
             )
 
-                    # legacy per-position detail blocks suppressed; unified table shown above
+            # legacy per-position detail blocks suppressed; unified table shown above
 
-# 4) Recommendation + READY/BLOCKED table
+    # 4) Recommendation + READY/BLOCKED table
     reco_text = render_reco(order, util, rec_doc, held_syms)
     reco_text = _backfill_recommendation_panel_text(reco_text, rec_doc, CACHE_DIR)
     sys.stdout.write(reco_text)
