@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Optional
 import os
+
+from market_health.market_catalog import get_symbol_meta
 
 
 @dataclass(frozen=True)
@@ -8,9 +12,7 @@ class AssetMeta:
     symbol: str
     asset_type: str  # sector | inverse | precious | parking | unsupported
     group: str  # SECTOR | INVERSE | PRECIOUS | PARKING | UNSUPPORTED
-    metal_type: Optional[str] = (
-        None  # gold | silver | platinum | palladium | basket | None
-    )
+    metal_type: Optional[str] = None  # gold | silver | platinum | palladium | basket
     is_basket: bool = False
 
 
@@ -25,6 +27,7 @@ SECTOR_SYMBOLS = [
     "XLY",
     "XLK",
     "XLE",
+    "EWJ",
 ]
 
 INVERSE_SYMBOLS = [
@@ -69,6 +72,27 @@ def precious_metals_enabled() -> bool:
     return _flag("MH_ENABLE_PRECIOUS_METALS", "1")
 
 
+def _is_live_tradable(sym: str) -> bool:
+    allow_research = _flag("MARKET_HEALTH_INCLUDE_RESEARCH", "0")
+    if allow_research:
+        return True
+
+    meta = get_symbol_meta(sym)
+    if meta is None:
+        return True
+
+    if not bool(getattr(meta, "tradable_live", True)):
+        return False
+
+    broker_profile = (
+        str(getattr(meta, "broker_profile", "us_retail_supported") or "")
+        .strip()
+        .lower()
+    )
+
+    return broker_profile in {"", "default", "us_retail_supported"}
+
+
 def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list[str]:
     if include_precious is None:
         include_precious = precious_metals_enabled()
@@ -76,7 +100,20 @@ def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list
     symbols = list(SECTOR_SYMBOLS)
     if include_precious:
         symbols.extend(PRECIOUS_SYMBOLS)
-    return symbols
+
+    out: list[str] = []
+    seen: set[str] = set()
+
+    for sym in symbols:
+        s = str(sym).strip().upper()
+        if not s or s in seen:
+            continue
+        if not _is_live_tradable(s):
+            continue
+        out.append(s)
+        seen.add(s)
+
+    return out
 
 
 def classify_asset_symbol(symbol: str) -> AssetMeta:
