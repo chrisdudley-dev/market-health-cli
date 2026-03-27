@@ -1769,6 +1769,10 @@ def render_reco(order, util, rec_doc, held_syms):
 
     # legacy per-position widgets suppressed; unified table shown above
     pair_rows = d.get("candidate_pairs") or []
+    pair_total = len(pair_rows)
+    pair_limit = 10
+    if pair_total > pair_limit:
+        pair_rows = pair_rows[:pair_limit]
     stale_positions = "stale_positions_cache" in str(reason)
 
     if stale_positions and (not isinstance(pair_rows, list) or not pair_rows):
@@ -1778,7 +1782,11 @@ def render_reco(order, util, rec_doc, held_syms):
                     "Forecast candidate pairs are hidden because positions.v1.json is stale. Refresh positions to restore this panel.",
                     style="yellow",
                 ),
-                title="Forecast candidate pairs",
+                title=(
+                    f"Forecast candidate pairs (top {len(pair_rows)} of {pair_total})"
+                    if pair_total > len(pair_rows)
+                    else "Forecast candidate pairs"
+                ),
                 border_style="yellow",
                 box=box.ROUNDED,
             )
@@ -1877,13 +1885,24 @@ def render_reco(order, util, rec_doc, held_syms):
         console.print(
             Panel(
                 ptbl,
-                title="Forecast candidate pairs",
+                title=(
+                    f"Forecast candidate pairs (top {len(pair_rows)} of {pair_total})"
+                    if pair_total > len(pair_rows)
+                    else "Forecast candidate pairs"
+                ),
                 border_style="magenta",
                 box=box.ROUNDED,
             )
         )
 
     rows = d.get("candidate_rows") or []
+
+    rows_total = len(rows)
+
+    rows_limit = 10
+
+    if rows_total > rows_limit:
+        rows = rows[:rows_limit]
     if isinstance(rows, list) and rows:
         tbl = Table(
             box=box.SIMPLE_HEAVY,
@@ -1938,7 +1957,11 @@ def render_reco(order, util, rec_doc, held_syms):
         console.print(
             Panel(
                 tbl,
-                title="Forecast candidates",
+                title=(
+                    f"Forecast candidates (top {len(rows)} of {rows_total})"
+                    if rows_total > len(rows)
+                    else "Forecast candidates"
+                ),
                 border_style="cyan",
                 box=box.ROUNDED,
             )
