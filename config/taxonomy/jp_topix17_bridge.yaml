@@ -1,0 +1,21 @@
+market: JP
+taxonomy: topix17
+bridge:
+  jp_broad_market:
+    family_id: broad_equity
+    representative_symbol: EWJ
+  jp_machinery:
+    family_id: industrials
+    representative_symbol: 1624.T
+  jp_electric_appliances_precision:
+    family_id: technology
+    representative_symbol: 1625.T
+  jp_electric_power_gas:
+    family_id: utilities
+    representative_symbol: 1627.T
+  jp_financials_ex_banks:
+    family_id: financials
+    representative_symbol: 1632.T
+  jp_real_estate:
+    family_id: real_estate
+    representative_symbol: 1633.T

@@ -1,0 +1,10 @@
+market: JP
+region: APAC
+calendar_id: JPX
+currency: JPY
+broad_benchmark: TOPIX
+taxonomy: topix17
+session_model: cash_equity
+supports_sector_taxonomy: true
+supports_inverse_etfs: false
+supports_crowding_direct: partial
