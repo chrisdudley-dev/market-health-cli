@@ -679,12 +679,19 @@ def main() -> int:
 
     args = ap.parse_args()
 
-    forecast_enabled = bool(getattr(args, "forecast", False)) or str(
+    forecast_requested = bool(getattr(args, "forecast", False)) or str(
         os.environ.get("JERBOA_FORECAST_MODE", "")
     ).lower() in ("1", "true", "yes")
 
     pos_p = Path(args.positions)
     out_p = Path(args.out)
+    forecast_p = Path(
+        getattr(
+            args,
+            "forecast_path",
+            os.path.expanduser("~/.cache/jerboa/forecast_scores.v1.json"),
+        )
+    )
 
     positions = read_json(pos_p) if pos_p.exists() else {"positions": []}
     positions_mtime_epoch = _mtime_epoch(pos_p)
@@ -708,27 +715,27 @@ def main() -> int:
 
     forecast_doc = None
     forecast_status = "disabled"
-    forecast_p = Path(
-        getattr(
-            args,
-            "forecast_path",
-            os.path.expanduser("~/.cache/jerboa/forecast_scores.v1.json"),
-        )
-    )
-    if forecast_enabled:
-        forecast_status = "ok"
+    forecast_enabled = False
+
+    if forecast_requested or forecast_p.exists():
         try:
             if forecast_p.exists():
                 forecast_doc = json.loads(forecast_p.read_text(encoding="utf-8"))
-                if not (
+                if (
                     isinstance(forecast_doc, dict)
                     and forecast_doc.get("schema") == "forecast_scores.v1"
                 ):
+                    forecast_enabled = True
+                    forecast_status = "ok"
+                else:
+                    forecast_enabled = False
                     forecast_status = "unreadable"
                     forecast_doc = None
             else:
+                forecast_enabled = False
                 forecast_status = "missing"
         except Exception:
+            forecast_enabled = False
             forecast_status = "unreadable"
             forecast_doc = None
 
