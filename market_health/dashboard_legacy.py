@@ -1963,6 +1963,9 @@ def main() -> int:
             data=data2,
             horizons=(1, 5),
         )
+        forecast_scores = (
+            forecast_doc.get("scores") if isinstance(forecast_doc, dict) else {}
+        )
         if isinstance(rows2, tuple) and len(rows2) == 2:
             rows2 = rows2[0]
 
@@ -1993,6 +1996,52 @@ def main() -> int:
                     except Exception:
                         pass
             return total
+
+        if isinstance(forecast_scores, dict):
+            for sym, row in by2.items():
+                if not isinstance(row, dict):
+                    continue
+
+                by_h = forecast_scores.get(sym)
+                if not isinstance(by_h, dict):
+                    continue
+
+                h1_payload = by_h.get(1) or by_h.get("1") or {}
+                h5_payload = by_h.get(5) or by_h.get("5") or {}
+
+                h1_score = h1_payload.get("forecast_score")
+                h5_score = h5_payload.get("forecast_score")
+
+                current_utility = _cat_sum(row, "A") + _cat_sum(row, "B")
+                current_utility += _cat_sum(row, "C") + _cat_sum(row, "D")
+                current_utility += _cat_sum(row, "E")
+                current_utility = float(current_utility) / 60.0
+
+                row["current_utility"] = current_utility
+                row["c"] = current_utility
+
+                if isinstance(h1_score, (int, float)):
+                    row["h1_utility"] = float(h1_score)
+                    row["h1"] = float(h1_score)
+
+                if isinstance(h5_score, (int, float)):
+                    row["h5_utility"] = float(h5_score)
+                    row["h5"] = float(h5_score)
+
+                if isinstance(h1_score, (int, float)) and isinstance(
+                    h5_score, (int, float)
+                ):
+                    blended = (
+                        (current_utility * 0.5)
+                        + (float(h1_score) * 0.25)
+                        + (float(h5_score) * 0.25)
+                    )
+                    row["utility"] = blended
+                    row["blended"] = blended
+                    row["delta_h1"] = float(h1_score) - current_utility
+                    row["delta_h5"] = float(h5_score) - current_utility
+                    row["d1"] = float(h1_score) - current_utility
+                    row["d5"] = float(h5_score) - current_utility
 
         def _style(val, denom):
             if denom == 12:
