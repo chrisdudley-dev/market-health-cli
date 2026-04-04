@@ -624,7 +624,6 @@ def render_overview_triscore(order, held_syms):
             if sym:
                 sector_map[sym] = row
 
-    raw_scores = (fs.get("scores") or {}) if isinstance(fs, dict) else {}
     held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
 
     syms = []
