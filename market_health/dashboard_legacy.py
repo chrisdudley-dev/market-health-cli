@@ -625,7 +625,6 @@ def render_overview_triscore(order, held_syms):
                 sector_map[sym] = row
 
     raw_scores = (fs.get("scores") or {}) if isinstance(fs, dict) else {}
-    scores = raw_scores if isinstance(raw_scores, dict) else {}
     held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
 
     syms = []
@@ -697,7 +696,11 @@ def render_overview_triscore(order, held_syms):
         fs_doc = {}
 
     _overview_rows_unused, overview_data = _unpack_scores(
-        compute_scores(sectors=order, period="6mo", interval="1d")
+        compute_scores(
+            sectors=list(dict.fromkeys(["SPY", *order])),
+            period="6mo",
+            interval="1d",
+        )
     )
 
     fs_doc = _backfill_missing_forecast_scores(
