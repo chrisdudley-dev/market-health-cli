@@ -2,12 +2,14 @@ from dataclasses import dataclass
 from typing import Optional
 import os
 
+from market_health.etf_universe_v1 import load_etf_universe
+
 
 @dataclass(frozen=True)
 class AssetMeta:
     symbol: str
-    asset_type: str  # sector | inverse | precious | parking | unsupported
-    group: str  # SECTOR | INVERSE | PRECIOUS | PARKING | UNSUPPORTED
+    asset_type: str  # sector | inverse | precious | parking | etf | unsupported
+    group: str  # SECTOR | INVERSE | PRECIOUS | PARKING | ETF | UNSUPPORTED
     metal_type: Optional[str] = (
         None  # gold | silver | platinum | palladium | basket | None
     )
@@ -69,6 +71,22 @@ def precious_metals_enabled() -> bool:
     return _flag("MH_ENABLE_PRECIOUS_METALS", "1")
 
 
+def etf_universe_enabled() -> bool:
+    return _flag("MH_ENABLE_ETF_UNIVERSE", "0")
+
+
+def get_configured_etf_symbols() -> list[str]:
+    if not etf_universe_enabled():
+        return []
+
+    out: list[str] = []
+    for row in load_etf_universe():
+        sym = str(row.get("symbol", "")).upper().strip()
+        if sym and bool(row.get("enabled", True)):
+            out.append(sym)
+    return out
+
+
 def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list[str]:
     if include_precious is None:
         include_precious = precious_metals_enabled()
@@ -112,6 +130,9 @@ def classify_asset_symbol(symbol: str) -> AssetMeta:
             metal_type="basket",
             is_basket=True,
         )
+
+    if sym in get_configured_etf_symbols():
+        return AssetMeta(symbol=sym, asset_type="etf", group="ETF")
 
     if sym in PARKING_SYMBOLS:
         return AssetMeta(symbol=sym, asset_type="parking", group="PARKING")
