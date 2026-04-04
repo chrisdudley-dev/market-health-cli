@@ -75,3 +75,23 @@ def test_engine_sectors_default_includes_etfs_when_enabled_on_reload(monkeypatch
     assert "IBIT" in engine.SECTORS_DEFAULT
     assert "ETHA" in engine.SECTORS_DEFAULT
     assert "QYLD" in engine.SECTORS_DEFAULT
+
+
+def test_enabled_etf_metadata_exposes_registry_flags(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    meta = universe.classify_asset_symbol("BITI")
+    assert meta.asset_type == "etf"
+    assert meta.group == "ETF"
+    assert meta.inverse_or_levered is True
+    assert meta.strategy_wrapper is False
+    assert meta.overlap_key == "bitcoin"
+
+
+def test_enabled_strategy_wrapper_etf_metadata(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    meta = universe.classify_asset_symbol("QYLD")
+    assert meta.asset_type == "etf"
+    assert meta.group == "ETF"
+    assert meta.inverse_or_levered is False
+    assert meta.strategy_wrapper is True
+    assert meta.overlap_key == "equity_income"

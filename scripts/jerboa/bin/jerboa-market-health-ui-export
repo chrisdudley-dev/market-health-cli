@@ -87,6 +87,9 @@ def enrich_sector_rows(obj):
         new_row.setdefault("group", meta_obj.group)
         new_row.setdefault("metal_type", meta_obj.metal_type)
         new_row.setdefault("is_basket", meta_obj.is_basket)
+        new_row.setdefault("inverse_or_levered", meta_obj.inverse_or_levered)
+        new_row.setdefault("strategy_wrapper", meta_obj.strategy_wrapper)
+        new_row.setdefault("overlap_key", meta_obj.overlap_key)
         out.append(new_row)
     return out
 
