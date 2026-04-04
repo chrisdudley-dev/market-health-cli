@@ -2,7 +2,7 @@
 from __future__ import annotations
 import argparse
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, time
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -112,8 +112,6 @@ def _get_market_calendar_module():
 
 
 def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
-    from datetime import datetime, timezone, timedelta, time
-
     dt = _parse_iso_utc(value)
     if dt is None:
         return False
