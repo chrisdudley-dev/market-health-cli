@@ -480,8 +480,6 @@ def fmt_u(u: float | None) -> str:
     return f"{u:.3f} / {u * 100:.1f}%"
 
 
-
-
 def _load_inverse_symbols_from_cache():
     try:
         inv_path = os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json")
@@ -512,6 +510,7 @@ def _load_inverse_symbols_from_cache():
             deduped.append(sym)
     return deduped
 
+
 def _expanded_overview_order(base_order, held_syms):
     out = []
     seen = set()
@@ -525,7 +524,12 @@ def _expanded_overview_order(base_order, held_syms):
         seen.add(s)
         out.append(s)
 
-    for seq in (base_order, held_syms, _load_inverse_symbols_from_cache(), get_default_scoring_symbols()):
+    for seq in (
+        base_order,
+        held_syms,
+        _load_inverse_symbols_from_cache(),
+        get_default_scoring_symbols(),
+    ):
         if isinstance(seq, (list, tuple)):
             for sym in seq:
                 _add(sym)
@@ -802,6 +806,7 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
     except ModuleNotFoundError:
         try:
             from zoneinfo import ZoneInfo
+
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -859,6 +864,7 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
 
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -880,6 +886,7 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
     next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
+
 
 def render_reco(order, util, rec_doc, held_syms):
     NL = chr(10)
@@ -1832,8 +1839,16 @@ def main() -> int:
         from rich import box
 
         inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
-        period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
-        interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
+        period = (
+            str(inputs.get("period"))
+            if isinstance(inputs, dict) and inputs.get("period")
+            else "6mo"
+        )
+        interval = (
+            str(inputs.get("interval"))
+            if isinstance(inputs, dict) and inputs.get("interval")
+            else "1d"
+        )
 
         rows2 = compute_scores(sectors=overview_order, period=period, interval=interval)
         if isinstance(rows2, tuple) and len(rows2) == 2:

@@ -124,6 +124,7 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
     except ModuleNotFoundError:
         try:
             from zoneinfo import ZoneInfo
+
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -181,6 +182,7 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
 
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -203,6 +205,7 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
 
+
 def _is_same_or_last_completed_session(value: Any):
     dt = _parse_iso_utc(value)
     if dt is None:
@@ -211,6 +214,7 @@ def _is_same_or_last_completed_session(value: Any):
     now_utc = datetime.now(timezone.utc)
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -556,6 +560,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
     except ModuleNotFoundError:
         try:
             from zoneinfo import ZoneInfo
+
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -613,6 +618,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
 
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -634,6 +640,7 @@ def _intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
     next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(

@@ -61,7 +61,9 @@ def test_sectorize_positions_maps_enabled_etf_holdings_when_in_universe(monkeypa
     assert meta["classified"]["ETF"] == ["ETHA", "IBIT"]
 
 
-def test_sectorize_positions_marks_enabled_etf_holdings_supported_outside_universe(monkeypatch):
+def test_sectorize_positions_marks_enabled_etf_holdings_supported_outside_universe(
+    monkeypatch,
+):
     monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
     positions = {
         "schema": "positions.v1",
