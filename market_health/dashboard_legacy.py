@@ -686,6 +686,29 @@ def render_overview_triscore(order, held_syms):
     table.add_column("Δ1", justify="right", no_wrap=True, width=4)
     table.add_column("Δ5", justify="right", no_wrap=True, width=4)
 
+    fs_doc = {}
+    try:
+        fs_doc = json.loads(
+            (Path.home() / ".cache" / "jerboa" / "forecast_scores.v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except Exception:
+        fs_doc = {}
+
+    overview_scores = compute_scores(sectors=order, period="6mo", interval="1d")
+    overview_data = {}
+    if isinstance(overview_scores, tuple) and len(overview_scores) == 2:
+        _overview_rows_unused, overview_data = overview_scores
+
+    fs_doc = _backfill_missing_forecast_scores(
+        forecast_doc=fs_doc,
+        symbols=[str(sym).upper() for sym in order if isinstance(sym, str)],
+        data=overview_data,
+        horizons=(1, 5),
+    )
+    forecast_scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else {}
+
     extras_map = {}
     try:
         missing_syms = [s for s in syms if s not in sector_map]
@@ -730,6 +753,64 @@ def render_overview_triscore(order, held_syms):
         h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
         d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
         d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
+
+        if isinstance(forecast_scores, dict):
+            by_h = forecast_scores.get(sym)
+            if isinstance(by_h, dict):
+                curr_meta = util.get(sym, {}) if isinstance(util, dict) else {}
+                c_num = _num(curr_meta.get("current_utility"))
+                h1_num = _num(curr_meta.get("h1_utility"))
+                h5_num = _num(curr_meta.get("h5_utility"))
+                blend_num = _num(curr_meta.get("utility"))
+
+                if h1_num is None:
+                    h1_num = _num(
+                        (by_h.get(1) or by_h.get("1") or {}).get("forecast_score")
+                    )
+                if h5_num is None:
+                    h5_num = _num(
+                        (by_h.get(5) or by_h.get("5") or {}).get("forecast_score")
+                    )
+
+                if (
+                    blend_num is None
+                    and c_num is not None
+                    and h1_num is not None
+                    and h5_num is not None
+                ):
+                    blend_num = (c_num * 0.5) + (h1_num * 0.25) + (h5_num * 0.25)
+
+                d1_num = (
+                    (h1_num - c_num)
+                    if h1_num is not None and c_num is not None
+                    else None
+                )
+                d5_num = (
+                    (h5_num - c_num)
+                    if h5_num is not None and c_num is not None
+                    else None
+                )
+
+                if blend is None and blend_num is not None:
+                    blend = blend_num
+                    blend_pct = blend_num
+                    blend_txt = f"[{_score_style(blend_num)}]{_fmt_pct(blend_num)}[/]"
+
+                if h1 is None and h1_num is not None:
+                    h1 = h1_num
+                    h1_txt = f"[{_score_style(h1_num)}]{_fmt_pct(h1_num)}[/]"
+
+                if h5 is None and h5_num is not None:
+                    h5 = h5_num
+                    h5_txt = f"[{_score_style(h5_num)}]{_fmt_pct(h5_num)}[/]"
+
+                if d1 is None and d1_num is not None:
+                    d1 = d1_num
+                    d1_txt = f"[{_delta_style(d1_num)}]{_fmt_delta(d1_num)}[/]"
+
+                if d5 is None and d5_num is not None:
+                    d5 = d5_num
+                    d5_txt = f"[{_delta_style(d5_num)}]{_fmt_delta(d5_num)}[/]"
 
         rows.append(
             {
