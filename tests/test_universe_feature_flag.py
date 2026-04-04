@@ -50,3 +50,28 @@ def test_classify_asset_symbol_recognizes_enabled_etf(monkeypatch):
     meta = universe.classify_asset_symbol("IBIT")
     assert meta.asset_type == "etf"
     assert meta.group == "ETF"
+
+
+def test_default_scoring_symbols_excludes_etfs_when_disabled(monkeypatch):
+    monkeypatch.delenv("MH_ENABLE_ETF_UNIVERSE", raising=False)
+    syms = universe.get_default_scoring_symbols()
+    assert "IBIT" not in syms
+    assert "ETHA" not in syms
+    assert "QYLD" not in syms
+
+
+def test_default_scoring_symbols_includes_etfs_when_enabled(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    syms = universe.get_default_scoring_symbols()
+    assert "IBIT" in syms
+    assert "ETHA" in syms
+    assert "QYLD" in syms
+
+
+def test_engine_sectors_default_includes_etfs_when_enabled_on_reload(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    importlib.reload(universe)
+    importlib.reload(engine)
+    assert "IBIT" in engine.SECTORS_DEFAULT
+    assert "ETHA" in engine.SECTORS_DEFAULT
+    assert "QYLD" in engine.SECTORS_DEFAULT

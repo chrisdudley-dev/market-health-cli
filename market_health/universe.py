@@ -94,6 +94,8 @@ def get_default_scoring_symbols(include_precious: Optional[bool] = None) -> list
     symbols = list(SECTOR_SYMBOLS)
     if include_precious:
         symbols.extend(PRECIOUS_SYMBOLS)
+    if etf_universe_enabled():
+        symbols.extend(get_configured_etf_symbols())
     return symbols
 
 
