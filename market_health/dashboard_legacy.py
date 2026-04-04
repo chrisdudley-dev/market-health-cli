@@ -696,10 +696,9 @@ def render_overview_triscore(order, held_syms):
     except Exception:
         fs_doc = {}
 
-    overview_scores = compute_scores(sectors=order, period="6mo", interval="1d")
-    overview_data = {}
-    if isinstance(overview_scores, tuple) and len(overview_scores) == 2:
-        _overview_rows_unused, overview_data = overview_scores
+    _overview_rows_unused, overview_data = _unpack_scores(
+        compute_scores(sectors=order, period="6mo", interval="1d")
+    )
 
     fs_doc = _backfill_missing_forecast_scores(
         forecast_doc=fs_doc,
@@ -731,8 +730,8 @@ def render_overview_triscore(order, held_syms):
             continue
 
         c_pct = _sum_cat_pct(row)
-        h1_pct = _forecast_pct(scores, sym, 1)
-        h5_pct = _forecast_pct(scores, sym, 5)
+        h1_pct = _forecast_pct(forecast_scores, sym, 1)
+        h5_pct = _forecast_pct(forecast_scores, sym, 5)
 
         d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
         d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
