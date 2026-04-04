@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Any
 from market_health.engine import compute_scores
+from market_health.forecast_features import OHLCV
+from market_health.forecast_score_provider import compute_forecast_universe
 from market_health.universe import get_default_scoring_symbols
 from market_health.inverse_universe_v1 import load_inverse_pairs
 import argparse
@@ -886,6 +888,104 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
     next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
+
+
+def _has_forecast_payload(
+    forecast_scores: dict[str, Any] | None,
+    sym: str,
+    horizons: tuple[int, ...] = (1, 5),
+) -> bool:
+    if not isinstance(forecast_scores, dict):
+        return False
+
+    by_h = forecast_scores.get(sym.upper())
+    if not isinstance(by_h, dict):
+        return False
+
+    for h in horizons:
+        payload = by_h.get(h) or by_h.get(str(h))
+        if not isinstance(payload, dict):
+            return False
+        if not isinstance(payload.get("forecast_score"), (int, float)):
+            return False
+    return True
+
+
+def _df_to_ohlcv(df):
+    if df is None or getattr(df, "empty", True):
+        return None
+
+    cols = {str(c).lower(): c for c in df.columns}
+    required = {"close", "high", "low", "volume"}
+    if not required.issubset(cols):
+        return None
+
+    return OHLCV(
+        close=[float(x) for x in df[cols["close"]].tolist()],
+        high=[float(x) for x in df[cols["high"]].tolist()],
+        low=[float(x) for x in df[cols["low"]].tolist()],
+        volume=[float(x) for x in df[cols["volume"]].fillna(0).tolist()],
+    )
+
+
+def _backfill_missing_forecast_scores(
+    forecast_doc: dict[str, Any] | None,
+    *,
+    symbols: list[str],
+    data,
+    horizons: tuple[int, ...] = (1, 5),
+):
+    doc = dict(forecast_doc or {})
+    scores = dict(doc.get("scores") or {})
+
+    missing = [
+        str(sym).upper()
+        for sym in symbols
+        if isinstance(sym, str)
+        and sym.strip()
+        and not _has_forecast_payload(scores, str(sym).upper(), horizons)
+    ]
+    if not missing:
+        doc["scores"] = scores
+        doc.setdefault("horizons_trading_days", list(horizons))
+        return doc
+
+    if not isinstance(data, dict):
+        doc["scores"] = scores
+        doc.setdefault("horizons_trading_days", list(horizons))
+        return doc
+
+    spy = _df_to_ohlcv(data.get("SPY"))
+    if spy is None:
+        doc["scores"] = scores
+        doc.setdefault("horizons_trading_days", list(horizons))
+        return doc
+
+    universe = {}
+    for sym in missing:
+        ohlcv = _df_to_ohlcv(data.get(sym))
+        if ohlcv is None:
+            continue
+        if len(ohlcv.close) < 30:
+            continue
+        universe[sym] = ohlcv
+
+    if universe:
+        extra_scores = compute_forecast_universe(
+            universe=universe,
+            spy=spy,
+            horizons_trading_days=horizons,
+            calendar={
+                "schema": "calendar.v1",
+                "windows": {"by_h": {str(h): {} for h in horizons}},
+            },
+        )
+        for sym, by_h in extra_scores.items():
+            scores[str(sym).upper()] = by_h
+
+    doc["scores"] = scores
+    doc.setdefault("horizons_trading_days", list(horizons))
+    return doc
 
 
 def render_reco(order, util, rec_doc, held_syms):
@@ -1851,6 +1951,18 @@ def main() -> int:
         )
 
         rows2 = compute_scores(sectors=overview_order, period=period, interval=interval)
+
+        data2 = None
+
+        if isinstance(rows2, tuple) and len(rows2) == 2:
+            rows2, data2 = rows2
+
+        forecast_doc = _backfill_missing_forecast_scores(
+            forecast_doc=forecast_doc,
+            symbols=overview_order,
+            data=data2,
+            horizons=(1, 5),
+        )
         if isinstance(rows2, tuple) and len(rows2) == 2:
             rows2 = rows2[0]
 
