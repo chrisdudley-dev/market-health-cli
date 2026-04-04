@@ -544,7 +544,6 @@ def render_overview_triscore(order, held_syms):
     NL = chr(10)
     cache = Path.home() / ".cache" / "jerboa"
     ui_p = cache / "market_health.ui.v1.json"
-    fs_p = cache / "forecast_scores.v1.json"
 
     def _jload(path):
         try:
@@ -974,6 +973,53 @@ def _df_to_ohlcv(df):
     )
 
 
+def _download_price_frames(symbols, *, period: str = "6mo", interval: str = "1d"):
+    syms = [
+        str(sym).upper().strip()
+        for sym in (symbols or [])
+        if isinstance(sym, str) and str(sym).strip()
+    ]
+    if not syms:
+        return {}
+
+    try:
+        import yfinance as yf
+    except Exception:
+        return {}
+
+    out = {}
+    for sym in syms:
+        try:
+            df = yf.download(
+                sym,
+                period=period,
+                interval=interval,
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+            )
+        except Exception:
+            continue
+
+        if df is None or getattr(df, "empty", True):
+            continue
+
+        # Normalize possible multi-index columns from yfinance.
+        cols = getattr(df, "columns", None)
+        if cols is not None and getattr(cols, "nlevels", 1) > 1:
+            try:
+                df = df.droplevel(-1, axis=1)
+            except Exception:
+                try:
+                    df = df.xs(sym, axis=1, level=0)
+                except Exception:
+                    pass
+
+        out[sym] = df
+
+    return out
+
+
 def _backfill_missing_forecast_scores(
     forecast_doc: dict[str, Any] | None,
     *,
@@ -996,12 +1042,23 @@ def _backfill_missing_forecast_scores(
         doc.setdefault("horizons_trading_days", list(horizons))
         return doc
 
-    if not isinstance(data, dict):
-        doc["scores"] = scores
-        doc.setdefault("horizons_trading_days", list(horizons))
-        return doc
+    data_map = dict(data) if isinstance(data, dict) else {}
 
-    spy = _df_to_ohlcv(data.get("SPY"))
+    # Fallback: compact tri-score calls compute_scores(), which only returns rows.
+    # In that path we need to fetch price frames ourselves for SPY + missing symbols.
+    need_frames = ["SPY", *missing]
+    need_download = [
+        sym
+        for sym in need_frames
+        if not isinstance(data_map.get(sym), object)
+        or getattr(data_map.get(sym), "empty", True)
+    ]
+    if need_download:
+        downloaded = _download_price_frames(need_download, period="6mo", interval="1d")
+        for sym, df in downloaded.items():
+            data_map[str(sym).upper()] = df
+
+    spy = _df_to_ohlcv(data_map.get("SPY"))
     if spy is None:
         doc["scores"] = scores
         doc.setdefault("horizons_trading_days", list(horizons))
@@ -1009,7 +1066,7 @@ def _backfill_missing_forecast_scores(
 
     universe = {}
     for sym in missing:
-        ohlcv = _df_to_ohlcv(data.get(sym))
+        ohlcv = _df_to_ohlcv(data_map.get(sym))
         if ohlcv is None:
             continue
         if len(ohlcv.close) < 30:
