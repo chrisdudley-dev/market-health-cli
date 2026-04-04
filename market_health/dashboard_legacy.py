@@ -1958,7 +1958,7 @@ def main() -> int:
             rows2, data2 = rows2
 
         forecast_doc = _backfill_missing_forecast_scores(
-            forecast_doc=forecast_doc,
+            forecast_doc={},
             symbols=overview_order,
             data=data2,
             horizons=(1, 5),
