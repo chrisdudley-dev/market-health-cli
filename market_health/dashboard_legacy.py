@@ -605,7 +605,6 @@ def render_overview_triscore(order, held_syms):
         return "   -"
 
     ui = _jload(ui_p)
-    fs = _jload(fs_p)
 
     raw_sectors = (
         ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
