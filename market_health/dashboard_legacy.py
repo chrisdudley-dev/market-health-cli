@@ -757,60 +757,25 @@ def render_overview_triscore(order, held_syms):
         if isinstance(forecast_scores, dict):
             by_h = forecast_scores.get(sym)
             if isinstance(by_h, dict):
-                curr_meta = util.get(sym, {}) if isinstance(util, dict) else {}
-                c_num = _num(curr_meta.get("current_utility"))
-                h1_num = _num(curr_meta.get("h1_utility"))
-                h5_num = _num(curr_meta.get("h5_utility"))
-                blend_num = _num(curr_meta.get("utility"))
+                h1_backfill = (by_h.get(1) or by_h.get("1") or {}).get("forecast_score")
+                h5_backfill = (by_h.get(5) or by_h.get("5") or {}).get("forecast_score")
 
-                if h1_num is None:
-                    h1_num = _num(
-                        (by_h.get(1) or by_h.get("1") or {}).get("forecast_score")
-                    )
-                if h5_num is None:
-                    h5_num = _num(
-                        (by_h.get(5) or by_h.get("5") or {}).get("forecast_score")
-                    )
+                if h1_pct is None and isinstance(h1_backfill, (int, float)):
+                    h1_pct = float(h1_backfill)
+                if h5_pct is None and isinstance(h5_backfill, (int, float)):
+                    h5_pct = float(h5_backfill)
 
-                if (
-                    blend_num is None
-                    and c_num is not None
-                    and h1_num is not None
-                    and h5_num is not None
-                ):
-                    blend_num = (c_num * 0.5) + (h1_num * 0.25) + (h5_num * 0.25)
+                if c_pct is not None and h1_pct is not None and h5_pct is not None:
+                    blend_pct = (0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct)
 
-                d1_num = (
-                    (h1_num - c_num)
-                    if h1_num is not None and c_num is not None
-                    else None
-                )
-                d5_num = (
-                    (h5_num - c_num)
-                    if h5_num is not None and c_num is not None
-                    else None
-                )
+                d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
+                d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
 
-                if blend is None and blend_num is not None:
-                    blend = blend_num
-                    blend_pct = blend_num
-                    blend_txt = f"[{_score_style(blend_num)}]{_fmt_pct(blend_num)}[/]"
-
-                if h1 is None and h1_num is not None:
-                    h1 = h1_num
-                    h1_txt = f"[{_score_style(h1_num)}]{_fmt_pct(h1_num)}[/]"
-
-                if h5 is None and h5_num is not None:
-                    h5 = h5_num
-                    h5_txt = f"[{_score_style(h5_num)}]{_fmt_pct(h5_num)}[/]"
-
-                if d1 is None and d1_num is not None:
-                    d1 = d1_num
-                    d1_txt = f"[{_delta_style(d1_num)}]{_fmt_delta(d1_num)}[/]"
-
-                if d5 is None and d5_num is not None:
-                    d5 = d5_num
-                    d5_txt = f"[{_delta_style(d5_num)}]{_fmt_delta(d5_num)}[/]"
+                blend_txt = f"[{_pct_style(blend_pct)}]{_fmt_pct(blend_pct)}[/]"
+                h1_txt = f"[{_pct_style(h1_pct)}]{_fmt_pct(h1_pct)}[/]"
+                h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
+                d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
+                d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
 
         rows.append(
             {
