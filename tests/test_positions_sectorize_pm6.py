@@ -37,3 +37,43 @@ def test_sectorize_positions_maps_precious_when_in_universe():
     assert meta["supported_outside_universe"] == []
     assert meta["unmapped"] == []
     assert meta["classified"]["PRECIOUS"] == ["GLDM"]
+
+
+def test_sectorize_positions_maps_enabled_etf_holdings_when_in_universe(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    positions = {
+        "schema": "positions.v1",
+        "positions": [
+            {"symbol": "IBIT", "market_value": 1000.0},
+            {"symbol": "ETHA", "market_value": 500.0},
+        ],
+    }
+
+    out, meta = sectorize_positions(positions, {"XLE", "IBIT", "ETHA"})
+
+    assert out["positions"] == [
+        {"symbol": "ETHA", "market_value": 500.0},
+        {"symbol": "IBIT", "market_value": 1000.0},
+    ]
+    assert meta["mapped"] == ["ETHA", "IBIT"]
+    assert meta["supported_outside_universe"] == []
+    assert meta["unmapped"] == []
+    assert meta["classified"]["ETF"] == ["ETHA", "IBIT"]
+
+
+def test_sectorize_positions_marks_enabled_etf_holdings_supported_outside_universe(
+    monkeypatch,
+):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    positions = {
+        "schema": "positions.v1",
+        "positions": [{"symbol": "IBIT", "market_value": 1000.0}],
+    }
+
+    out, meta = sectorize_positions(positions, {"XLE"})
+
+    assert out["positions"] == []
+    assert meta["mapped"] == []
+    assert meta["supported_outside_universe"] == ["IBIT"]
+    assert meta["unmapped"] == []
+    assert meta["classified"]["ETF"] == ["IBIT"]

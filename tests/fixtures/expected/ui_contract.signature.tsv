@@ -132,8 +132,11 @@ data.sectors[].categories.F.checks	list[dict]
 data.sectors[].categories.F.checks[].label	str
 data.sectors[].categories.F.checks[].score	int
 data.sectors[].group	str
+data.sectors[].inverse_or_levered	bool
 data.sectors[].is_basket	bool
 data.sectors[].metal_type	NoneType
+data.sectors[].overlap_key	NoneType
+data.sectors[].strategy_wrapper	bool
 data.sectors[].symbol	str
 data.state.changed.market	int
 data.state.changed.positions	int

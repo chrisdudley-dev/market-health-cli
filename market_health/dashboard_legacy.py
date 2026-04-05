@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Any
 from market_health.engine import compute_scores
+from market_health.forecast_features import OHLCV
+from market_health.forecast_score_provider import compute_forecast_universe
 from market_health.universe import get_default_scoring_symbols
 from market_health.inverse_universe_v1 import load_inverse_pairs
 import argparse
@@ -480,8 +482,6 @@ def fmt_u(u: float | None) -> str:
     return f"{u:.3f} / {u * 100:.1f}%"
 
 
-
-
 def _load_inverse_symbols_from_cache():
     try:
         inv_path = os.path.expanduser("~/.cache/jerboa/inverse_universe.v1.json")
@@ -512,6 +512,7 @@ def _load_inverse_symbols_from_cache():
             deduped.append(sym)
     return deduped
 
+
 def _expanded_overview_order(base_order, held_syms):
     out = []
     seen = set()
@@ -525,7 +526,12 @@ def _expanded_overview_order(base_order, held_syms):
         seen.add(s)
         out.append(s)
 
-    for seq in (base_order, held_syms, _load_inverse_symbols_from_cache(), get_default_scoring_symbols()):
+    for seq in (
+        base_order,
+        held_syms,
+        _load_inverse_symbols_from_cache(),
+        get_default_scoring_symbols(),
+    ):
         if isinstance(seq, (list, tuple)):
             for sym in seq:
                 _add(sym)
@@ -538,7 +544,6 @@ def render_overview_triscore(order, held_syms):
     NL = chr(10)
     cache = Path.home() / ".cache" / "jerboa"
     ui_p = cache / "market_health.ui.v1.json"
-    fs_p = cache / "forecast_scores.v1.json"
 
     def _jload(path):
         try:
@@ -599,7 +604,6 @@ def render_overview_triscore(order, held_syms):
         return "   -"
 
     ui = _jload(ui_p)
-    fs = _jload(fs_p)
 
     raw_sectors = (
         ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
@@ -618,8 +622,6 @@ def render_overview_triscore(order, held_syms):
             if sym:
                 sector_map[sym] = row
 
-    raw_scores = (fs.get("scores") or {}) if isinstance(fs, dict) else {}
-    scores = raw_scores if isinstance(raw_scores, dict) else {}
     held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
 
     syms = []
@@ -680,6 +682,32 @@ def render_overview_triscore(order, held_syms):
     table.add_column("Δ1", justify="right", no_wrap=True, width=4)
     table.add_column("Δ5", justify="right", no_wrap=True, width=4)
 
+    fs_doc = {}
+    try:
+        fs_doc = json.loads(
+            (Path.home() / ".cache" / "jerboa" / "forecast_scores.v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except Exception:
+        fs_doc = {}
+
+    _overview_rows_unused, overview_data = _unpack_scores(
+        compute_scores(
+            sectors=list(dict.fromkeys(["SPY", *order])),
+            period="6mo",
+            interval="1d",
+        )
+    )
+
+    fs_doc = _backfill_missing_forecast_scores(
+        forecast_doc=fs_doc,
+        symbols=[str(sym).upper() for sym in order if isinstance(sym, str)],
+        data=overview_data,
+        horizons=(1, 5),
+    )
+    forecast_scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else {}
+
     extras_map = {}
     try:
         missing_syms = [s for s in syms if s not in sector_map]
@@ -702,8 +730,8 @@ def render_overview_triscore(order, held_syms):
             continue
 
         c_pct = _sum_cat_pct(row)
-        h1_pct = _forecast_pct(scores, sym, 1)
-        h5_pct = _forecast_pct(scores, sym, 5)
+        h1_pct = _forecast_pct(forecast_scores, sym, 1)
+        h5_pct = _forecast_pct(forecast_scores, sym, 5)
 
         d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
         d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
@@ -724,6 +752,29 @@ def render_overview_triscore(order, held_syms):
         h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
         d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
         d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
+
+        if isinstance(forecast_scores, dict):
+            by_h = forecast_scores.get(sym)
+            if isinstance(by_h, dict):
+                h1_backfill = (by_h.get(1) or by_h.get("1") or {}).get("forecast_score")
+                h5_backfill = (by_h.get(5) or by_h.get("5") or {}).get("forecast_score")
+
+                if h1_pct is None and isinstance(h1_backfill, (int, float)):
+                    h1_pct = float(h1_backfill)
+                if h5_pct is None and isinstance(h5_backfill, (int, float)):
+                    h5_pct = float(h5_backfill)
+
+                if c_pct is not None and h1_pct is not None and h5_pct is not None:
+                    blend_pct = (0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct)
+
+                d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
+                d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
+
+                blend_txt = f"[{_pct_style(blend_pct)}]{_fmt_pct(blend_pct)}[/]"
+                h1_txt = f"[{_pct_style(h1_pct)}]{_fmt_pct(h1_pct)}[/]"
+                h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
+                d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
+                d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
 
         rows.append(
             {
@@ -802,6 +853,7 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
     except ModuleNotFoundError:
         try:
             from zoneinfo import ZoneInfo
+
             et_tz = ZoneInfo("America/New_York")
         except Exception:
             et_tz = timezone(timedelta(hours=-5), "ET")
@@ -859,6 +911,7 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
 
     try:
         from zoneinfo import ZoneInfo
+
         session_tz = ZoneInfo("America/New_York")
     except Exception:
         session_tz = timezone(timedelta(hours=-5), "ET")
@@ -880,6 +933,163 @@ def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=1
     next_open = future_rows[0][1] if future_rows else (now_utc + timedelta(days=5))
 
     return dt_session == last_completed_session or (last_close <= dt <= next_open)
+
+
+def _has_forecast_payload(
+    forecast_scores: dict[str, Any] | None,
+    sym: str,
+    horizons: tuple[int, ...] = (1, 5),
+) -> bool:
+    if not isinstance(forecast_scores, dict):
+        return False
+
+    by_h = forecast_scores.get(sym.upper())
+    if not isinstance(by_h, dict):
+        return False
+
+    for h in horizons:
+        payload = by_h.get(h) or by_h.get(str(h))
+        if not isinstance(payload, dict):
+            return False
+        if not isinstance(payload.get("forecast_score"), (int, float)):
+            return False
+    return True
+
+
+def _df_to_ohlcv(df):
+    if df is None or getattr(df, "empty", True):
+        return None
+
+    cols = {str(c).lower(): c for c in df.columns}
+    required = {"close", "high", "low", "volume"}
+    if not required.issubset(cols):
+        return None
+
+    return OHLCV(
+        close=[float(x) for x in df[cols["close"]].tolist()],
+        high=[float(x) for x in df[cols["high"]].tolist()],
+        low=[float(x) for x in df[cols["low"]].tolist()],
+        volume=[float(x) for x in df[cols["volume"]].fillna(0).tolist()],
+    )
+
+
+def _download_price_frames(symbols, *, period: str = "6mo", interval: str = "1d"):
+    syms = [
+        str(sym).upper().strip()
+        for sym in (symbols or [])
+        if isinstance(sym, str) and str(sym).strip()
+    ]
+    if not syms:
+        return {}
+
+    try:
+        import yfinance as yf
+    except Exception:
+        return {}
+
+    out = {}
+    for sym in syms:
+        try:
+            df = yf.download(
+                sym,
+                period=period,
+                interval=interval,
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+            )
+        except Exception:
+            continue
+
+        if df is None or getattr(df, "empty", True):
+            continue
+
+        # Normalize possible multi-index columns from yfinance.
+        cols = getattr(df, "columns", None)
+        if cols is not None and getattr(cols, "nlevels", 1) > 1:
+            try:
+                df = df.droplevel(-1, axis=1)
+            except Exception:
+                try:
+                    df = df.xs(sym, axis=1, level=0)
+                except Exception:
+                    pass
+
+        out[sym] = df
+
+    return out
+
+
+def _backfill_missing_forecast_scores(
+    forecast_doc: dict[str, Any] | None,
+    *,
+    symbols: list[str],
+    data,
+    horizons: tuple[int, ...] = (1, 5),
+):
+    doc = dict(forecast_doc or {})
+    scores = dict(doc.get("scores") or {})
+
+    missing = [
+        str(sym).upper()
+        for sym in symbols
+        if isinstance(sym, str)
+        and sym.strip()
+        and not _has_forecast_payload(scores, str(sym).upper(), horizons)
+    ]
+    if not missing:
+        doc["scores"] = scores
+        doc.setdefault("horizons_trading_days", list(horizons))
+        return doc
+
+    data_map = dict(data) if isinstance(data, dict) else {}
+
+    # Fallback: compact tri-score calls compute_scores(), which only returns rows.
+    # In that path we need to fetch price frames ourselves for SPY + missing symbols.
+    need_frames = ["SPY", *missing]
+    need_download = [
+        sym
+        for sym in need_frames
+        if not isinstance(data_map.get(sym), object)
+        or getattr(data_map.get(sym), "empty", True)
+    ]
+    if need_download:
+        downloaded = _download_price_frames(need_download, period="6mo", interval="1d")
+        for sym, df in downloaded.items():
+            data_map[str(sym).upper()] = df
+
+    spy = _df_to_ohlcv(data_map.get("SPY"))
+    if spy is None:
+        doc["scores"] = scores
+        doc.setdefault("horizons_trading_days", list(horizons))
+        return doc
+
+    universe = {}
+    for sym in missing:
+        ohlcv = _df_to_ohlcv(data_map.get(sym))
+        if ohlcv is None:
+            continue
+        if len(ohlcv.close) < 30:
+            continue
+        universe[sym] = ohlcv
+
+    if universe:
+        extra_scores = compute_forecast_universe(
+            universe=universe,
+            spy=spy,
+            horizons_trading_days=horizons,
+            calendar={
+                "schema": "calendar.v1",
+                "windows": {"by_h": {str(h): {} for h in horizons}},
+            },
+        )
+        for sym, by_h in extra_scores.items():
+            scores[str(sym).upper()] = by_h
+
+    doc["scores"] = scores
+    doc.setdefault("horizons_trading_days", list(horizons))
+    return doc
+
 
 def render_reco(order, util, rec_doc, held_syms):
     NL = chr(10)
@@ -1832,10 +2042,33 @@ def main() -> int:
         from rich import box
 
         inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
-        period = str(inputs.get("period")) if isinstance(inputs, dict) and inputs.get("period") else "6mo"
-        interval = str(inputs.get("interval")) if isinstance(inputs, dict) and inputs.get("interval") else "1d"
+        period = (
+            str(inputs.get("period"))
+            if isinstance(inputs, dict) and inputs.get("period")
+            else "6mo"
+        )
+        interval = (
+            str(inputs.get("interval"))
+            if isinstance(inputs, dict) and inputs.get("interval")
+            else "1d"
+        )
 
         rows2 = compute_scores(sectors=overview_order, period=period, interval=interval)
+
+        data2 = None
+
+        if isinstance(rows2, tuple) and len(rows2) == 2:
+            rows2, data2 = rows2
+
+        forecast_doc = _backfill_missing_forecast_scores(
+            forecast_doc={},
+            symbols=overview_order,
+            data=data2,
+            horizons=(1, 5),
+        )
+        forecast_scores = (
+            forecast_doc.get("scores") if isinstance(forecast_doc, dict) else {}
+        )
         if isinstance(rows2, tuple) and len(rows2) == 2:
             rows2 = rows2[0]
 
@@ -1866,6 +2099,52 @@ def main() -> int:
                     except Exception:
                         pass
             return total
+
+        if isinstance(forecast_scores, dict):
+            for sym, row in by2.items():
+                if not isinstance(row, dict):
+                    continue
+
+                by_h = forecast_scores.get(sym)
+                if not isinstance(by_h, dict):
+                    continue
+
+                h1_payload = by_h.get(1) or by_h.get("1") or {}
+                h5_payload = by_h.get(5) or by_h.get("5") or {}
+
+                h1_score = h1_payload.get("forecast_score")
+                h5_score = h5_payload.get("forecast_score")
+
+                current_utility = _cat_sum(row, "A") + _cat_sum(row, "B")
+                current_utility += _cat_sum(row, "C") + _cat_sum(row, "D")
+                current_utility += _cat_sum(row, "E")
+                current_utility = float(current_utility) / 60.0
+
+                row["current_utility"] = current_utility
+                row["c"] = current_utility
+
+                if isinstance(h1_score, (int, float)):
+                    row["h1_utility"] = float(h1_score)
+                    row["h1"] = float(h1_score)
+
+                if isinstance(h5_score, (int, float)):
+                    row["h5_utility"] = float(h5_score)
+                    row["h5"] = float(h5_score)
+
+                if isinstance(h1_score, (int, float)) and isinstance(
+                    h5_score, (int, float)
+                ):
+                    blended = (
+                        (current_utility * 0.5)
+                        + (float(h1_score) * 0.25)
+                        + (float(h5_score) * 0.25)
+                    )
+                    row["utility"] = blended
+                    row["blended"] = blended
+                    row["delta_h1"] = float(h1_score) - current_utility
+                    row["delta_h5"] = float(h5_score) - current_utility
+                    row["d1"] = float(h1_score) - current_utility
+                    row["d5"] = float(h5_score) - current_utility
 
         def _style(val, denom):
             if denom == 12:

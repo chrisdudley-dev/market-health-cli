@@ -1,0 +1,219 @@
+{
+  "asof": "2026-04-04T17:01:06Z",
+  "computation_fingerprint": "c4cf1fbd37f43a19f28663b4d409cef7795ecb71e76912a41c093ba19c7b9aa2",
+  "computed_at": "2026-04-04T17:01:06.768221Z",
+  "freshness": {
+    "forecast_age_seconds": null,
+    "forecast_is_fresh": false,
+    "max_positions_age_minutes": 15,
+    "positions_age_seconds": 0,
+    "positions_is_fresh": true,
+    "sectors_age_seconds": null,
+    "sectors_is_fresh": false,
+    "source_skew_seconds": 0
+  },
+  "generated_at": "2026-04-04T17:01:06.790648Z",
+  "input_hashes": {
+    "forecast": null,
+    "positions": "00d351980123cad5c1c97ea412422a5573cd2ebccae13da4db69b150a74b6e9e",
+    "sectors": null
+  },
+  "inputs": {
+    "block_gltr_component_overlap": true,
+    "cooldown_trading_days": 0,
+    "disagreement_veto_edge": 0.0,
+    "forecast_asof": null,
+    "forecast_generated_at": null,
+    "forecast_mode": false,
+    "forecast_path": "/tmp/tmpbp0bgjvz/.cache/jerboa/forecast_scores.v1.json",
+    "forecast_source_asof": null,
+    "forecast_status": "disabled",
+    "hhi_cap": 0.2,
+    "horizon_trading_days": 5,
+    "interval": "1d",
+    "max_positions_age_minutes": 15,
+    "max_precious_holdings": 1,
+    "max_weight_per_symbol": 0.25,
+    "min_delta": 0.12,
+    "min_distinct_symbols": 4,
+    "min_floor": 0.55,
+    "min_improvement_threshold": 0.12,
+    "period": "6mo",
+    "positions_asof": "2026-04-04T17:01:06Z",
+    "positions_classified": {
+      "ETF": [
+        "IBIT"
+      ],
+      "INVERSE": [],
+      "PARKING": [],
+      "PRECIOUS": [],
+      "SECTOR": [
+        "XLB"
+      ],
+      "UNSUPPORTED": []
+    },
+    "positions_is_fresh": true,
+    "positions_mapped": [
+      "IBIT",
+      "XLB"
+    ],
+    "positions_mode": "sectorized",
+    "positions_mtime_epoch": 1775322066,
+    "positions_path": "/root/market-health-cli/tests/fixtures/scenarios/etf_policy/jerboa_cache/positions.v1.json",
+    "positions_supported_outside_universe": [],
+    "positions_unmapped": [],
+    "scores_source": "compute_scores",
+    "sectors_asof": null,
+    "sgov_is_policy_fallback": true,
+    "sgov_symbol": "SGOV",
+    "snapshot_epoch": 1775322066
+  },
+  "recommendation": {
+    "action": "SWAP",
+    "constraints_applied": [
+      "min_delta",
+      "max_swaps_per_day",
+      "min_floor",
+      "sgov_policy_fallback",
+      "max_precious_holdings",
+      "block_gltr_component_overlap",
+      "block_inverse_or_levered_etf",
+      "block_overlap_key"
+    ],
+    "diagnostics": {
+      "best_candidate": "BITI",
+      "candidate_components": {
+        "blended": 0.75,
+        "c": 0.75,
+        "h1": null,
+        "h5": null
+      },
+      "candidate_rows": [
+        {
+          "asset_type": "etf",
+          "blended": 0.75,
+          "c": 0.75,
+          "delta_blended": 0.35,
+          "group": "ETF",
+          "h1": null,
+          "h5": null,
+          "is_basket": false,
+          "metal_type": null,
+          "min_floor": 0.55,
+          "passes_delta": true,
+          "passes_floor": true,
+          "passes_policy": false,
+          "rejection_reasons": [
+            "policy:block_inverse_or_levered_etf",
+            "policy:block_overlap_key"
+          ],
+          "status": "BLOCKED",
+          "sym": "BITI",
+          "threshold": 0.12
+        },
+        {
+          "asset_type": "etf",
+          "blended": 0.7,
+          "c": 0.7,
+          "delta_blended": 0.29999999999999993,
+          "group": "ETF",
+          "h1": null,
+          "h5": null,
+          "is_basket": false,
+          "metal_type": null,
+          "min_floor": 0.55,
+          "passes_delta": true,
+          "passes_floor": true,
+          "passes_policy": false,
+          "rejection_reasons": [
+            "policy:block_overlap_key"
+          ],
+          "status": "BLOCKED",
+          "sym": "BITC",
+          "threshold": 0.12
+        },
+        {
+          "asset_type": "parking",
+          "blended": 0.35,
+          "c": 0.35,
+          "delta_blended": -0.050000000000000044,
+          "group": "PARKING",
+          "h1": null,
+          "h5": null,
+          "is_basket": false,
+          "metal_type": null,
+          "min_floor": 0.55,
+          "passes_delta": null,
+          "passes_floor": null,
+          "passes_policy": null,
+          "rejection_reasons": [
+            "fallback_only"
+          ],
+          "status": "FALLBACK_ONLY",
+          "sym": "SGOV",
+          "threshold": 0.12
+        }
+      ],
+      "candidate_utility": 0.75,
+      "decision_metric": "blended_utility",
+      "delta_utility": 0.35,
+      "edge": 0.35,
+      "fallback_reason": "policy_blocked",
+      "health_score_from": 0.4,
+      "health_score_to": 0.75,
+      "held": [
+        "IBIT",
+        "XLB"
+      ],
+      "held_components": {
+        "IBIT": {
+          "blended": 0.5,
+          "c": 0.5,
+          "h1": null,
+          "h5": null
+        },
+        "XLB": {
+          "blended": 0.4,
+          "c": 0.4,
+          "h1": null,
+          "h5": null
+        }
+      },
+      "held_scored": [
+        "IBIT",
+        "XLB"
+      ],
+      "held_utilities": {
+        "IBIT": 0.5,
+        "XLB": 0.4
+      },
+      "horizon_trading_days": 5,
+      "min_delta": 0.12,
+      "min_floor": 0.55,
+      "selection_mode": "sgov_fallback",
+      "threshold": 0.12,
+      "utility_weights": {
+        "c": 0.5,
+        "h1": 0.25,
+        "h5": 0.25
+      },
+      "weakest_held": "XLB"
+    },
+    "from_symbol": "XLB",
+    "horizon_trading_days": 5,
+    "reason": "No candidate clears policy gates; fallback to SGOV.",
+    "target_trade_date": "2026-04-13",
+    "to_symbol": "SGOV"
+  },
+  "schema": "recommendations.v1",
+  "snapshot_asof": "2026-04-04T17:01:06Z",
+  "snapshot_id": "c4cf1fbd37f4",
+  "source_timestamps": {
+    "forecast_asof": null,
+    "forecast_generated_at": null,
+    "forecast_source_asof": null,
+    "positions_asof": "2026-04-04T17:01:06Z",
+    "sectors_asof": null,
+    "snapshot_asof": "2026-04-04T17:01:06Z"
+  }
+}

@@ -949,6 +949,9 @@ def compute_scores(
                 "group": meta.group,
                 "metal_type": meta.metal_type,
                 "is_basket": meta.is_basket,
+                "inverse_or_levered": meta.inverse_or_levered,
+                "strategy_wrapper": meta.strategy_wrapper,
+                "overlap_key": meta.overlap_key,
                 "categories": cats,
             }
         )
