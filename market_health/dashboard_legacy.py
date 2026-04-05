@@ -540,10 +540,408 @@ def _expanded_overview_order(base_order, held_syms):
 
 
 # COMPACT_TRISCORE_OVERVIEW_V1
-def render_overview_triscore(order, held_syms):
+def _proxy_overrides() -> dict[str, str]:
+    return {
+        "CSWC": "XLF",
+    }
+
+
+def _proxy_for_symbol(sym: str, inv_to_long: dict[str, str] | None = None) -> str:
+    s = str(sym or "").upper().strip()
+    if not s:
+        return s
+    mapped = _proxy_overrides().get(s)
+    if mapped:
+        return str(mapped).upper().strip()
+    if isinstance(inv_to_long, dict):
+        mapped = inv_to_long.get(s)
+        if mapped:
+            return str(mapped).upper().strip()
+    return s
+
+
+def _direct_structure_summary_from_df(df):
+    import math
+
+    try:
+        import pandas as pd
+    except Exception:
+        return {}
+
+    if df is None or getattr(df, "empty", True):
+        return {}
+
+    cols = {str(c).lower(): c for c in getattr(df, "columns", [])}
+    if not {"close", "high", "low"}.issubset(cols):
+        return {}
+
+    try:
+        close = df[cols["close"]].astype(float)
+        high = df[cols["high"]].astype(float)
+        low = df[cols["low"]].astype(float)
+    except Exception:
+        return {}
+
+    if len(close) < 20:
+        return {}
+
+    prev_close = close.shift(1)
+    tr = pd.concat(
+        [
+            (high - low).abs(),
+            (high - prev_close).abs(),
+            (low - prev_close).abs(),
+        ],
+        axis=1,
+    ).max(axis=1)
+
+    atr = tr.rolling(14, min_periods=5).mean()
+    if atr.empty:
+        return {}
+
+    atr_last = float(atr.iloc[-1])
+    last_close = float(close.iloc[-1])
+    if not math.isfinite(atr_last) or atr_last <= 0 or not math.isfinite(last_close):
+        return {}
+
+    recent_low = float(low.tail(20).min())
+    recent_high = float(high.tail(20).max())
+
+    support_cushion_atr = max(0.0, (last_close - recent_low) / atr_last)
+    overhead_resistance_atr = max(0.0, (recent_high - last_close) / atr_last)
+
+    stop = recent_low - (0.25 * atr_last)
+    buy = recent_high + (0.25 * atr_last)
+
+    state_tags = []
+    if support_cushion_atr <= 0.25:
+        state_tags.append("near_damage_zone")
+    elif support_cushion_atr <= 0.75:
+        state_tags.append("reclaim_ready")
+
+    if overhead_resistance_atr <= 0.25:
+        state_tags.append("breakout_ready")
+    elif overhead_resistance_atr <= 1.00:
+        state_tags.append("overhead_heavy")
+
+    return {
+        "support_cushion_atr": round(support_cushion_atr, 6),
+        "support_atr": round(support_cushion_atr, 6),
+        "sup_atr": round(support_cushion_atr, 6),
+        "overhead_resistance_atr": round(overhead_resistance_atr, 6),
+        "resistance_atr": round(overhead_resistance_atr, 6),
+        "res_atr": round(overhead_resistance_atr, 6),
+        "state_tags": state_tags,
+        "state_text": ",".join(state_tags) if state_tags else "-",
+        "stop": round(stop, 6),
+        "stop_candidate": round(stop, 6),
+        "catastrophic_stop_candidate": round(stop, 6),
+        "buy": round(buy, 6),
+        "buy_candidate": round(buy, 6),
+        "stop_buy_candidate": round(buy, 6),
+        "breakout_trigger": round(buy, 6),
+    }
+
+
+def _structure_summary_for_symbol(fs_doc, symbol, *, horizon=None, frames_map=None):
+    if not isinstance(fs_doc, dict):
+        fs_doc = {}
+
+    scores = fs_doc.get("scores") or {}
+    if not isinstance(scores, dict):
+        scores = {}
+
+    sym = str(symbol or "").upper().strip()
+    if not sym:
+        return {}
+
+    by_h = scores.get(sym) or {}
+    if not isinstance(by_h, dict):
+        by_h = {}
+
+    if horizon is None:
+        hs = fs_doc.get("horizons_trading_days") or [1, 5]
+        try:
+            horizon = int(hs[1])
+        except Exception:
+            horizon = 5
+
+    try:
+        hk_int = int(horizon)
+    except Exception:
+        hk_int = 5
+
+    payload = None
+    for hk in (str(hk_int), hk_int):
+        cand = by_h.get(hk)
+        if isinstance(cand, dict):
+            payload = cand
+            break
+
+    def _walk_find(obj, keys):
+        want = {str(k).lower() for k in keys}
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if str(k).lower() in want and v not in (None, "", [], {}):
+                    return v
+            for v in obj.values():
+                found = _walk_find(v, keys)
+                if found not in (None, "", [], {}):
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk_find(item, keys)
+                if found not in (None, "", [], {}):
+                    return found
+        return None
+
+    if isinstance(payload, dict):
+        ss = payload.get("structure_summary")
+        if not isinstance(ss, dict):
+            ss = {}
+
+        sup = (
+            ss.get("support_cushion_atr")
+            or _walk_find(
+                ss, ["support_cushion_atr", "support_atr", "sup_atr", "supatr"]
+            )
+            or _walk_find(
+                payload, ["support_cushion_atr", "support_atr", "sup_atr", "supatr"]
+            )
+        )
+        res = (
+            ss.get("overhead_resistance_atr")
+            or _walk_find(
+                ss, ["overhead_resistance_atr", "resistance_atr", "res_atr", "resatr"]
+            )
+            or _walk_find(
+                payload,
+                ["overhead_resistance_atr", "resistance_atr", "res_atr", "resatr"],
+            )
+        )
+        state_tags = ss.get("state_tags")
+        if not isinstance(state_tags, list):
+            state_tags = _walk_find(payload, ["state_tags"])
+        if not isinstance(state_tags, list):
+            state_tags = []
+        state_text = (
+            ss.get("state_text")
+            or _walk_find(ss, ["state_text", "state"])
+            or _walk_find(
+                payload,
+                [
+                    "state_text",
+                    "state",
+                    "risk_state",
+                    "overlay_state",
+                    "structure_state",
+                    "regime",
+                ],
+            )
+        )
+        stop = (
+            ss.get("tactical_stop_candidate")
+            or ss.get("catastrophic_stop_candidate")
+            or _walk_find(
+                ss,
+                [
+                    "stop",
+                    "stop_candidate",
+                    "catastrophic_stop_candidate",
+                    "tactical_stop_candidate",
+                ],
+            )
+            or _walk_find(
+                payload,
+                [
+                    "stop",
+                    "stop_candidate",
+                    "catastrophic_stop_candidate",
+                    "tactical_stop_candidate",
+                ],
+            )
+        )
+        buy = (
+            ss.get("stop_buy_candidate")
+            or ss.get("breakout_trigger")
+            or _walk_find(
+                ss, ["buy", "buy_candidate", "stop_buy_candidate", "breakout_trigger"]
+            )
+            or _walk_find(
+                payload,
+                ["buy", "buy_candidate", "stop_buy_candidate", "breakout_trigger"],
+            )
+        )
+
+        if any(
+            v not in (None, "", [], {})
+            for v in (sup, res, state_tags, state_text, stop, buy)
+        ):
+            out = dict(ss) if isinstance(ss, dict) else {}
+            out.setdefault("support_cushion_atr", sup)
+            out.setdefault("support_atr", sup)
+            out.setdefault("sup_atr", sup)
+            out.setdefault("overhead_resistance_atr", res)
+            out.setdefault("resistance_atr", res)
+            out.setdefault("res_atr", res)
+            out.setdefault("state_tags", state_tags)
+            out.setdefault(
+                "state_text",
+                ",".join(str(x) for x in state_tags if x)
+                if state_tags
+                else (state_text or "-"),
+            )
+            out.setdefault("stop", stop)
+            out.setdefault("stop_candidate", stop)
+            out.setdefault("catastrophic_stop_candidate", stop)
+            out.setdefault("buy", buy)
+            out.setdefault("buy_candidate", buy)
+            out.setdefault("stop_buy_candidate", buy)
+            out.setdefault("breakout_trigger", buy)
+            out.setdefault("payload", payload)
+            return out
+
+    if isinstance(frames_map, dict):
+        direct = _direct_structure_summary_from_df(frames_map.get(sym))
+        if direct:
+            return direct
+
+    return {}
+
+
+def _ensure_forecast_payloads(
+    forecast_doc,
+    symbols,
+    *,
+    period="6mo",
+    interval="1d",
+    horizons=(1, 5),
+):
+    if not isinstance(forecast_doc, dict):
+        forecast_doc = {}
+
+    scores = forecast_doc.get("scores")
+    if not isinstance(scores, dict):
+        scores = {}
+        forecast_doc["scores"] = scores
+
+    syms = []
+    for sym in symbols or []:
+        s = str(sym or "").upper().strip()
+        if s and s not in syms:
+            syms.append(s)
+
+    def _has_forecast_horizons(sym):
+        by_h = scores.get(sym)
+        if not isinstance(by_h, dict):
+            return False
+        for h in horizons:
+            payload = by_h.get(str(h), by_h.get(h))
+            if not isinstance(payload, dict):
+                return False
+            if not isinstance(payload.get("forecast_score"), (int, float)):
+                return False
+        return True
+
+    missing = [sym for sym in syms if not _has_forecast_horizons(sym)]
+    if not missing:
+        if not isinstance(forecast_doc.get("horizons_trading_days"), list):
+            forecast_doc["horizons_trading_days"] = [int(h) for h in horizons]
+        return forecast_doc
+
+    try:
+        from market_health.forecast_score_provider import compute_forecast_universe
+    except Exception:
+        return forecast_doc
+
+    frames = _download_price_frames(["SPY", *missing], period=period, interval=interval)
+    if not isinstance(frames, dict):
+        return forecast_doc
+
+    spy_ohlcv = _df_to_ohlcv(frames.get("SPY"))
+    if spy_ohlcv is None:
+        return forecast_doc
+
+    universe = {}
+    for sym in missing:
+        ohlcv = _df_to_ohlcv(frames.get(sym))
+        if ohlcv is not None:
+            universe[sym] = ohlcv
+
+    if not universe:
+        return forecast_doc
+
+    try:
+        new_scores = compute_forecast_universe(
+            universe=universe,
+            spy=spy_ohlcv,
+            horizons_trading_days=tuple(int(h) for h in horizons),
+            calendar={
+                "schema": "calendar.v1",
+                "windows": {"by_h": {str(int(h)): {} for h in horizons}},
+            },
+        )
+    except Exception:
+        return forecast_doc
+
+    if isinstance(new_scores, dict):
+        for sym, payload in new_scores.items():
+            if isinstance(sym, str) and isinstance(payload, dict):
+                scores[str(sym).upper()] = payload
+
+    if not isinstance(forecast_doc.get("horizons_trading_days"), list):
+        forecast_doc["horizons_trading_days"] = [int(h) for h in horizons]
+
+    return forecast_doc
+
+
+def _compact_state_tags(value):
+    raw = str(value or "").strip()
+    if not raw or raw == "-":
+        return "-"
+
+    mp = {
+        "near_damage_zone": "DMG",
+        "overhead_heavy": "OH",
+        "reclaim_ready": "RCL",
+        "breakout_ready": "BRK",
+    }
+
+    out = []
+    seen = set()
+    for part in [x.strip() for x in raw.split(",") if str(x).strip()]:
+        short = mp.get(part, part[:3].upper())
+        if short not in seen:
+            seen.add(short)
+            out.append(short)
+
+    return ",".join(out) if out else "-"
+
+
+def render_overview_triscore(order, util, held_syms):
+    import io
+    import json
+    from pathlib import Path
+
+    from rich import box
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.text import Text
+
     NL = chr(10)
     cache = Path.home() / ".cache" / "jerboa"
     ui_p = cache / "market_health.ui.v1.json"
+    fs_p = cache / "forecast_scores.v1.json"
+    sectors_p = cache / "market_health.sectors.json"
+    inv_p = cache / "inverse_universe.v1.json"
+
+    console = Console(
+        record=True,
+        force_terminal=True,
+        color_system="truecolor",
+        file=io.StringIO(),
+    )
 
     def _jload(path):
         try:
@@ -551,12 +949,150 @@ def render_overview_triscore(order, held_syms):
         except Exception:
             return {}
 
-    def _sum_cat_pct(row):
-        cats = (row or {}).get("categories", {})
+    def _norm(sym):
+        s = str(sym or "").strip().upper()
+        return s if s else ""
+
+    def _to_float(v):
+        if isinstance(v, (int, float)):
+            return float(v)
+        try:
+            s = str(v).strip().replace("%", "").replace(",", "")
+            return float(s) if s else None
+        except Exception:
+            return None
+
+    def _to_pct(v):
+        n = _to_float(v)
+        if n is None:
+            return None
+        return n / 100.0 if abs(n) > 1.5 else n
+
+    def _fmt_pct(v):
+        n = _to_pct(v)
+        return "-" if n is None else f"{int(round(n * 100.0)):d}%"
+
+    def _fmt_num(v):
+        n = _to_float(v)
+        return "-" if n is None else f"{n:.2f}"
+
+    def _score_style(v):
+        n = _to_pct(v)
+        if n is None:
+            return "dim"
+        if n >= 0.60:
+            return "bold green"
+        if n >= 0.40:
+            return "bold yellow"
+        return "bold red"
+
+    def _num_style(v):
+        return "bold cyan" if isinstance(v, (int, float)) else "dim"
+
+    def _state_style(s):
+        s = str(s or "")
+        if "near_damage_zone" in s:
+            return "bold red"
+        if "breakout_ready" in s:
+            return "bold green"
+        if "reclaim_ready" in s or "overhead_heavy" in s:
+            return "bold yellow"
+        return "white"
+
+    def _walk_find(obj, keys):
+        want = {str(k).lower() for k in keys}
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if str(k).lower() in want and v not in (None, "", [], {}):
+                    return v
+            for v in obj.values():
+                found = _walk_find(v, keys)
+                if found not in (None, "", [], {}):
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = _walk_find(item, keys)
+                if found not in (None, "", [], {}):
+                    return found
+        return None
+
+    def _rowmaps_from_any(doc, allowed):
+        out = {}
+
+        def ingest(obj):
+            if isinstance(obj, list):
+                for item in obj:
+                    ingest(item)
+                return
+            if not isinstance(obj, dict):
+                return
+
+            sym = _norm(obj.get("symbol") or obj.get("sym") or obj.get("ticker"))
+            if sym and (not allowed or sym in allowed):
+                out.setdefault(sym, {}).update(obj)
+
+            for k in ("rows", "items", "data", "sectors", "state", "scores"):
+                v = obj.get(k)
+                if isinstance(v, (list, dict)):
+                    ingest(v)
+
+        ingest(doc)
+        return out
+
+    def _forecast_horizons(fs_doc):
+        hs = fs_doc.get("horizons_trading_days")
+        out = []
+        if isinstance(hs, list):
+            for h in hs:
+                try:
+                    out.append(int(h))
+                except Exception:
+                    pass
+        return (out[0], out[1]) if len(out) >= 2 else (1, 5)
+
+    def _forecast_util(fs_doc, sym, horizon_days):
+        scores = fs_doc.get("scores")
+        if not isinstance(scores, dict):
+            return None
+        by_h = scores.get(sym)
+        if not isinstance(by_h, dict):
+            return None
+        payload = by_h.get(str(horizon_days), by_h.get(horizon_days))
+        if not isinstance(payload, dict):
+            return None
+
+        fs = payload.get("forecast_score")
+        if isinstance(fs, (int, float)):
+            v = float(fs)
+            return v / 100.0 if v > 1.5 else v
+
+        pts = payload.get("points")
+        mx = payload.get("max_points")
+        if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
+            return float(pts) / float(mx)
+
+        return None
+
+    def _first_pct(*vals):
+        for v in vals:
+            n = _to_pct(v)
+            if n is not None:
+                return n
+        return None
+
+    def _first_num(*vals):
+        for v in vals:
+            n = _to_float(v)
+            if n is not None:
+                return n
+        return None
+
+    def _row_total_pct(row):
+        cats = row.get("categories") if isinstance(row, dict) else None
         if not isinstance(cats, dict):
             return None
-        pts = 0
-        mx = 0
+        pts = 0.0
+        mx = 0.0
         for cat in cats.values():
             if not isinstance(cat, dict):
                 continue
@@ -568,258 +1104,580 @@ def render_overview_triscore(order, held_syms):
                     continue
                 sc = chk.get("score")
                 if isinstance(sc, (int, float)):
-                    pts += int(sc)
-                    mx += 2
-        return int(round((pts / mx) * 100)) if mx else None
-
-    def _forecast_pct(scores, sym, horizon):
-        if not isinstance(scores, dict):
-            return None
-        by_h = scores.get(sym)
-        if not isinstance(by_h, dict):
-            return None
-        node = by_h.get(str(horizon), by_h.get(horizon))
-        if not isinstance(node, dict):
-            return None
-
-        fs = node.get("forecast_score")
-        if isinstance(fs, (int, float)):
-            val = float(fs)
-            return int(round(val * 100)) if val <= 1.5 else int(round(val))
-
-        pts = node.get("points")
-        mx = node.get("max_points")
-        if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
-            return int(round((float(pts) / float(mx)) * 100))
-        return None
-
-    def _fmt_pct(v):
-        if isinstance(v, (int, float)):
-            return f"{int(v):>3d}%"
-        return "  - "
-
-    def _fmt_delta(v):
-        if isinstance(v, (int, float)):
-            return f"{int(v):+4d}"
-        return "   -"
+                    pts += float(sc)
+                    mx += 2.0
+        return (pts / mx) if mx else None
 
     ui = _jload(ui_p)
+    fs = _jload(fs_p)
+    sectors = _jload(sectors_p)
+    inv = _jload(inv_p)
 
-    raw_sectors = (
-        ((ui.get("data") or {}).get("sectors") or {}) if isinstance(ui, dict) else {}
-    )
-    sector_map = {}
-    if isinstance(raw_sectors, dict):
-        for k, v in raw_sectors.items():
-            sym = str(k).strip().upper()
-            if sym and isinstance(v, dict):
-                sector_map[sym] = v
-    elif isinstance(raw_sectors, list):
-        for row in raw_sectors:
-            if not isinstance(row, dict):
-                continue
-            sym = str(row.get("symbol", "")).strip().upper()
-            if sym:
-                sector_map[sym] = row
-
-    held_set = {str(s).strip().upper() for s in (held_syms or []) if str(s).strip()}
-
-    syms = []
-    for s in order or []:
-        sym = str(s).strip().upper()
-        if sym and sym not in syms:
-            syms.append(sym)
-    if not syms and isinstance(sector_map, dict):
-        syms = sorted(sector_map.keys())
-
-    import io
-    from rich import box
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
-
-    def _pct_style(v):
-        if v is None:
-            return "dim"
-        if v >= 60:
-            return "bold green"
-        if v >= 40:
-            return "bold yellow"
-        return "bold red"
-
-    def _delta_style(v):
-        if v is None:
-            return "dim"
-        if v > 0:
-            return "bold green"
-        if v < 0:
-            return "bold red"
-        return "dim"
-
-    console = Console(
-        record=True,
-        force_terminal=True,
-        color_system="truecolor",
-        width=88,
-        file=io.StringIO(),
-    )
-
-    table = Table(
-        box=box.ROUNDED,
-        expand=True,
-        header_style="bold cyan",
-        border_style="bright_blue",
-        pad_edge=False,
-        padding=(0, 1),
-        show_lines=True,
-        row_styles=["none", "on rgb(20,24,28)"],
-    )
-    table.add_column("Sym", style="bold white", no_wrap=True, width=7)
-    table.add_column("Blend", justify="right", no_wrap=True, width=5)
-    table.add_column("C", justify="right", no_wrap=True, width=4)
-    table.add_column("H1", justify="right", no_wrap=True, width=4)
-    table.add_column("H5", justify="right", no_wrap=True, width=4)
-    table.add_column("Δ1", justify="right", no_wrap=True, width=4)
-    table.add_column("Δ5", justify="right", no_wrap=True, width=4)
-
-    fs_doc = {}
+    live_rows = []
+    live_data = None
     try:
-        fs_doc = json.loads(
-            (Path.home() / ".cache" / "jerboa" / "forecast_scores.v1.json").read_text(
-                encoding="utf-8"
-            )
+        live_syms = [_norm(s) for s in (order or []) if _norm(s)]
+        live_universe = list(dict.fromkeys(["SPY", *live_syms]))
+        live_rows, live_data = _unpack_scores(
+            compute_scores(sectors=live_universe, period="6mo", interval="1d")
         )
     except Exception:
-        fs_doc = {}
+        live_rows, live_data = [], None
 
-    _overview_rows_unused, overview_data = _unpack_scores(
-        compute_scores(
-            sectors=list(dict.fromkeys(["SPY", *order])),
-            period="6mo",
-            interval="1d",
-        )
-    )
-
-    fs_doc = _backfill_missing_forecast_scores(
-        forecast_doc=fs_doc,
-        symbols=[str(sym).upper() for sym in order if isinstance(sym, str)],
-        data=overview_data,
+    fs = _backfill_missing_forecast_scores(
+        forecast_doc=fs if isinstance(fs, dict) else {},
+        symbols=[_norm(s) for s in (order or []) if _norm(s)],
+        data=live_data,
         horizons=(1, 5),
     )
-    forecast_scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else {}
+    fs = _ensure_forecast_payloads(
+        fs,
+        [_norm(s) for s in (order or []) if _norm(s)],
+        period="6mo",
+        interval="1d",
+        horizons=(1, 5),
+    )
 
-    extras_map = {}
-    try:
-        missing_syms = [s for s in syms if s not in sector_map]
-        if missing_syms:
-            extra_rows, _ = _unpack_scores(
-                compute_scores(sectors=missing_syms, period="6mo", interval="1d")
-            )
-            for it in extra_rows:
-                if isinstance(it, dict):
-                    s2 = str(it.get("symbol") or "").strip().upper()
-                    if s2:
-                        extras_map[s2] = it
-    except Exception:
-        extras_map = {}
+    util_map = util if isinstance(util, dict) else {}
+    held_set = {_norm(x) for x in (held_syms or []) if _norm(x)}
+    allowed = set()
+    allowed.update(_norm(s) for s in (order or []) if _norm(s))
+    allowed.update(held_set)
+    allowed.update(_norm(s) for s in util_map.keys() if _norm(s))
+    scores_obj = fs.get("scores") if isinstance(fs, dict) else {}
+    if isinstance(scores_obj, dict):
+        allowed.update(_norm(s) for s in scores_obj.keys() if _norm(s))
 
-    rows = []
-    for sym in syms:
-        row = sector_map.get(sym) or extras_map.get(sym)
+    inv_to_long = {}
+    pairs = inv.get("pairs") if isinstance(inv, dict) else None
+    if isinstance(pairs, list):
+        for pair in pairs:
+            if not isinstance(pair, dict):
+                continue
+            long_sym = _norm(pair.get("long"))
+            inv_sym = _norm(pair.get("inverse"))
+            if long_sym and inv_sym:
+                inv_to_long[inv_sym] = long_sym
+
+    for src, dst in _proxy_overrides().items():
+        if _norm(src) and _norm(dst):
+            inv_to_long[_norm(src)] = _norm(dst)
+            allowed.add(_norm(src))
+            allowed.add(_norm(dst))
+
+    data = ui.get("data") if isinstance(ui, dict) else {}
+    rows = {}
+    for src in (
+        _rowmaps_from_any(sectors, allowed),
+        _rowmaps_from_any(
+            data.get("sectors") if isinstance(data, dict) else {}, allowed
+        ),
+        _rowmaps_from_any(data.get("state") if isinstance(data, dict) else {}, allowed),
+    ):
+        for sym, row in src.items():
+            rows.setdefault(sym, {}).update(row)
+
+    for row in live_rows or []:
         if not isinstance(row, dict):
             continue
+        sym = _norm(row.get("symbol") or row.get("sym") or row.get("ticker"))
+        if sym and sym in allowed:
+            rows.setdefault(sym, {}).update(row)
 
-        c_pct = _sum_cat_pct(row)
-        h1_pct = _forecast_pct(forecast_scores, sym, 1)
-        h5_pct = _forecast_pct(forecast_scores, sym, 5)
+    universe = sorted(s for s in allowed if s and s != "XLV")
+    structure_frames = _download_price_frames(universe, period="6mo", interval="1d")
+    H1, H5 = _forecast_horizons(fs)
 
-        d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
-        d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
+    display_rows = []
+    for sym in universe:
+        proxy_sym = _proxy_for_symbol(sym, inv_to_long)
+        row = rows.get(sym, {})
+        proxy_row = rows.get(proxy_sym, {})
 
-        blend_pct = None
-        if c_pct is not None and h1_pct is not None and h5_pct is not None:
-            blend_pct = (0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct)
-
-        sym_txt = (
-            f"[bold white]{sym}[/][bold magenta]•[/]"
-            if sym in held_set
-            else f"[bold white]{sym}[/]"
+        c_val = _first_pct(
+            util_map.get(sym),
+            util_map.get(proxy_sym),
+            _row_total_pct(row),
+            _row_total_pct(proxy_row),
+            row.get("c"),
+            proxy_row.get("c"),
+            _walk_find(row, ["c", "crowding", "crowding_util", "c_util"]),
+            _walk_find(proxy_row, ["c", "crowding", "crowding_util", "c_util"]),
+        )
+        h1_val = _first_pct(
+            _forecast_util(fs, sym, H1),
+            _forecast_util(fs, proxy_sym, H1),
+        )
+        h5_val = _first_pct(
+            _forecast_util(fs, sym, H5),
+            _forecast_util(fs, proxy_sym, H5),
         )
 
-        blend_txt = f"[{_pct_style(blend_pct)}]{_fmt_pct(blend_pct)}[/]"
-        c_txt = f"[{_pct_style(c_pct)}]{_fmt_pct(c_pct)}[/]"
-        h1_txt = f"[{_pct_style(h1_pct)}]{_fmt_pct(h1_pct)}[/]"
-        h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
-        d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
-        d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
+        pieces = []
+        if c_val is not None:
+            pieces.append((0.50, c_val))
+        if h1_val is not None:
+            pieces.append((0.25, h1_val))
+        if h5_val is not None:
+            pieces.append((0.25, h5_val))
+        denom = sum(w for w, _ in pieces)
+        blend = sum(w * v for w, v in pieces) / denom if denom > 0 else None
 
-        if isinstance(forecast_scores, dict):
-            by_h = forecast_scores.get(sym)
-            if isinstance(by_h, dict):
-                h1_backfill = (by_h.get(1) or by_h.get("1") or {}).get("forecast_score")
-                h5_backfill = (by_h.get(5) or by_h.get("5") or {}).get("forecast_score")
+        ss = _structure_summary_for_symbol(
+            fs, sym, horizon=H5, frames_map=structure_frames
+        )
+        if (not isinstance(ss, dict) or not ss) and proxy_sym != sym:
+            ss = _structure_summary_for_symbol(
+                fs, proxy_sym, horizon=H5, frames_map=structure_frames
+            )
 
-                if h1_pct is None and isinstance(h1_backfill, (int, float)):
-                    h1_pct = float(h1_backfill)
-                if h5_pct is None and isinstance(h5_backfill, (int, float)):
-                    h5_pct = float(h5_backfill)
+        sup = _first_num(
+            ss.get("support_cushion_atr") if isinstance(ss, dict) else None,
+            ss.get("support_atr") if isinstance(ss, dict) else None,
+            ss.get("sup_atr") if isinstance(ss, dict) else None,
+            row.get("sup_atr"),
+            proxy_row.get("sup_atr"),
+            row.get("support_atr"),
+            proxy_row.get("support_atr"),
+        )
+        res = _first_num(
+            ss.get("overhead_resistance_atr") if isinstance(ss, dict) else None,
+            ss.get("resistance_atr") if isinstance(ss, dict) else None,
+            ss.get("res_atr") if isinstance(ss, dict) else None,
+            row.get("res_atr"),
+            proxy_row.get("res_atr"),
+            row.get("resistance_atr"),
+            proxy_row.get("resistance_atr"),
+        )
+        state = (
+            (ss.get("state_text") if isinstance(ss, dict) else None)
+            or (
+                ",".join(str(x) for x in ss.get("state_tags") if x)
+                if isinstance(ss, dict) and isinstance(ss.get("state_tags"), list)
+                else None
+            )
+            or row.get("state")
+            or proxy_row.get("state")
+            or "-"
+        )
+        stop = _first_num(
+            ss.get("tactical_stop_candidate") if isinstance(ss, dict) else None,
+            ss.get("catastrophic_stop_candidate") if isinstance(ss, dict) else None,
+            ss.get("stop") if isinstance(ss, dict) else None,
+        )
+        buy = _first_num(
+            ss.get("stop_buy_candidate") if isinstance(ss, dict) else None,
+            ss.get("breakout_trigger") if isinstance(ss, dict) else None,
+            ss.get("buy") if isinstance(ss, dict) else None,
+        )
 
-                if c_pct is not None and h1_pct is not None and h5_pct is not None:
-                    blend_pct = (0.50 * c_pct) + (0.25 * h1_pct) + (0.25 * h5_pct)
-
-                d1 = None if c_pct is None or h1_pct is None else (h1_pct - c_pct)
-                d5 = None if c_pct is None or h5_pct is None else (h5_pct - c_pct)
-
-                blend_txt = f"[{_pct_style(blend_pct)}]{_fmt_pct(blend_pct)}[/]"
-                h1_txt = f"[{_pct_style(h1_pct)}]{_fmt_pct(h1_pct)}[/]"
-                h5_txt = f"[{_pct_style(h5_pct)}]{_fmt_pct(h5_pct)}[/]"
-                d1_txt = f"[{_delta_style(d1)}]{_fmt_delta(d1)}[/]"
-                d5_txt = f"[{_delta_style(d5)}]{_fmt_delta(d5)}[/]"
-
-        rows.append(
+        display_rows.append(
             {
-                "sym": sym,
-                "blend": blend_pct,
-                "sym_txt": sym_txt,
-                "blend_txt": blend_txt,
-                "c_txt": c_txt,
-                "h1_txt": h1_txt,
-                "h5_txt": h5_txt,
-                "d1_txt": d1_txt,
-                "d5_txt": d5_txt,
+                "sym": f"{sym}•" if sym in held_set else sym,
+                "blend": blend,
+                "c": c_val,
+                "h1": h1_val,
+                "h5": h5_val,
+                "sup": sup,
+                "res": res,
+                "state": state,
+                "stop": stop,
+                "buy": buy,
             }
         )
 
-    rows.sort(
+    display_rows.sort(
         key=lambda r: (
-            r["blend"] is None,
-            -(r["blend"] if r["blend"] is not None else -1.0),
+            -1.0 if not isinstance(r["blend"], (int, float)) else -float(r["blend"]),
             r["sym"],
         )
     )
 
-    for r in rows:
-        table.add_row(
-            r["sym_txt"],
-            r["blend_txt"],
-            r["c_txt"],
-            r["h1_txt"],
-            r["h5_txt"],
-            r["d1_txt"],
-            r["d5_txt"],
+    tbl = Table(
+        box=box.SIMPLE_HEAVY,
+        show_header=True,
+        header_style="bold cyan",
+        expand=False,
+        pad_edge=False,
+    )
+    tbl.add_column("Sym", justify="left", no_wrap=True)
+    tbl.add_column("Blend", justify="right", no_wrap=True)
+    tbl.add_column("C", justify="right", no_wrap=True)
+    tbl.add_column("H1", justify="right", no_wrap=True)
+    tbl.add_column("H5", justify="right", no_wrap=True)
+    tbl.add_column("SupATR", justify="right", no_wrap=True)
+    tbl.add_column("ResATR", justify="right", no_wrap=True)
+    tbl.add_column("State", justify="left", no_wrap=True)
+    tbl.add_column("Stop", justify="right", no_wrap=True)
+    tbl.add_column("Buy", justify="right", no_wrap=True)
+
+    for r in display_rows:
+        tbl.add_row(
+            r["sym"],
+            Text(_fmt_pct(r["blend"]), style=_score_style(r["blend"])),
+            Text(_fmt_pct(r["c"]), style=_score_style(r["c"])),
+            Text(_fmt_pct(r["h1"]), style=_score_style(r["h1"])),
+            Text(_fmt_pct(r["h5"]), style=_score_style(r["h5"])),
+            Text(_fmt_num(r["sup"]), style=_num_style(r["sup"])),
+            Text(_fmt_num(r["res"]), style=_num_style(r["res"])),
+            Text(_compact_state_tags(r["state"]), style=_state_style(r["state"])),
+            Text(_fmt_num(r["stop"]), style=_num_style(r["stop"])),
+            Text(_fmt_num(r["buy"]), style=_num_style(r["buy"])),
         )
 
-    console.print()
     console.print(
         Panel(
-            table,
-            title="[bold white]Overview (expanded universe, compact tri-score)[/] [bold magenta]• held[/]",
-            border_style="bright_blue",
-            padding=(0, 1),
+            tbl,
+            title="Overview (expanded universe, compact tri-score) • all",
+            border_style="cyan",
+            box=box.ROUNDED,
         )
     )
-
     return console.export_text(styles=True) + NL
+
+
+def _has_structure_payload(forecast_doc, sym, horizons=(1, 5)):
+    if not isinstance(forecast_doc, dict):
+        return False
+    scores = forecast_doc.get("scores")
+    if not isinstance(scores, dict):
+        return False
+
+    by_h = scores.get(str(sym).upper())
+    if not isinstance(by_h, dict):
+        return False
+
+    want_keys = {
+        "structure_summary",
+        "support_cushion_atr",
+        "overhead_resistance_atr",
+        "state_tags",
+        "state_text",
+        "tactical_stop_candidate",
+        "catastrophic_stop_candidate",
+        "stop_buy_candidate",
+        "breakout_trigger",
+    }
+
+    def _walk_has(obj):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if str(k).lower() in want_keys and v not in (None, "", [], {}):
+                    return True
+            return any(_walk_has(v) for v in obj.values())
+        if isinstance(obj, list):
+            return any(_walk_has(v) for v in obj)
+        return False
+
+    for h in horizons:
+        payload = by_h.get(str(h), by_h.get(h))
+        if not isinstance(payload, dict):
+            return False
+        if not _walk_has(payload):
+            return False
+    return True
+
+
+def _ensure_structure_summary_payloads(
+    forecast_doc,
+    symbols,
+    *,
+    period="6mo",
+    interval="1d",
+    horizons=(1, 5),
+):
+    if not isinstance(forecast_doc, dict):
+        forecast_doc = {}
+    scores = forecast_doc.get("scores")
+    if not isinstance(scores, dict):
+        scores = {}
+
+    syms = []
+    for sym in symbols or []:
+        s = str(sym or "").upper().strip()
+        if s and s not in syms:
+            syms.append(s)
+
+    missing = [
+        sym for sym in syms if not _has_structure_payload(forecast_doc, sym, horizons)
+    ]
+    if not missing:
+        return forecast_doc
+
+    try:
+        from market_health.forecast_score_provider import compute_forecast_universe
+    except Exception:
+        return forecast_doc
+
+    frames = _download_price_frames(["SPY", *missing], period=period, interval=interval)
+    if not isinstance(frames, dict):
+        return forecast_doc
+
+    spy_ohlcv = _df_to_ohlcv(frames.get("SPY"))
+    if spy_ohlcv is None:
+        return forecast_doc
+
+    universe = {"SPY": spy_ohlcv}
+    for sym in missing:
+        ohlcv = _df_to_ohlcv(frames.get(sym))
+        if ohlcv is not None:
+            universe[sym] = ohlcv
+
+    if len(universe) <= 1:
+        return forecast_doc
+
+    try:
+        horizon_tuple = tuple(int(h) for h in horizons)
+    except Exception:
+        horizon_tuple = (1, 5)
+
+    calendar = {
+        "schema": "calendar.v1",
+        "windows": {"by_h": {str(h): {} for h in horizon_tuple}},
+    }
+
+    try:
+        fresh = compute_forecast_universe(
+            universe=universe,
+            spy=spy_ohlcv,
+            horizons_trading_days=horizon_tuple,
+            calendar=calendar,
+        )
+    except Exception:
+        return forecast_doc
+
+    if not isinstance(fresh, dict):
+        return forecast_doc
+
+    out = dict(forecast_doc)
+    out_scores = dict(scores)
+
+    for sym in missing:
+        by_h_new = fresh.get(sym)
+        if not isinstance(by_h_new, dict):
+            continue
+
+        by_h_old = out_scores.get(sym)
+        if not isinstance(by_h_old, dict):
+            by_h_old = {}
+
+        merged = {}
+        for k, v in by_h_old.items():
+            merged[str(k)] = v
+
+        for k, v in by_h_new.items():
+            hk = str(k)
+            old_payload = merged.get(hk)
+            if isinstance(old_payload, dict) and isinstance(v, dict):
+                new_payload = dict(old_payload)
+                new_payload.update(v)
+                merged[hk] = new_payload
+            else:
+                merged[hk] = v
+
+        out_scores[sym] = merged
+
+    out["scores"] = out_scores
+    return out
+
+
+def render_my_positions_triscore_prototype(held_syms):
+    import json
+    from pathlib import Path
+
+    NL = chr(10)
+    cache = Path.home() / ".cache" / "jerboa"
+    fs_p = cache / "forecast_scores.v1.json"
+
+    factor_names = {
+        "A": "Announcements",
+        "B": "Backdrop",
+        "C": "Crowding",
+        "D": "Danger",
+        "E": "Environment",
+    }
+
+    def _jload(path):
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _norm(sym):
+        s = str(sym or "").strip().upper()
+        return s if s else ""
+
+    def _checks_for(payload, factor):
+        if not isinstance(payload, dict):
+            return []
+        cats = payload.get("categories")
+        if not isinstance(cats, dict):
+            return []
+        cat = cats.get(factor)
+        if not isinstance(cat, dict):
+            return []
+        checks = cat.get("checks")
+        return checks if isinstance(checks, list) else []
+
+    def _digit(chk):
+        if isinstance(chk, dict) and isinstance(chk.get("score"), (int, float)):
+            return max(0, min(2, int(chk.get("score"))))
+        return 0
+
+    def _totals(payload):
+        pts = 0
+        mx = 0
+        if not isinstance(payload, dict):
+            return None
+        cats = payload.get("categories")
+        if not isinstance(cats, dict):
+            return None
+        for factor in ("A", "B", "C", "D", "E"):
+            for chk in _checks_for(payload, factor):
+                pts += _digit(chk)
+                mx += 2
+        return int(round((pts / mx) * 100)) if mx else None
+
+    def _factor_points(payload, factor):
+        return sum(_digit(chk) for chk in _checks_for(payload, factor))
+
+    held = []
+    for s in held_syms or []:
+        ns = _norm(s)
+        if ns and ns not in held:
+            held.append(ns)
+    if not held:
+        return ""
+
+    try:
+        current_rows, current_data = _unpack_scores(
+            compute_scores(
+                sectors=list(dict.fromkeys(["SPY", *held])),
+                period="6mo",
+                interval="1d",
+            )
+        )
+    except Exception:
+        current_rows, current_data = [], None
+
+    current_map = {}
+    for row in current_rows or []:
+        if not isinstance(row, dict):
+            continue
+        sym = _norm(row.get("symbol"))
+        if sym:
+            current_map[sym] = row
+
+    fs_doc = _jload(fs_p)
+    try:
+        fs_doc = _backfill_missing_forecast_scores(
+            forecast_doc=fs_doc if isinstance(fs_doc, dict) else {},
+            symbols=held,
+            data=current_data,
+            horizons=(1, 5),
+        )
+    except Exception:
+        pass
+
+    try:
+        fs_doc = _ensure_forecast_payloads(
+            fs_doc,
+            held,
+            period="6mo",
+            interval="1d",
+            horizons=(1, 5),
+        )
+    except Exception:
+        pass
+
+    scores = fs_doc.get("scores") if isinstance(fs_doc, dict) else {}
+    scores = scores if isinstance(scores, dict) else {}
+
+    horizons = fs_doc.get("horizons_trading_days") if isinstance(fs_doc, dict) else None
+    if isinstance(horizons, list) and len(horizons) >= 2:
+        try:
+            H1 = int(horizons[0])
+            H5 = int(horizons[1])
+        except Exception:
+            H1, H5 = 1, 5
+    else:
+        H1, H5 = 1, 5
+
+    mapped = [s for s in held if s in current_map or s in scores]
+    unmapped = [s for s in held if s not in mapped]
+    if not mapped and not unmapped:
+        return ""
+
+    lines = []
+    lines.append("")
+    lines.append(
+        "============================== Details (your positions) =============================="
+    )
+    lines.append("My Positions — Tri-Score Prototype (read-only)")
+    lines.append("Each cell shows C/H1/H5 (digits 0=red, 1=yellow, 2=green).")
+    lines.append(f"cache={cache}")
+    lines.append(f"horizons: H1={H1}  H5={H5}")
+    lines.append("")
+
+    for sym in mapped:
+        curr = current_map.get(sym, {})
+        by_h = scores.get(sym, {}) if isinstance(scores.get(sym), dict) else {}
+        h1_payload = by_h.get(str(H1), by_h.get(H1)) if isinstance(by_h, dict) else {}
+        h5_payload = by_h.get(str(H5), by_h.get(H5)) if isinstance(by_h, dict) else {}
+
+        cur_pct = _totals(curr)
+        h1_pct = _totals(h1_payload)
+        h5_pct = _totals(h5_payload)
+
+        lines.append(
+            f"== {sym} ==  Totals (C/H1/H5):"
+            f" {str(cur_pct).rjust(4) + '%' if cur_pct is not None else '   -'}"
+            f" {str(h1_pct).rjust(4) + '%' if h1_pct is not None else '   -'}"
+            f" {str(h5_pct).rjust(4) + '%' if h5_pct is not None else '   -'}"
+        )
+        lines.append("")
+        lines.append("Factor                1   2   3   4   5   6   Tot(C/H1/H5)")
+        lines.append(
+            "--------------------------------------------------------------------"
+        )
+
+        for factor in ("A", "B", "C", "D", "E"):
+            cur_checks = _checks_for(curr, factor)
+            h1_checks = _checks_for(h1_payload, factor)
+            h5_checks = _checks_for(h5_payload, factor)
+
+            width = max(6, len(cur_checks), len(h1_checks), len(h5_checks))
+            triplets = []
+            for i in range(width):
+                c = _digit(cur_checks[i]) if i < len(cur_checks) else 0
+                h1 = _digit(h1_checks[i]) if i < len(h1_checks) else 0
+                h5 = _digit(h5_checks[i]) if i < len(h5_checks) else 0
+                triplets.append(f"{c}{h1}{h5}")
+
+            cur_pts = _factor_points(curr, factor)
+            h1_pts = _factor_points(h1_payload, factor)
+            h5_pts = _factor_points(h5_payload, factor)
+
+            label = f"{factor} {factor_names[factor]}"
+            lines.append(
+                f"{label:<20} "
+                + " ".join(f"{t:>3}" for t in triplets[:6])
+                + f"  {cur_pts}/{h1_pts}/{h5_pts}"
+            )
+
+        lines.append("")
+        if unmapped:
+            lines.append("Unmapped (not sector ETFs): " + ", ".join(unmapped))
+            lines.append("")
+
+    if unmapped and not mapped:
+        lines.append("Unmapped (not sector ETFs): " + ", ".join(unmapped))
+        lines.append("")
+
+    lines.append(
+        "Note: C digit comes from current health scoring; H1/H5 digits come from forecast_scores.v1.json."
+    )
+    return NL.join(lines).rstrip() + NL
 
 
 def _dashboard_intraday_fresh_or_last_completed_session(value, max_age_minutes=15):
@@ -2229,37 +3087,41 @@ def main() -> int:
     #     except Exception:
     #         pass
     #     # --- end snapshot widgets ---
-    tri_overview = render_overview_triscore(overview_order, held_syms)
+    tri_overview = render_overview_triscore(overview_order, util, held_syms)
     if tri_overview:
         sys.stdout.write(tri_overview + chr(10))
 
-    sys.stdout.write(
-        c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10)
-    )
-
-    if not held_syms:
-        sys.stdout.write(
-            c(
-                "No positions detected yet (no positions cache; fallback held_scored also missing)."
-                + chr(10),
-                YELLOW,
-            )
-        )
-
-        sys.stdout.write(
-            "If you expect Schwab/TOS positions here, ensure positions refresh actually produces a positions cache file."
-            + chr(10)
-            + chr(10)
-        )
-
+    tri_details = render_my_positions_triscore_prototype(held_syms)
+    if tri_details:
+        sys.stdout.write(tri_details + chr(10))
     else:
-        for sym in held_syms:
-            blk = detail_blocks.get(sym)
+        sys.stdout.write(
+            c("=" * 30 + " Details (your positions) " + "=" * 30, CYAN) + chr(10)
+        )
 
-            if blk:
-                sys.stdout.write(blk.rstrip() + chr(10) + chr(10))
+        if not held_syms:
+            sys.stdout.write(
+                c(
+                    "No positions detected yet (no positions cache; fallback held_scored also missing)."
+                    + chr(10),
+                    YELLOW,
+                )
+            )
 
-    # 4) Recommendation + READY/BLOCKED table
+            sys.stdout.write(
+                "If you expect Schwab/TOS positions here, ensure positions refresh actually produces a positions cache file."
+                + chr(10)
+                + chr(10)
+            )
+
+        else:
+            for sym in held_syms:
+                blk = detail_blocks.get(sym)
+
+                if blk:
+                    sys.stdout.write(blk.rstrip() + chr(10) + chr(10))
+
+        # 4) Recommendation + READY/BLOCKED table
     sys.stdout.write(render_reco(order, util, rec_doc, held_syms))
     return 0
 
