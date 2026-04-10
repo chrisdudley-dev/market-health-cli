@@ -287,73 +287,64 @@ def _merged_universe_order(primary: list[str] | tuple[str, ...] | None) -> list[
 
 
 def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
-    if not _positions_doc_is_fresh(doc):
-        return []
-    syms: list[str] = []
-
-    v = doc.get("symbols")
-    if isinstance(v, list):
-        for x in v:
-            if x is not None:
-                syms.append(str(x).upper().strip())
-
-    v = doc.get("positions")
-    if isinstance(v, list):
-        for row in v:
-            if isinstance(row, dict):
-                s = row.get("symbol") or row.get("sym") or row.get("ticker")
-                if s:
-                    syms.append(str(s).upper().strip())
-
-    seen = set()
+    # Preserve held symbols for display even when the positions cache is stale.
     out: list[str] = []
-    for s in syms:
-        if s and s not in seen:
-            seen.add(s)
-            out.append(s)
+    seen: set[str] = set()
+
+    if not isinstance(doc, dict):
+        return out
+
+    rows = doc.get("positions")
+    if not isinstance(rows, list):
+        return out
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        sym = str(row.get("symbol") or "").strip().upper()
+        if sym and sym not in seen:
+            seen.add(sym)
+            out.append(sym)
     return out
 
-
 def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> list[str]:
-    # 1) real positions cache (if it exists)
-    for p in POS_CANDIDATES:
-        doc = read_json(p)
-        if doc:
-            syms = extract_symbols_from_positions(doc)
-            chosen = [s for s in syms if s in detail_blocks]
-            if chosen:
-                return chosen
+    # Always prefer the normalized positions cache for held symbols.
+    # Do not pre-filter by detail_blocks or sector membership here.
+    pos_paths = [
+        CACHE_DIR / "positions.v1.json",
+        CACHE_DIR / "positions.v0.json",
+        CACHE_DIR / "positions.json",
+        CACHE_DIR / "market_health.positions.json",
+    ]
 
-    # 2) fallback: held_scored from recommendations cache
-    rec = None
-    if isinstance(rec_doc, dict):
-        rec = rec_doc.get("recommendation")
-        if not isinstance(rec, dict):
-            # Accept flat v1 cache schema (keys live at top-level)
-            if any(
-                k in rec_doc
-                for k in (
-                    "action",
-                    "why",
-                    "swap_candidates",
-                    "threshold",
-                    "best",
-                    "weakest",
-                    "held_syms",
-                    "status",
-                )
-            ):
-                rec = rec_doc
+    for path in pos_paths:
+        try:
+            doc = read_json(path)
+        except Exception:
+            continue
+        syms = extract_symbols_from_positions(doc)
+        if syms:
+            out: list[str] = []
+            seen: set[str] = set()
+            for sym in syms:
+                ss = str(sym or "").strip().upper()
+                if ss and ss not in seen:
+                    seen.add(ss)
+                    out.append(ss)
+            return out
 
-    diag = rec.get("diagnostics") if isinstance(rec, dict) else None
+    # fallback: held_scored from recommendations cache
+    diag = rec_doc.get("diagnostic") if isinstance(rec_doc, dict) else None
     held = diag.get("held_scored") if isinstance(diag, dict) else None
+    out: list[str] = []
+    seen: set[str] = set()
     if isinstance(held, list):
-        chosen = [str(x) for x in held if str(x) in detail_blocks]
-        if chosen:
-            return chosen
-
-    return []
-
+        for sym in held:
+            ss = str(sym or "").strip().upper()
+            if ss and ss not in seen:
+                seen.add(ss)
+                out.append(ss)
+    return out
 
 def grade_letter(pct: int) -> tuple[str, str]:
     if pct >= 60:
@@ -362,6 +353,177 @@ def grade_letter(pct: int) -> tuple[str, str]:
         return "H", YELLOW
     return "S", RED
 
+
+def _coherent_reco_summary_from_obj(obj):
+    if not isinstance(obj, dict):
+        return None
+
+    def _num(v):
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            try:
+                return float(v.strip())
+            except Exception:
+                return None
+        return None
+
+    def _sym_from_dict(d):
+        if not isinstance(d, dict):
+            return None
+        lower = {str(k).lower(): v for k, v in d.items()}
+        for key in ("sym", "symbol", "ticker", "candidate", "to", "to_sym", "to_symbol"):
+            v = lower.get(key)
+            if isinstance(v, str) and v.strip():
+                return v.strip().upper()
+        return None
+
+    def _get(d, *names):
+        lower = {str(k).lower(): v for k, v in d.items()} if isinstance(d, dict) else {}
+        for name in names:
+            val = _num(lower.get(name.lower()))
+            if val is not None:
+                return val
+        return None
+
+    found = []
+
+    def _walk(x):
+        if isinstance(x, dict):
+            sym = _sym_from_dict(x)
+            if sym:
+                c = _get(x, "c", "current", "score_c", "current_score")
+                h1 = _get(x, "h1", "score_h1", "forecast_h1")
+                h5 = _get(x, "h5", "score_h5", "forecast_h5")
+                blend = _get(x, "blend", "score", "utility", "blended", "blend_score")
+                if c is not None or h1 is not None or h5 is not None or blend is not None:
+                    if c is not None and h1 is not None and h5 is not None:
+                        blend = round((0.50 * c) + (0.25 * h1) + (0.25 * h5), 2)
+                    found.append((sym, blend, c, h1, h5))
+            for v in x.values():
+                _walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                _walk(v)
+
+    _walk(obj)
+
+    scored = [t for t in found if t[1] is not None]
+    if not scored:
+        return None
+
+    best = max(scored, key=lambda t: (t[1], t[0]))
+    weakest = min(scored, key=lambda t: (t[1], t[0]))
+    delta = round(best[1] - weakest[1], 2)
+
+    def _fmt(v):
+        return "-" if v is None else f"{v:.2f}"
+
+    return {
+        "best": f"{best[0]}  (blend {_fmt(best[1])} | C {_fmt(best[2])} | H1 {_fmt(best[3])} | H5 {_fmt(best[4])})",
+        "weakest": f"{weakest[0]}  (blend {_fmt(weakest[1])} | C {_fmt(weakest[2])} | H1 {_fmt(weakest[3])} | H5 {_fmt(weakest[4])})",
+        "delta": delta,
+    }
+
+
+
+def _extract_blend_from_comp_line(text):
+    try:
+        m = re.search(r"blend\s+([0-9]+(?:\.[0-9]+)?)", str(text))
+        return float(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+def _coherent_reco_summary_from_rows(rows):
+    if not isinstance(rows, list):
+        return None
+    return _coherent_reco_summary_from_obj({"rows": rows})
+
+
+def _coherent_reco_policy_from_obj(obj):
+    if not isinstance(obj, dict):
+        return None
+
+    def _num(v):
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            try:
+                return float(v.strip())
+            except Exception:
+                return None
+        return None
+
+    def _lower_map(d):
+        return {str(k).lower(): v for k, v in d.items()} if isinstance(d, dict) else {}
+
+    def _sym(d):
+        lower = _lower_map(d)
+        for key in ("sym", "symbol", "ticker", "candidate", "to", "to_sym", "to_symbol"):
+            v = lower.get(key)
+            if isinstance(v, str) and v.strip():
+                return v.strip().upper()
+        return None
+
+    def _get(d, *names):
+        lower = _lower_map(d)
+        for name in names:
+            val = _num(lower.get(name.lower()))
+            if val is not None:
+                return val
+        return None
+
+    found = []
+
+    def _walk(x):
+        if isinstance(x, dict):
+            sym = _sym(x)
+            if sym:
+                c = _get(x, "c", "current", "score_c", "current_score")
+                h1 = _get(x, "h1", "score_h1", "forecast_h1")
+                h5 = _get(x, "h5", "score_h5", "forecast_h5")
+                blend = _get(x, "blend", "score", "utility", "blended", "blend_score")
+                if c is not None and h1 is not None and h5 is not None:
+                    blend = round((0.50 * c) + (0.25 * h1) + (0.25 * h5), 2)
+                status = None
+                lower = _lower_map(x)
+                for key in ("status", "state", "why", "reason", "veto_reason"):
+                    v = lower.get(key)
+                    if isinstance(v, str) and v.strip():
+                        status = v.strip()
+                        break
+                found.append(
+                    {
+                        "sym": sym,
+                        "blend": blend,
+                        "status": status,
+                    }
+                )
+            for v in x.values():
+                _walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                _walk(v)
+
+    _walk(obj)
+
+    scored = [r for r in found if r.get("blend") is not None]
+    if not scored:
+        return None
+
+    best = max(scored, key=lambda r: (r["blend"], r["sym"]))
+    statuses = [str(r.get("status") or "").upper() for r in scored if str(r.get("status") or "").strip()]
+
+    all_blocked = bool(statuses) and all("BLOCK" in s for s in statuses)
+    any_unblocked = any("BLOCK" not in s for s in statuses) if statuses else False
+
+    return {
+        "best_blend": best.get("blend"),
+        "all_blocked": all_blocked,
+        "any_unblocked": any_unblocked,
+        "status_count": len(statuses),
+    }
 
 def _snapshot_order_util(doc: dict) -> tuple[list[str], dict[str, float]]:
     data = doc.get("data") or {}
@@ -1949,6 +2111,53 @@ def _backfill_missing_forecast_scores(
     return doc
 
 
+
+def _summary_display_iso_local(value):
+    if not isinstance(value, str) or not value.strip():
+        return "-"
+    try:
+        from datetime import datetime as _dt2, timezone as _tz2, timedelta as _td2
+        try:
+            from zoneinfo import ZoneInfo as _ZI2
+            _et = _ZI2("America/New_York")
+        except Exception:
+            _et = _tz2(_td2(hours=-5), "ET")
+        return (
+            _dt2.fromisoformat(value.replace("Z", "+00:00"))
+            .astimezone(_et)
+            .strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        )
+    except Exception:
+        return str(value)
+
+
+
+def _summary_display_iso_local(value):
+    if not isinstance(value, str) or not value.strip():
+        return "-"
+    try:
+        from datetime import datetime as _dt2, timezone as _tz2, timedelta as _td2
+        try:
+            from zoneinfo import ZoneInfo as _ZI2
+            _et = _ZI2("America/New_York")
+        except Exception:
+            _et = _tz2(_td2(hours=-5), "ET")
+        return (
+            _dt2.fromisoformat(value.replace("Z", "+00:00"))
+            .astimezone(_et)
+            .strftime("%Y-%m-%d %I:%M:%S %p %Z")
+        )
+    except Exception:
+        return str(value)
+
+
+def _first_present(*vals):
+    for v in vals:
+        if isinstance(v, str) and v.strip():
+            return v
+    return None
+
+
 def render_reco(order, util, rec_doc, held_syms):
     NL = chr(10)
     console = Console(
@@ -2343,6 +2552,42 @@ def render_reco(order, util, rec_doc, held_syms):
     rendered_now_display = _dt.now(_ET).strftime("%Y-%m-%d %I:%M:%S %p %Z")
     asof_display = _fmt_et(asof)
     positions_display = _fmt_et(positions_asof_live)
+    _rec_src = rec_doc if isinstance(rec_doc, dict) else {}
+    _rec_bucket = (
+        _rec_src.get("recommendation")
+        if isinstance(_rec_src.get("recommendation"), dict)
+        else {}
+    )
+    _rec_st = (
+        _rec_src.get("source_timestamps")
+        if isinstance(_rec_src.get("source_timestamps"), dict)
+        else {}
+    )
+    _bucket_st = (
+        _rec_bucket.get("source_timestamps")
+        if isinstance(_rec_bucket.get("source_timestamps"), dict)
+        else {}
+    )
+
+    _positions_source_iso = _first_present(
+        _rec_src.get("positions_source_asof"),
+        _rec_bucket.get("positions_source_asof"),
+        _rec_st.get("positions_source_asof"),
+        _bucket_st.get("positions_source_asof"),
+        _rec_src.get("positions_asof"),
+        _rec_bucket.get("positions_asof"),
+        _rec_st.get("positions_asof"),
+        _bucket_st.get("positions_asof"),
+    )
+    _positions_cache_iso = _first_present(
+        _rec_src.get("positions_cache_asof"),
+        _rec_bucket.get("positions_cache_asof"),
+        _rec_st.get("positions_cache_asof"),
+        _bucket_st.get("positions_cache_asof"),
+    )
+
+    if _positions_source_iso:
+        positions_display = _summary_display_iso_local(_positions_source_iso)
     forecast_display = _fmt_et(forecast_asof_live)
     computed_display = _fmt_et(computed_at)
     age_display = f"{_fmt_age(positions_age)} / {_fmt_age(forecast_age)} / {_fmt_age(sectors_age)}"
@@ -2485,6 +2730,7 @@ def render_reco(order, util, rec_doc, held_syms):
     selected_pair = (
         d.get("selected_pair") if isinstance(d.get("selected_pair"), dict) else {}
     )
+    _coherent_reco = _coherent_reco_summary_from_obj(d if isinstance(d, dict) else None)
     best = selected_pair.get("to_symbol") or d.get("best_candidate")
     weakest = selected_pair.get("from_symbol") or d.get("weakest_held")
 
@@ -2498,10 +2744,155 @@ def render_reco(order, util, rec_doc, held_syms):
         weakest,
         held_components.get(weakest) if isinstance(held_components, dict) else None,
     )
+    _coherent_reco_live = _coherent_reco_summary_from_obj(
+        d if isinstance(d, dict) else None
+    )
+    _coherent_policy_live = _coherent_reco_policy_from_obj(
+        d if isinstance(d, dict) else None
+    )
+
+    best_line = (
+        _coherent_reco_live.get("best")
+        if isinstance(_coherent_reco_live, dict) and _coherent_reco_live.get("best")
+        else _comp_line(best, best_components)
+    )
+    _best_candidate_blend = (
+        _coherent_policy_live.get("best_blend")
+        if isinstance(_coherent_policy_live, dict)
+        else None
+    )
+
+    _held_live = []
+    _pos_doc_live = read_json(CACHE_DIR / "positions.v1.json")
+    _pos_syms_live = (
+        extract_symbols_from_positions(_pos_doc_live)
+        if isinstance(_pos_doc_live, dict)
+        else []
+    )
+
+    _held_util_live = {}
+    try:
+        _held_rows_live, _held_data_live = _unpack_scores(
+            compute_scores(
+                sectors=list(dict.fromkeys(["SPY", *_pos_syms_live])),
+                period="6mo",
+                interval="1d",
+            )
+        )
+    except Exception:
+        _held_rows_live, _held_data_live = ([], None)
+
+    for _row in _held_rows_live or []:
+        if not isinstance(_row, dict):
+            continue
+        _sym = str(_row.get("symbol") or "").strip().upper()
+        _cats = _row.get("categories") or {}
+        _pts = 0
+        _mx = 0
+        for _cat in ("A", "B", "C", "D", "E"):
+            _node = _cats.get(_cat)
+            if not isinstance(_node, dict):
+                continue
+            _checks = _node.get("checks") or []
+            for _chk in _checks:
+                if isinstance(_chk, dict) and isinstance(_chk.get("score"), (int, float)):
+                    _pts += int(_chk["score"])
+                    _mx += 2
+        if _sym and _mx:
+            _held_util_live[_sym] = round(_pts / _mx, 2)
+
+    _seen_held = set()
+    for _sym in _pos_syms_live:
+        _ss = str(_sym or "").strip().upper()
+        if not _ss or _ss in _seen_held:
+            continue
+        _seen_held.add(_ss)
+        _u = _held_util_live.get(_ss)
+        if _u is not None:
+            _held_live.append((float(_u), _ss))
+
+    if _held_live:
+        _weakest_held_blend, _weakest_held_sym = min(
+            _held_live, key=lambda t: (t[0], t[1])
+        )
+    else:
+        _weakest_held_blend, _weakest_held_sym = (None, weakest)
+
+    _fs_doc_live = read_json(CACHE_DIR / "forecast_scores.v1.json")
+    _scores_live = _fs_doc_live.get("scores") if isinstance(_fs_doc_live, dict) else {}
+    _scores_live = _scores_live if isinstance(_scores_live, dict) else {}
+
+    def _payload_pct(_payload):
+        if not isinstance(_payload, dict):
+            return None
+        _cats = _payload.get("categories")
+        if not isinstance(_cats, dict):
+            return None
+        _pts = 0
+        _mx = 0
+        for _cat in ("A", "B", "C", "D", "E"):
+            _node = _cats.get(_cat)
+            if not isinstance(_node, dict):
+                continue
+            _checks = _node.get("checks") or []
+            for _chk in _checks:
+                if isinstance(_chk, dict) and isinstance(_chk.get("score"), (int, float)):
+                    _pts += int(_chk["score"])
+                    _mx += 2
+        return round(_pts / _mx, 2) if _mx else None
+
+    def _fmt_live(_v):
+        return "-" if _v is None else f"{float(_v):.2f}"
+
+    _by_h_live = (
+        _scores_live.get(_weakest_held_sym, {})
+        if isinstance(_scores_live.get(_weakest_held_sym), dict)
+        else {}
+    )
+    _h1_live = _payload_pct(_by_h_live.get("1", _by_h_live.get(1)))
+    _h5_live = _payload_pct(_by_h_live.get("5", _by_h_live.get(5)))
+    _c_live = _weakest_held_blend
+    if _c_live is not None and _h1_live is not None and _h5_live is not None:
+        _blend_live = round((0.50 * _c_live) + (0.25 * _h1_live) + (0.25 * _h5_live), 2)
+    else:
+        _blend_live = _c_live
+
+    weakest_line = (
+        f"{_weakest_held_sym}  (blend {_fmt_live(_blend_live)} | "
+        f"C {_fmt_live(_c_live)} | H1 {_fmt_live(_h1_live)} | H5 {_fmt_live(_h5_live)})"
+    )
 
     delta = _num(d.get("delta_utility"))
+    if _best_candidate_blend is not None and '_blend_live' in locals() and _blend_live is not None:
+        delta = round(float(_best_candidate_blend) - float(_blend_live), 2)
+    elif _best_candidate_blend is not None and _weakest_held_blend is not None:
+        delta = round(float(_best_candidate_blend) - float(_weakest_held_blend), 2)
+    if isinstance(_coherent_reco, dict) and _coherent_reco.get("delta") is not None:
+        delta = _coherent_reco.get("delta")
     thr = _num(d.get("threshold"))
     shortfall = (thr - delta) if (delta is not None and thr is not None) else None
+
+    _coherent_policy = _coherent_reco_policy_from_obj(d if isinstance(d, dict) else None)
+    _best_blend = (
+        _coherent_policy.get("best_blend")
+        if isinstance(_coherent_policy, dict)
+        else None
+    )
+    _all_blocked = bool((_coherent_policy or {}).get("all_blocked"))
+    _status_count = int((_coherent_policy or {}).get("status_count") or 0)
+    _min_floor = 0.55
+
+    if _all_blocked:
+        action = "NOOP"
+        shortfall = None
+        if _status_count > 0:
+            reason = "All displayed candidates remain blocked; hold."
+    elif _best_blend is not None and _best_blend < _min_floor:
+        action = "NOOP"
+        reason = f"No candidate clears min floor ({_min_floor:.3f}); hold."
+    elif delta is not None and thr is not None and delta < thr:
+        action = "NOOP"
+        reason = f"No candidate clears threshold ({thr:.3f}); hold."
 
     summary = Table.grid(padding=(0, 2))
     summary.add_column(style="bold cyan", no_wrap=True)
@@ -2514,7 +2905,113 @@ def render_reco(order, util, rec_doc, held_syms):
     )
     summary.add_row("rendered", str(rendered_now_display))
     summary.add_row("snapshot", str(asof_display))
-    summary.add_row("positions", str(positions_display))
+    _metric_live = str(d.get("decision_metric") or metric or "")
+    _selected_pair_live = (
+        d.get("selected_pair") if isinstance(d.get("selected_pair"), dict) else {}
+    )
+    _best_label = "best candidate"
+    _from_label = "weakest held"
+    from_line = weakest_line
+    _delta_header = delta
+    _reason_header = str(reason)
+    _shortfall_header = shortfall
+
+    if "robust_edge" in _metric_live and isinstance(_selected_pair_live, dict):
+        _best_sym_live = str(_selected_pair_live.get("to_symbol") or best or "").strip().upper()
+        _from_sym_live = str(_selected_pair_live.get("from_symbol") or weakest or "").strip().upper()
+
+        if _best_sym_live:
+            _best_comp_live = _merge_comp(
+                _best_sym_live,
+                candidate_components if isinstance(candidate_components, dict) else None,
+            )
+            best_line = _comp_line(_best_sym_live, _best_comp_live)
+
+        if _from_sym_live:
+            _from_comp_live = _merge_comp(
+                _from_sym_live,
+                held_components.get(_from_sym_live) if isinstance(held_components, dict) else None,
+            )
+            from_line = _comp_line(_from_sym_live, _from_comp_live)
+
+        _from_label = "selected from"
+
+        _weighted_live = _num(_selected_pair_live.get("weighted_robust_edge"))
+        _robust_live = _num(_selected_pair_live.get("robust_edge"))
+
+        if _metric_live == "portfolio_weighted_robust_edge":
+            _delta_header = (
+                _weighted_live
+                if _weighted_live is not None
+                else (_robust_live if _robust_live is not None else delta)
+            )
+        else:
+            _delta_header = _robust_live if _robust_live is not None else delta
+
+        _vetoed_live = bool(_selected_pair_live.get("vetoed"))
+        _veto_reason_live = str(_selected_pair_live.get("veto_reason") or "").strip()
+
+        if _vetoed_live and _veto_reason_live:
+            _reason_header = f"Forecast veto: {_veto_reason_live}"
+            _shortfall_header = None
+        elif thr is not None and _delta_header is not None:
+            _shortfall_header = max(0.0, float(thr) - float(_delta_header))
+            if action == "NOOP":
+                _reason_header = (
+                    f"No candidate clears threshold "
+                    f"(best={float(_delta_header):.3f} < {float(thr):.3f}); hold."
+                )
+            else:
+                _reason_header = str(reason)
+        else:
+            _shortfall_header = None
+
+    _rec_src = rec_doc if isinstance(rec_doc, dict) else {}
+    _rec_bucket = (
+        _rec_src.get("recommendation")
+        if isinstance(_rec_src.get("recommendation"), dict)
+        else {}
+    )
+    _rec_st = (
+        _rec_src.get("source_timestamps")
+        if isinstance(_rec_src.get("source_timestamps"), dict)
+        else {}
+    )
+    _bucket_st = (
+        _rec_bucket.get("source_timestamps")
+        if isinstance(_rec_bucket.get("source_timestamps"), dict)
+        else {}
+    )
+
+    _positions_source_display = _summary_display_iso_local(
+        _rec_bucket.get("positions_source_asof")
+        or _rec_src.get("positions_source_asof")
+        or _bucket_st.get("positions_source_asof")
+        or _rec_st.get("positions_source_asof")
+        or d.get("positions_source_asof")
+        or ((d.get("source_timestamps") or {}).get("positions_source_asof"))
+        or _rec_bucket.get("positions_asof")
+        or _rec_src.get("positions_asof")
+        or _bucket_st.get("positions_asof")
+        or _rec_st.get("positions_asof")
+        or d.get("positions_asof")
+        or ((d.get("source_timestamps") or {}).get("positions_asof"))
+    )
+    _positions_cache_display = _summary_display_iso_local(
+        _rec_bucket.get("positions_cache_asof")
+        or _rec_src.get("positions_cache_asof")
+        or _bucket_st.get("positions_cache_asof")
+        or _rec_st.get("positions_cache_asof")
+        or d.get("positions_cache_asof")
+        or ((d.get("source_timestamps") or {}).get("positions_cache_asof"))
+    )
+
+    summary.add_row("positions", str(_positions_source_display))
+    if (
+        _positions_cache_display not in {"", "-"}
+        and _positions_cache_display != _positions_source_display
+    ):
+        summary.add_row("positions cache", str(_positions_cache_display))
     summary.add_row("forecast", str(forecast_display))
     summary.add_row("computed", str(computed_display))
     summary.add_row("fresh", str(freshness_line))
@@ -2524,15 +3021,16 @@ def render_reco(order, util, rec_doc, held_syms):
     summary.add_row("action", Text(action, style=action_style))
     summary.add_row("metric", str(metric))
     summary.add_row("weights", str(weights))
-    summary.add_row("why", str(reason))
-    summary.add_row("best", Text(_comp_line(best, best_components), style="bold green"))
+    summary.add_row("why", str(_reason_header))
+    summary.add_row(_best_label, Text(best_line, style="bold green"))
+    summary.add_row(_from_label, Text(from_line, style="bold yellow"))
     summary.add_row(
-        "weakest", Text(_comp_line(weakest, weakest_components), style="bold yellow")
+        "delta",
+        Text(_fmt(_delta_header), style=_delta_style(_delta_header, thr)),
     )
-    summary.add_row("delta", Text(_fmt(delta), style=_delta_style(delta, thr)))
     summary.add_row("threshold", Text(_fmt(thr), style="cyan"))
-    if shortfall is not None:
-        summary.add_row("shortfall", Text(_fmt(shortfall), style="yellow"))
+    if _shortfall_header is not None and float(_shortfall_header) > 0:
+        summary.add_row("shortfall", Text(_fmt(_shortfall_header), style="yellow"))
 
     console.print(
         Panel(
@@ -2688,7 +3186,7 @@ def render_reco(order, util, rec_doc, held_syms):
         tbl.add_column("C", justify="right", no_wrap=True)
         tbl.add_column("H1", justify="right", no_wrap=True)
         tbl.add_column("H5", justify="right", no_wrap=True)
-        tbl.add_column("ΔBlend", justify="right", no_wrap=True)
+        tbl.add_column("Edge", justify="right", no_wrap=True)
         tbl.add_column("Thr", justify="right", no_wrap=True)
         tbl.add_column("Status", justify="left", no_wrap=True)
 
@@ -2712,8 +3210,17 @@ def render_reco(order, util, rec_doc, held_syms):
                 Text(_fmt(row.get("h1")), style=_score_style(row.get("h1"))),
                 Text(_fmt(row.get("h5")), style=_score_style(row.get("h5"))),
                 Text(
-                    _fmt(row.get("delta_blended")),
-                    style=_delta_style(row.get("delta_blended"), thr),
+                    _fmt(
+                        row.get("decision_value")
+                        if row.get("decision_value") is not None
+                        else row.get("delta_blended")
+                    ),
+                    style=_delta_style(
+                        row.get("decision_value")
+                        if row.get("decision_value") is not None
+                        else row.get("delta_blended"),
+                        thr,
+                    ),
                 ),
                 Text(_fmt(row.get("threshold")), style="cyan"),
                 Text(

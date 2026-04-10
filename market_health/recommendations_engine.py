@@ -141,6 +141,29 @@ def _forecast_utility(payload: Any) -> Optional[float]:
     if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
         return float(pts) / float(mx)
 
+    # Fallback: derive utility from forecast payload categories/checks,
+    # same scoring basis used elsewhere in the dashboard.
+    cats = payload.get("categories")
+    if isinstance(cats, dict):
+        pts2 = 0.0
+        mx2 = 0.0
+        for key in ("A", "B", "C", "D", "E"):
+            cat = cats.get(key)
+            if not isinstance(cat, dict):
+                continue
+            checks = cat.get("checks")
+            if not isinstance(checks, list):
+                continue
+            for chk in checks:
+                if not isinstance(chk, dict):
+                    continue
+                sc = chk.get("score")
+                if isinstance(sc, (int, float)):
+                    pts2 += float(sc)
+                    mx2 += 2.0
+        if mx2 > 0:
+            return pts2 / mx2
+
     return None
 
 
@@ -223,7 +246,11 @@ def recommend(
     if bool(constraints.get("forecast_mode", False)):
         from market_health.forecast_recommendations import recommend_forecast_mode
 
-        return recommend_forecast_mode(positions=positions, constraints=constraints)
+        return recommend_forecast_mode(
+            positions=positions,
+            score_rows=scores,
+            constraints=constraints,
+        )
 
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
 
