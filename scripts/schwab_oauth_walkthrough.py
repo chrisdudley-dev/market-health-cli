@@ -196,14 +196,15 @@ def main() -> int:
             pass
 
     token_path = Path(os.path.expanduser(args.token))
-    tok_disk = {
-        "expires_at": tok.get("expires_at"),
-        "expires_in": tok.get("expires_in"),
-        "token_type": tok.get("token_type"),
-        "scope": tok.get("scope"),
-    }
-    _write_json_secure(token_path, tok_disk)
-    print(f"OK: wrote token marker -> {token_path} (tokens not stored)")
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = token_path.with_suffix(token_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(tok, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(tmp, token_path)
+    try:
+        os.chmod(token_path, 0o600)
+    except Exception:
+        pass
+    print(f"OK: wrote token cache -> {token_path}")
     return 0
 
 
