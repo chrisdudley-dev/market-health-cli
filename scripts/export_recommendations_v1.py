@@ -703,15 +703,6 @@ def main() -> int:
     aggregated_positions_count = len(aggregated_positions)
 
     positions_asof = _iso_from_epoch(positions_mtime_epoch)
-    positions_is_fresh = _intraday_fresh_or_last_completed_session(
-        positions_asof,
-        int(getattr(args, "max_positions_age_minutes", 15) or 15),
-    )
-    positions_mtime_epoch = _mtime_epoch(pos_p)
-    positions_asof = _iso_from_epoch(positions_mtime_epoch)
-    positions_is_fresh = _is_file_fresh(
-        pos_p, max_age_minutes=int(getattr(args, "max_positions_age_minutes", 15) or 0)
-    )
 
     forecast_doc = None
     forecast_status = "disabled"
@@ -933,13 +924,19 @@ def main() -> int:
         forecast_doc.get("source_asof") if isinstance(forecast_doc, dict) else None
     )
 
+    positions_input_asof = _iso_from_epoch(mtime(Path(args.positions)))
     positions_cache_asof = _iso_from_epoch(mtime(pos_p))
     positions_source_asof = (
         positions.get("asof") if isinstance(positions, dict) else None
     )
-    positions_asof = positions_source_asof or positions_cache_asof or positions_asof
+    positions_asof = (
+        positions_source_asof
+        or positions_input_asof
+        or positions_cache_asof
+        or positions_asof
+    )
     positions_is_fresh = _is_market_session_fresh(
-        positions_source_asof or positions_cache_asof,
+        positions_source_asof or positions_input_asof or positions_cache_asof,
         max_age_minutes=int(getattr(args, "max_positions_age_minutes", 15) or 0),
     )
 
@@ -987,7 +984,26 @@ def main() -> int:
         os.environ.get("MH_IGNORE_STALE_POSITIONS", "")
     ).strip().lower() in {"1", "true", "yes", "y", "on"}
 
-    if (not positions_is_fresh) and (not ignore_stale_positions):
+    canonical_positions_cache_p = Path(
+        os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+    )
+
+    positions_gate_uses_cache = True
+    try:
+        positions_gate_uses_cache = (
+            Path(str(args.positions)).expanduser().resolve()
+            == canonical_positions_cache_p.expanduser().resolve()
+        )
+    except Exception:
+        positions_gate_uses_cache = str(getattr(args, "positions", "")) == str(
+            canonical_positions_cache_p
+        )
+
+    if (
+        (not positions_is_fresh)
+        and (not ignore_stale_positions)
+        and positions_gate_uses_cache
+    ):
         doc: Dict[str, Any] = {
             "schema": "recommendations.v1",
             "snapshot_id": snapshot_id,
@@ -1188,7 +1204,11 @@ def main() -> int:
             )
         return 0
 
-    if not positions_is_fresh:
+    if (
+        (not positions_is_fresh)
+        and (not ignore_stale_positions)
+        and positions_gate_uses_cache
+    ):
         rec = SimpleNamespace(
             action="NOOP",
             reason="stale_positions_cache: positions.v1.json is too old for personalized recommendations; refresh positions first.",
@@ -1369,6 +1389,7 @@ def main() -> int:
 
     inputs["positions_asof"] = positions_asof
     inputs["positions_source_asof"] = positions_source_asof
+    inputs["positions_input_asof"] = positions_input_asof
     inputs["positions_cache_asof"] = positions_cache_asof
 
     inputs["positions_mtime_epoch"] = positions_mtime_epoch
@@ -1387,6 +1408,7 @@ def main() -> int:
 
     source_timestamps["positions_asof"] = positions_asof
     source_timestamps["positions_source_asof"] = positions_source_asof
+    source_timestamps["positions_input_asof"] = positions_input_asof
     source_timestamps["positions_cache_asof"] = positions_cache_asof
 
     source_timestamps["forecast_asof"] = forecast_asof
@@ -1509,6 +1531,7 @@ def main() -> int:
 
     rec_bucket["positions_asof"] = positions_asof
     rec_bucket["positions_source_asof"] = positions_source_asof
+    rec_bucket["positions_input_asof"] = positions_input_asof
     rec_bucket["positions_cache_asof"] = positions_cache_asof
 
     rec_st = (
@@ -1518,6 +1541,7 @@ def main() -> int:
     )
     rec_st["positions_asof"] = positions_asof
     rec_st["positions_source_asof"] = positions_source_asof
+    rec_st["positions_input_asof"] = positions_input_asof
     rec_st["positions_cache_asof"] = positions_cache_asof
     rec_bucket["source_timestamps"] = rec_st
 
