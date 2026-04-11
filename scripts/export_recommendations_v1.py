@@ -767,11 +767,19 @@ def main() -> int:
     sect_cache = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
     score_rows: List[Dict[str, Any]]
     used_source = "compute_scores"
-    sect_cache_asof = _iso_from_epoch(int(sect_cache.stat().st_mtime)) if sect_cache.exists() else None
-    sect_cache_fresh = _intraday_fresh_or_last_completed_session(
-        sect_cache_asof,
-        int(getattr(args, "max_sectors_age_minutes", 15) or 15),
-    ) if sect_cache_asof else False
+    sect_cache_asof = (
+        _iso_from_epoch(int(sect_cache.stat().st_mtime))
+        if sect_cache.exists()
+        else None
+    )
+    sect_cache_fresh = (
+        _intraday_fresh_or_last_completed_session(
+            sect_cache_asof,
+            int(getattr(args, "max_sectors_age_minutes", 15) or 15),
+        )
+        if sect_cache_asof
+        else False
+    )
 
     if sect_cache.exists() and sect_cache_fresh:
         try:
@@ -1398,8 +1406,12 @@ def main() -> int:
     freshness.setdefault("sectors_is_fresh", sectors_is_fresh)
 
     freshness.setdefault("positions_age_seconds", _age_seconds_from_iso(positions_asof))
-    freshness["positions_source_age_seconds"] = _age_seconds_from_iso(positions_source_asof)
-    freshness["positions_cache_age_seconds"] = _age_seconds_from_iso(positions_cache_asof)
+    freshness["positions_source_age_seconds"] = _age_seconds_from_iso(
+        positions_source_asof
+    )
+    freshness["positions_cache_age_seconds"] = _age_seconds_from_iso(
+        positions_cache_asof
+    )
 
     freshness.setdefault(
         "forecast_age_seconds",
@@ -1453,8 +1465,14 @@ def main() -> int:
 
     doc["source_timestamps"] = source_timestamps
 
-    rec_bucket = doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
-    rec_diag = rec_bucket.get("diagnostics") if isinstance(rec_bucket.get("diagnostics"), dict) else {}
+    rec_bucket = (
+        doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
+    )
+    rec_diag = (
+        rec_bucket.get("diagnostics")
+        if isinstance(rec_bucket.get("diagnostics"), dict)
+        else {}
+    )
     if not rec_diag and isinstance(rec_bucket.get("diagnostic"), dict):
         rec_diag = rec_bucket.get("diagnostic")
 
@@ -1485,7 +1503,9 @@ def main() -> int:
         if rec_diag.get("utility_weights") is not None:
             doc["utility_weights"] = rec_diag.get("utility_weights")
 
-    rec_bucket = doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
+    rec_bucket = (
+        doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
+    )
 
     rec_bucket["positions_asof"] = positions_asof
     rec_bucket["positions_source_asof"] = positions_source_asof

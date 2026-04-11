@@ -49,18 +49,24 @@ def _weights_from_positions(positions: Any) -> Dict[str, float]:
     return {s: 1.0 / n for s in held}
 
 
-def _held_min_score(sym: str, scores: Dict[str, Any], horizons: Tuple[int, ...]) -> float:
+def _held_min_score(
+    sym: str, scores: Dict[str, Any], horizons: Tuple[int, ...]
+) -> float:
     by_h = scores.get(sym, {})
     vals: List[float] = []
     if isinstance(by_h, dict):
         for H in horizons:
             payload = by_h.get(H) or by_h.get(str(H))
-            if isinstance(payload, dict) and isinstance(payload.get("forecast_score"), (int, float)):
+            if isinstance(payload, dict) and isinstance(
+                payload.get("forecast_score"), (int, float)
+            ):
                 vals.append(float(payload["forecast_score"]))
     return min(vals) if vals else float("inf")
 
 
-def _component_snapshot(sym: str, blended_util: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+def _component_snapshot(
+    sym: str, blended_util: Dict[str, Dict[str, Any]]
+) -> Dict[str, Any]:
     meta = blended_util.get(sym) if isinstance(blended_util, dict) else None
     if not isinstance(meta, dict):
         return {}
@@ -147,8 +153,6 @@ def _build_candidate_rows(
                 "status": status,
                 "vetoed": bool(pair.vetoed),
                 "veto_reason": pair.veto_reason,
-                "robust_edge": pair.robust_edge,
-                "weighted_robust_edge": weighted_robust_edge,
                 "avg_edge": pair.avg_edge,
                 "edges_by_h": {str(h): pair.edges_by_h.get(h) for h in horizons},
             }

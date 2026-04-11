@@ -35,7 +35,9 @@ def _run_repo_script(script_rel: str) -> None:
 
     env = dict(os.environ)
     root = str(_repo_root())
-    env["PYTHONPATH"] = root if not env.get("PYTHONPATH") else root + os.pathsep + env["PYTHONPATH"]
+    env["PYTHONPATH"] = (
+        root if not env.get("PYTHONPATH") else root + os.pathsep + env["PYTHONPATH"]
+    )
 
     subprocess.run(
         [sys.executable, str(script)],
@@ -49,6 +51,7 @@ def _ensure_refresh_inputs() -> None:
     _run_repo_script("scripts/export_forecast_scores_v1.py")
     _run_repo_script("scripts/backfill_forecast_scores_from_positions.py")
     _run_repo_script("scripts/export_recommendations_v1.py")
+
 
 def _read_json(p: Path) -> dict:
     try:
@@ -144,8 +147,6 @@ def _load_etf_symbols() -> List[str]:
             seen.add(s)
             uniq.append(s)
     return uniq
-
-
 
 
 def _rows_by_symbol(rows):
@@ -274,7 +275,9 @@ def build_snapshot(
 
     rows_by_symbol = _rows_by_symbol(rows if isinstance(rows, list) else [])
     held_symbols = _held_symbols(pos_doc if isinstance(pos_doc, dict) else {})
-    forecast_candidate_symbols = _candidate_symbols(rec_doc if isinstance(rec_doc, dict) else {})
+    forecast_candidate_symbols = _candidate_symbols(
+        rec_doc if isinstance(rec_doc, dict) else {}
+    )
     pair_symbols = _pair_symbols(rec_doc if isinstance(rec_doc, dict) else {})
 
     snap = {
@@ -293,16 +296,16 @@ def build_snapshot(
             "positions": pos_doc if isinstance(pos_doc, dict) else {},
             "recommendations": rec_doc if isinstance(rec_doc, dict) else {},
             "forecast_scores": fs_doc if isinstance(fs_doc, dict) else {},
-"state": {
-    "universes": {
-        "all": list(rows_by_symbol.keys()),
-        "held": held_symbols,
-        "forecast_candidates": forecast_candidate_symbols,
-        "forecast_pair_from": pair_symbols["from"],
-        "forecast_pair_to": pair_symbols["to"],
-    },
-    "rows_by_symbol": rows_by_symbol,
-},
+            "state": {
+                "universes": {
+                    "all": list(rows_by_symbol.keys()),
+                    "held": held_symbols,
+                    "forecast_candidates": forecast_candidate_symbols,
+                    "forecast_pair_from": pair_symbols["from"],
+                    "forecast_pair_to": pair_symbols["to"],
+                },
+                "rows_by_symbol": rows_by_symbol,
+            },
             "events": {},
             "environment": {},
         },

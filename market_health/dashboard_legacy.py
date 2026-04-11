@@ -307,6 +307,7 @@ def extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
             out.append(sym)
     return out
 
+
 def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> list[str]:
     # Always prefer the normalized positions cache for held symbols.
     # Do not pre-filter by detail_blocks or sector membership here.
@@ -346,6 +347,7 @@ def pick_positions(detail_blocks: dict[str, str], rec_doc: dict[str, Any]) -> li
                 out.append(ss)
     return out
 
+
 def grade_letter(pct: int) -> tuple[str, str]:
     if pct >= 60:
         return "B", GREEN
@@ -372,7 +374,15 @@ def _coherent_reco_summary_from_obj(obj):
         if not isinstance(d, dict):
             return None
         lower = {str(k).lower(): v for k, v in d.items()}
-        for key in ("sym", "symbol", "ticker", "candidate", "to", "to_sym", "to_symbol"):
+        for key in (
+            "sym",
+            "symbol",
+            "ticker",
+            "candidate",
+            "to",
+            "to_sym",
+            "to_symbol",
+        ):
             v = lower.get(key)
             if isinstance(v, str) and v.strip():
                 return v.strip().upper()
@@ -396,7 +406,12 @@ def _coherent_reco_summary_from_obj(obj):
                 h1 = _get(x, "h1", "score_h1", "forecast_h1")
                 h5 = _get(x, "h5", "score_h5", "forecast_h5")
                 blend = _get(x, "blend", "score", "utility", "blended", "blend_score")
-                if c is not None or h1 is not None or h5 is not None or blend is not None:
+                if (
+                    c is not None
+                    or h1 is not None
+                    or h5 is not None
+                    or blend is not None
+                ):
                     if c is not None and h1 is not None and h5 is not None:
                         blend = round((0.50 * c) + (0.25 * h1) + (0.25 * h5), 2)
                     found.append((sym, blend, c, h1, h5))
@@ -424,7 +439,6 @@ def _coherent_reco_summary_from_obj(obj):
         "weakest": f"{weakest[0]}  (blend {_fmt(weakest[1])} | C {_fmt(weakest[2])} | H1 {_fmt(weakest[3])} | H5 {_fmt(weakest[4])})",
         "delta": delta,
     }
-
 
 
 def _extract_blend_from_comp_line(text):
@@ -460,7 +474,15 @@ def _coherent_reco_policy_from_obj(obj):
 
     def _sym(d):
         lower = _lower_map(d)
-        for key in ("sym", "symbol", "ticker", "candidate", "to", "to_sym", "to_symbol"):
+        for key in (
+            "sym",
+            "symbol",
+            "ticker",
+            "candidate",
+            "to",
+            "to_sym",
+            "to_symbol",
+        ):
             v = lower.get(key)
             if isinstance(v, str) and v.strip():
                 return v.strip().upper()
@@ -513,7 +535,11 @@ def _coherent_reco_policy_from_obj(obj):
         return None
 
     best = max(scored, key=lambda r: (r["blend"], r["sym"]))
-    statuses = [str(r.get("status") or "").upper() for r in scored if str(r.get("status") or "").strip()]
+    statuses = [
+        str(r.get("status") or "").upper()
+        for r in scored
+        if str(r.get("status") or "").strip()
+    ]
 
     all_blocked = bool(statuses) and all("BLOCK" in s for s in statuses)
     any_unblocked = any("BLOCK" not in s for s in statuses) if statuses else False
@@ -524,6 +550,7 @@ def _coherent_reco_policy_from_obj(obj):
         "any_unblocked": any_unblocked,
         "status_count": len(statuses),
     }
+
 
 def _snapshot_order_util(doc: dict) -> tuple[list[str], dict[str, float]]:
     data = doc.get("data") or {}
@@ -2111,14 +2138,15 @@ def _backfill_missing_forecast_scores(
     return doc
 
 
-
 def _summary_display_iso_local(value):
     if not isinstance(value, str) or not value.strip():
         return "-"
     try:
         from datetime import datetime as _dt2, timezone as _tz2, timedelta as _td2
+
         try:
             from zoneinfo import ZoneInfo as _ZI2
+
             _et = _ZI2("America/New_York")
         except Exception:
             _et = _tz2(_td2(hours=-5), "ET")
@@ -2131,14 +2159,15 @@ def _summary_display_iso_local(value):
         return str(value)
 
 
-
 def _summary_display_iso_local(value):
     if not isinstance(value, str) or not value.strip():
         return "-"
     try:
         from datetime import datetime as _dt2, timezone as _tz2, timedelta as _td2
+
         try:
             from zoneinfo import ZoneInfo as _ZI2
+
             _et = _ZI2("America/New_York")
         except Exception:
             _et = _tz2(_td2(hours=-5), "ET")
@@ -2795,7 +2824,9 @@ def render_reco(order, util, rec_doc, held_syms):
                 continue
             _checks = _node.get("checks") or []
             for _chk in _checks:
-                if isinstance(_chk, dict) and isinstance(_chk.get("score"), (int, float)):
+                if isinstance(_chk, dict) and isinstance(
+                    _chk.get("score"), (int, float)
+                ):
                     _pts += int(_chk["score"])
                     _mx += 2
         if _sym and _mx:
@@ -2836,7 +2867,9 @@ def render_reco(order, util, rec_doc, held_syms):
                 continue
             _checks = _node.get("checks") or []
             for _chk in _checks:
-                if isinstance(_chk, dict) and isinstance(_chk.get("score"), (int, float)):
+                if isinstance(_chk, dict) and isinstance(
+                    _chk.get("score"), (int, float)
+                ):
                     _pts += int(_chk["score"])
                     _mx += 2
         return round(_pts / _mx, 2) if _mx else None
@@ -2863,7 +2896,11 @@ def render_reco(order, util, rec_doc, held_syms):
     )
 
     delta = _num(d.get("delta_utility"))
-    if _best_candidate_blend is not None and '_blend_live' in locals() and _blend_live is not None:
+    if (
+        _best_candidate_blend is not None
+        and "_blend_live" in locals()
+        and _blend_live is not None
+    ):
         delta = round(float(_best_candidate_blend) - float(_blend_live), 2)
     elif _best_candidate_blend is not None and _weakest_held_blend is not None:
         delta = round(float(_best_candidate_blend) - float(_weakest_held_blend), 2)
@@ -2872,7 +2909,9 @@ def render_reco(order, util, rec_doc, held_syms):
     thr = _num(d.get("threshold"))
     shortfall = (thr - delta) if (delta is not None and thr is not None) else None
 
-    _coherent_policy = _coherent_reco_policy_from_obj(d if isinstance(d, dict) else None)
+    _coherent_policy = _coherent_reco_policy_from_obj(
+        d if isinstance(d, dict) else None
+    )
     _best_blend = (
         _coherent_policy.get("best_blend")
         if isinstance(_coherent_policy, dict)
@@ -2917,20 +2956,28 @@ def render_reco(order, util, rec_doc, held_syms):
     _shortfall_header = shortfall
 
     if "robust_edge" in _metric_live and isinstance(_selected_pair_live, dict):
-        _best_sym_live = str(_selected_pair_live.get("to_symbol") or best or "").strip().upper()
-        _from_sym_live = str(_selected_pair_live.get("from_symbol") or weakest or "").strip().upper()
+        _best_sym_live = (
+            str(_selected_pair_live.get("to_symbol") or best or "").strip().upper()
+        )
+        _from_sym_live = (
+            str(_selected_pair_live.get("from_symbol") or weakest or "").strip().upper()
+        )
 
         if _best_sym_live:
             _best_comp_live = _merge_comp(
                 _best_sym_live,
-                candidate_components if isinstance(candidate_components, dict) else None,
+                candidate_components
+                if isinstance(candidate_components, dict)
+                else None,
             )
             best_line = _comp_line(_best_sym_live, _best_comp_live)
 
         if _from_sym_live:
             _from_comp_live = _merge_comp(
                 _from_sym_live,
-                held_components.get(_from_sym_live) if isinstance(held_components, dict) else None,
+                held_components.get(_from_sym_live)
+                if isinstance(held_components, dict)
+                else None,
             )
             from_line = _comp_line(_from_sym_live, _from_comp_live)
 
