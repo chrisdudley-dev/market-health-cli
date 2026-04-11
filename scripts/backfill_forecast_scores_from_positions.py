@@ -24,16 +24,37 @@ def _write_json(path: Path, obj: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
-def main() -> int:
-    from market_health.dashboard_legacy import (
-        extract_symbols_from_positions,
-        _ensure_forecast_payloads,
-    )
+def _extract_symbols_from_positions(doc: dict[str, Any]) -> list[str]:
+    syms: list[str] = []
 
+    v = doc.get("symbols") if isinstance(doc, dict) else None
+    if isinstance(v, list):
+        for x in v:
+            if x is not None:
+                syms.append(str(x).upper().strip())
+
+    v = doc.get("positions") if isinstance(doc, dict) else None
+    if isinstance(v, list):
+        for row in v:
+            if isinstance(row, dict):
+                sym = row.get("symbol") or row.get("sym") or row.get("ticker")
+                if sym:
+                    syms.append(str(sym).upper().strip())
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for s in syms:
+        if s and s not in seen:
+            seen.add(s)
+            out.append(s)
+    return out
+
+
+def main() -> int:
     pos_doc = _read_json(POS_PATH)
     fs_doc = _read_json(FS_PATH)
 
-    held = extract_symbols_from_positions(pos_doc) if isinstance(pos_doc, dict) else []
+    held = _extract_symbols_from_positions(pos_doc) if isinstance(pos_doc, dict) else []
     seen: set[str] = set()
     held_syms: list[str] = []
     for sym in held:
@@ -48,13 +69,21 @@ def main() -> int:
 
     before = json.dumps(fs_doc if isinstance(fs_doc, dict) else {}, sort_keys=True)
 
-    fs_doc = _ensure_forecast_payloads(
-        fs_doc if isinstance(fs_doc, dict) else {},
-        held_syms,
-        period=os.environ.get("MH_PERIOD", "6mo"),
-        interval=os.environ.get("MH_INTERVAL", "1d"),
-        horizons=(1, 5),
-    )
+    try:
+        from market_health.dashboard_legacy import _ensure_forecast_payloads  # type: ignore
+    except Exception:
+        _ensure_forecast_payloads = None
+
+    if callable(_ensure_forecast_payloads):
+        fs_doc = _ensure_forecast_payloads(
+            fs_doc if isinstance(fs_doc, dict) else {},
+            held_syms,
+            period=os.environ.get("MH_PERIOD", "6mo"),
+            interval=os.environ.get("MH_INTERVAL", "1d"),
+            horizons=(1, 5),
+        )
+    else:
+        fs_doc = fs_doc if isinstance(fs_doc, dict) else {}
 
     after = json.dumps(fs_doc, sort_keys=True)
     changed = before != after

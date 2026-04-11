@@ -12,7 +12,6 @@ from market_health.engine import (
     compute_scores,
     SECTORS_DEFAULT,
 )  # existing in your repo
-from market_health.etf_universe_v1 import load_etf_universe
 
 CACHE_DIR = Path(os.path.expanduser("~/.cache/jerboa"))
 
@@ -119,6 +118,11 @@ def _load_inverse_symbols() -> List[str]:
 
 def _load_etf_symbols() -> List[str]:
     out: List[str] = []
+    try:
+        from market_health.etf_universe_v1 import load_etf_universe
+    except Exception:
+        return out
+
     try:
         rows = load_etf_universe()
     except Exception:
