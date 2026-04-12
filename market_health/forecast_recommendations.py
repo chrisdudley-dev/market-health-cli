@@ -1,12 +1,6 @@
 """market_health.forecast_recommendations
 
-Forecast-driven recommendation path (Issue #113).
-
-Pure/deterministic: no I/O. Export layer provides:
-  - forecast_scores (forecast_scores.v1["scores"])
-  - optional horizons list
-  - thresholds / knobs
-  - optional cooldown history (SwapEvent[])
+Forecast-driven recommendation path.
 """
 
 from __future__ import annotations
@@ -16,20 +10,15 @@ from typing import Any, Dict, List, Tuple
 from market_health.forecast_policy import rank_candidates_by_robust_edge
 from market_health.diversity_constraints import apply_swap, check_diversity
 from market_health.cooldown_policy import SwapEvent, check_cooldown
-
-# Import types/helpers from legacy engine (safe: imported lazily by recommend()).
 from market_health.recommendations_engine import (
     Recommendation,
+    blended_utility_from_scores,
     extract_held_symbols,
     stable_tiebreak_key,
 )
 
 
 def _weights_from_positions(positions: Any) -> Dict[str, float]:
-    """Convert positions.v1-like dict into symbol->weight map.
-
-    Prefers market_value-like fields if present; otherwise equal-weight.
-    """
     held = extract_held_symbols(positions)
     if not held:
         return {}
@@ -75,8 +64,105 @@ def _held_min_score(
     return min(vals) if vals else float("inf")
 
 
+def _component_snapshot(
+    sym: str, blended_util: Dict[str, Dict[str, Any]]
+) -> Dict[str, Any]:
+    meta = blended_util.get(sym) if isinstance(blended_util, dict) else None
+    if not isinstance(meta, dict):
+        return {}
+    cur = meta.get("current_utility")
+    return {
+        "c": cur,
+        "current": cur,
+        "h1": meta.get("h1_utility"),
+        "h5": meta.get("h5_utility"),
+        "blend": meta.get("utility"),
+        "blended": meta.get("utility"),
+    }
+
+
+def _build_candidate_rows(
+    *,
+    ranked_pairs: List[Tuple[Any, Any, float, float]],
+    blended_util: Dict[str, Dict[str, Any]],
+    held_present: List[str],
+    horizons: Tuple[int, ...],
+    threshold: float,
+) -> Tuple[List[Dict[str, Any]], float]:
+    held_blends = [
+        float(blended_util[s].get("utility"))
+        for s in held_present
+        if isinstance(blended_util.get(s), dict)
+        and isinstance(blended_util[s].get("utility"), (int, float))
+    ]
+    weakest_held_blended = min(held_blends) if held_blends else 0.0
+
+    rows: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for _, pair, from_weight, weighted_robust_edge in ranked_pairs:
+        sym = str(pair.to_symbol).strip().upper()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+
+        meta = blended_util.get(sym) if isinstance(blended_util, dict) else None
+        meta = meta if isinstance(meta, dict) else {}
+
+        blended = meta.get("utility")
+        current = meta.get("current_utility")
+        h1 = meta.get("h1_utility")
+        h5 = meta.get("h5_utility")
+
+        delta_blended = (
+            round(float(blended) - float(weakest_held_blended), 2)
+            if isinstance(blended, (int, float))
+            else None
+        )
+
+        decision_metric = "portfolio_weighted_robust_edge"
+        decision_value = float(weighted_robust_edge)
+
+        status = "BLOCKED"
+        if (
+            not bool(pair.vetoed)
+            and isinstance(decision_value, (int, float))
+            and float(decision_value) >= float(threshold)
+        ):
+            status = "READY"
+
+        rows.append(
+            {
+                "sym": sym,
+                "symbol": sym,
+                "candidate": sym,
+                "to_symbol": sym,
+                "from_symbol": pair.from_symbol,
+                "decision_metric": decision_metric,
+                "decision_value": decision_value,
+                "robust_edge": float(pair.robust_edge),
+                "weighted_robust_edge": float(weighted_robust_edge),
+                "from_weight": from_weight,
+                "blend": blended,
+                "blended": blended,
+                "c": current,
+                "current": current,
+                "h1": h1,
+                "h5": h5,
+                "delta_blended": delta_blended,
+                "threshold": float(threshold),
+                "status": status,
+                "vetoed": bool(pair.vetoed),
+                "veto_reason": pair.veto_reason,
+                "avg_edge": pair.avg_edge,
+                "edges_by_h": {str(h): pair.edges_by_h.get(h) for h in horizons},
+            }
+        )
+
+    return rows, weakest_held_blended
+
+
 def recommend_forecast_mode(
-    *, positions: Any, constraints: Dict[str, Any]
+    *, positions: Any, score_rows: Any = None, constraints: Dict[str, Any]
 ) -> Recommendation:
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
 
@@ -127,6 +213,18 @@ def recommend_forecast_mode(
         if isinstance(horizons_raw, (list, tuple))
         else (1, 5)
     )
+
+    blended_util = blended_utility_from_scores(
+        score_rows if isinstance(score_rows, list) else [],
+        forecast_scores=scores,
+        utility_weights=constraints.get("utility_weights"),
+        forecast_horizons=horizons,
+    )
+    utility_weights = None
+    if isinstance(blended_util, dict) and blended_util:
+        meta0 = next(iter(blended_util.values()))
+        if isinstance(meta0, dict):
+            utility_weights = meta0.get("utility_weights")
 
     applied = (
         "forecast_mode",
@@ -227,11 +325,36 @@ def recommend_forecast_mode(
         )
 
     ranked_pairs.sort(key=lambda item: item[0])
+
+    candidate_rows, weakest_held_blended = _build_candidate_rows(
+        ranked_pairs=ranked_pairs,
+        blended_util=blended_util,
+        held_present=held_present,
+        horizons=horizons,
+        threshold=thr,
+    )
+
+    held_components: Dict[str, Dict[str, Any]] = {}
+    for sym in held_present:
+        snap = _component_snapshot(sym, blended_util)
+        if snap:
+            held_components[sym] = snap
+
+    candidate_components: Dict[str, Dict[str, Any]] = {}
+    for row in candidate_rows:
+        sym = str(row.get("sym") or "").strip().upper()
+        if not sym:
+            continue
+        snap = _component_snapshot(sym, blended_util)
+        if snap:
+            candidate_components[sym] = snap
+
     _, best, from_weight, weighted_robust_edge = ranked_pairs[0]
     selected_from = best.from_symbol
     decision_metric = (
         "portfolio_weighted_robust_edge" if len(held_present) > 1 else "robust_edge"
     )
+
     pair_diagnostics = [
         {
             "from_symbol": pair.from_symbol,
@@ -274,12 +397,24 @@ def recommend_forecast_mode(
             "vetoed": best.vetoed,
             "veto_reason": best.veto_reason,
         },
-        # keep legacy UI key until #115 updates display text
         "delta_utility": best.robust_edge,
+        "delta_blended": (
+            round(
+                float(candidate_components.get(best.to_symbol, {}).get("blend", 0.0))
+                - float(weakest_held_blended),
+                2,
+            )
+            if best.to_symbol in candidate_components
+            else None
+        ),
         "disagreement_veto_edge": veto_edge,
         "vetoed": best.vetoed,
         "veto_reason": best.veto_reason,
         "candidate_pairs": pair_diagnostics,
+        "candidate_rows": candidate_rows,
+        "held_components": held_components,
+        "candidate_components": candidate_components,
+        "utility_weights": utility_weights,
     }
 
     if best.vetoed:

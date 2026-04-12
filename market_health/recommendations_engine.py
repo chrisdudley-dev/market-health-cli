@@ -16,6 +16,8 @@ Pure/deterministic: no IO, no network, no timestamps.
 
 from __future__ import annotations
 
+from market_health.universe import get_asset_meta
+
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Literal, Optional, Tuple
 
@@ -139,6 +141,29 @@ def _forecast_utility(payload: Any) -> Optional[float]:
     if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
         return float(pts) / float(mx)
 
+    # Fallback: derive utility from forecast payload categories/checks,
+    # same scoring basis used elsewhere in the dashboard.
+    cats = payload.get("categories")
+    if isinstance(cats, dict):
+        pts2 = 0.0
+        mx2 = 0.0
+        for key in ("A", "B", "C", "D", "E"):
+            cat = cats.get(key)
+            if not isinstance(cat, dict):
+                continue
+            checks = cat.get("checks")
+            if not isinstance(checks, list):
+                continue
+            for chk in checks:
+                if not isinstance(chk, dict):
+                    continue
+                sc = chk.get("score")
+                if isinstance(sc, (int, float)):
+                    pts2 += float(sc)
+                    mx2 += 2.0
+        if mx2 > 0:
+            return pts2 / mx2
+
     return None
 
 
@@ -221,7 +246,11 @@ def recommend(
     if bool(constraints.get("forecast_mode", False)):
         from market_health.forecast_recommendations import recommend_forecast_mode
 
-        return recommend_forecast_mode(positions=positions, constraints=constraints)
+        return recommend_forecast_mode(
+            positions=positions,
+            score_rows=scores,
+            constraints=constraints,
+        )
 
     horizon = int(constraints.get("horizon_trading_days", 5) or 5)
 
@@ -267,6 +296,8 @@ def recommend(
     applied_list.append("max_precious_holdings")
     if block_gltr_component_overlap:
         applied_list.append("block_gltr_component_overlap")
+    applied_list.append("block_inverse_or_levered_etf")
+    applied_list.append("block_overlap_key")
     if sector_cap is not None:
         applied_list.append("sector_cap")
     if turnover_cap is not None:
@@ -305,11 +336,29 @@ def recommend(
         if not isinstance(sym, str) or not sym.strip():
             continue
         sym_u = sym.strip().upper()
+        meta_obj = get_asset_meta(sym_u)
         row_meta[sym_u] = {
-            "asset_type": row.get("asset_type"),
-            "group": row.get("group"),
-            "metal_type": row.get("metal_type"),
-            "is_basket": row.get("is_basket"),
+            "asset_type": row.get("asset_type")
+            if row.get("asset_type") is not None
+            else meta_obj.asset_type,
+            "group": row.get("group")
+            if row.get("group") is not None
+            else meta_obj.group,
+            "metal_type": row.get("metal_type")
+            if row.get("metal_type") is not None
+            else meta_obj.metal_type,
+            "is_basket": row.get("is_basket")
+            if row.get("is_basket") is not None
+            else meta_obj.is_basket,
+            "inverse_or_levered": row.get("inverse_or_levered")
+            if row.get("inverse_or_levered") is not None
+            else meta_obj.inverse_or_levered,
+            "strategy_wrapper": row.get("strategy_wrapper")
+            if row.get("strategy_wrapper") is not None
+            else meta_obj.strategy_wrapper,
+            "overlap_key": row.get("overlap_key")
+            if row.get("overlap_key") is not None
+            else meta_obj.overlap_key,
         }
         sec = row.get("sector")
         if isinstance(sec, str) and sec.strip():
@@ -369,26 +418,41 @@ def recommend(
 
     def _policy_reasons(candidate: str) -> List[str]:
         reasons: List[str] = []
-        if not _is_precious(candidate):
-            return reasons
 
-        after_precious = _after_swap_precious(candidate)
+        if _is_precious(candidate):
+            after_precious = _after_swap_precious(candidate)
 
-        if len(after_precious) > max_precious_holdings:
-            reasons.append("policy:max_precious_holdings")
+            if len(after_precious) > max_precious_holdings:
+                reasons.append("policy:max_precious_holdings")
 
-        if block_gltr_component_overlap:
-            after_metals = [
-                row_meta.get(sym, {}).get("metal_type") for sym in after_precious
-            ]
-            has_basket = any(m == "basket" for m in after_metals)
-            has_single = any(
-                isinstance(m, str) and m not in {"basket"} for m in after_metals
-            )
-            if has_basket and has_single:
-                reasons.append("policy:block_gltr_component_overlap")
+            if block_gltr_component_overlap:
+                after_metals = [
+                    row_meta.get(sym, {}).get("metal_type") for sym in after_precious
+                ]
+                has_basket = any(m == "basket" for m in after_metals)
+                has_single = any(
+                    isinstance(m, str) and m not in {"basket"} for m in after_metals
+                )
+                if has_basket and has_single:
+                    reasons.append("policy:block_gltr_component_overlap")
 
-        return reasons
+        candidate_meta = row_meta.get(candidate, {})
+        if candidate_meta.get("group") == "ETF":
+            if bool(candidate_meta.get("inverse_or_levered")):
+                reasons.append("policy:block_inverse_or_levered_etf")
+
+            overlap_key = candidate_meta.get("overlap_key")
+            if isinstance(overlap_key, str) and overlap_key.strip():
+                overlap_key = overlap_key.strip()
+                for held_sym in held_present:
+                    if held_sym == weakest:
+                        continue
+                    held_key = row_meta.get(held_sym, {}).get("overlap_key")
+                    if isinstance(held_key, str) and held_key.strip() == overlap_key:
+                        reasons.append("policy:block_overlap_key")
+                        break
+
+        return list(dict.fromkeys(reasons))
 
     candidate_rows: List[Dict[str, Any]] = []
     candidate_row_index: Dict[str, Dict[str, Any]] = {}

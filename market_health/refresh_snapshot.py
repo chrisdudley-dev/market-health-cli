@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import datetime as dt
 from pathlib import Path
 from typing import List
@@ -20,6 +22,35 @@ POS_PATH = CACHE_DIR / "positions.v1.json"
 REC_PATH = CACHE_DIR / "recommendations.v1.json"
 FS_PATH = CACHE_DIR / "forecast_scores.v1.json"
 INV_PATH = CACHE_DIR / "inverse_universe.v1.json"
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _run_repo_script(script_rel: str) -> None:
+    script = _repo_root() / script_rel
+    if not script.exists():
+        return
+
+    env = dict(os.environ)
+    root = str(_repo_root())
+    env["PYTHONPATH"] = (
+        root if not env.get("PYTHONPATH") else root + os.pathsep + env["PYTHONPATH"]
+    )
+
+    subprocess.run(
+        [sys.executable, str(script)],
+        cwd=str(_repo_root()),
+        env=env,
+        check=False,
+    )
+
+
+def _ensure_refresh_inputs() -> None:
+    _run_repo_script("scripts/export_forecast_scores_v1.py")
+    _run_repo_script("scripts/backfill_forecast_scores_from_positions.py")
+    _run_repo_script("scripts/export_recommendations_v1.py")
 
 
 def _read_json(p: Path) -> dict:
@@ -88,6 +119,129 @@ def _load_inverse_symbols() -> List[str]:
     return uniq
 
 
+def _load_etf_symbols() -> List[str]:
+    out: List[str] = []
+    try:
+        from market_health.etf_universe_v1 import load_etf_universe
+    except Exception:
+        return out
+
+    try:
+        rows = load_etf_universe()
+    except Exception:
+        rows = []
+
+    if isinstance(rows, list):
+        for row in rows:
+            if isinstance(row, dict):
+                sym = row.get("symbol")
+                if isinstance(sym, str):
+                    out.append(sym.upper().strip())
+            elif isinstance(row, str):
+                out.append(row.upper().strip())
+
+    seen = set()
+    uniq: List[str] = []
+    for s in out:
+        if s and s not in seen:
+            seen.add(s)
+            uniq.append(s)
+    return uniq
+
+
+def _rows_by_symbol(rows):
+    out = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        sym = row.get("symbol")
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        out[sym.strip().upper()] = row
+    return out
+
+
+def _held_symbols(pos_doc):
+    out = []
+    seen = set()
+    for pos in (pos_doc.get("positions") or []) if isinstance(pos_doc, dict) else []:
+        if not isinstance(pos, dict):
+            continue
+        sym = pos.get("symbol") or pos.get("ticker")
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        ss = sym.strip().upper()
+        if ss not in seen:
+            seen.add(ss)
+            out.append(ss)
+    return out
+
+
+def _candidate_symbols(rec_doc):
+    out = []
+    seen = set()
+    rows = []
+    if isinstance(rec_doc, dict):
+        rows = rec_doc.get("candidate_rows") or []
+        if not rows and isinstance(rec_doc.get("diagnostic"), dict):
+            rows = rec_doc["diagnostic"].get("candidate_rows") or []
+        if not rows and isinstance(rec_doc.get("diagnostics"), dict):
+            rows = rec_doc["diagnostics"].get("candidate_rows") or []
+        if not rows and isinstance(rec_doc.get("recommendation"), dict):
+            rec = rec_doc["recommendation"]
+            if isinstance(rec.get("diagnostics"), dict):
+                rows = rec["diagnostics"].get("candidate_rows") or []
+            elif isinstance(rec.get("diagnostic"), dict):
+                rows = rec["diagnostic"].get("candidate_rows") or []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        sym = row.get("sym") or row.get("symbol") or row.get("candidate")
+        if not isinstance(sym, str) or not sym.strip():
+            continue
+        ss = sym.strip().upper()
+        if ss not in seen:
+            seen.add(ss)
+            out.append(ss)
+    return out
+
+
+def _pair_symbols(rec_doc):
+    from_syms, to_syms = [], []
+    seen_from, seen_to = set(), set()
+    rows = []
+    if isinstance(rec_doc, dict):
+        rows = rec_doc.get("candidate_pairs") or []
+        if not rows and isinstance(rec_doc.get("diagnostic"), dict):
+            rows = rec_doc["diagnostic"].get("candidate_pairs") or []
+        if not rows and isinstance(rec_doc.get("diagnostics"), dict):
+            rows = rec_doc["diagnostics"].get("candidate_pairs") or []
+        if not rows and isinstance(rec_doc.get("recommendation"), dict):
+            rec = rec_doc["recommendation"]
+            if isinstance(rec.get("diagnostics"), dict):
+                rows = rec["diagnostics"].get("candidate_pairs") or []
+            elif isinstance(rec.get("diagnostic"), dict):
+                rows = rec["diagnostic"].get("candidate_pairs") or []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        fs = row.get("from_symbol")
+        ts = row.get("to_symbol")
+        if isinstance(fs, str) and fs.strip():
+            ss = fs.strip().upper()
+            if ss not in seen_from:
+                seen_from.add(ss)
+                from_syms.append(ss)
+        if isinstance(ts, str) and ts.strip():
+            ss = ts.strip().upper()
+            if ss not in seen_to:
+                seen_to.add(ss)
+                to_syms.append(ss)
+
+    return {"from": from_syms, "to": to_syms}
+
+
 def build_snapshot(
     period: str = "6mo",
     interval: str = "1d",
@@ -95,6 +249,7 @@ def build_snapshot(
     include_inverses: bool = True,
 ) -> dict:
     sectors = [s.upper().strip() for s in (SECTORS_DEFAULT or [])]
+    sectors = sectors + _load_etf_symbols()
     if include_inverses:
         sectors = sectors + _load_inverse_symbols()
 
@@ -113,9 +268,17 @@ def build_snapshot(
     rows = compute_scores(sectors=order, period=period, interval=interval)
 
     # --- load cached supporting docs (positions, reco, forecast) ---
+    _ensure_refresh_inputs()
     pos_doc = _read_json(POS_PATH)
     rec_doc = _read_json(REC_PATH)
     fs_doc = _read_json(FS_PATH)
+
+    rows_by_symbol = _rows_by_symbol(rows if isinstance(rows, list) else [])
+    held_symbols = _held_symbols(pos_doc if isinstance(pos_doc, dict) else {})
+    forecast_candidate_symbols = _candidate_symbols(
+        rec_doc if isinstance(rec_doc, dict) else {}
+    )
+    pair_symbols = _pair_symbols(rec_doc if isinstance(rec_doc, dict) else {})
 
     snap = {
         "schema": "market_health.ui.v1",
@@ -133,7 +296,16 @@ def build_snapshot(
             "positions": pos_doc if isinstance(pos_doc, dict) else {},
             "recommendations": rec_doc if isinstance(rec_doc, dict) else {},
             "forecast_scores": fs_doc if isinstance(fs_doc, dict) else {},
-            "state": {},
+            "state": {
+                "universes": {
+                    "all": list(rows_by_symbol.keys()),
+                    "held": held_symbols,
+                    "forecast_candidates": forecast_candidate_symbols,
+                    "forecast_pair_from": pair_symbols["from"],
+                    "forecast_pair_to": pair_symbols["to"],
+                },
+                "rows_by_symbol": rows_by_symbol,
+            },
             "events": {},
             "environment": {},
         },

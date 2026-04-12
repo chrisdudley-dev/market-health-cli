@@ -703,15 +703,6 @@ def main() -> int:
     aggregated_positions_count = len(aggregated_positions)
 
     positions_asof = _iso_from_epoch(positions_mtime_epoch)
-    positions_is_fresh = _intraday_fresh_or_last_completed_session(
-        positions_asof,
-        int(getattr(args, "max_positions_age_minutes", 15) or 15),
-    )
-    positions_mtime_epoch = _mtime_epoch(pos_p)
-    positions_asof = _iso_from_epoch(positions_mtime_epoch)
-    positions_is_fresh = _is_file_fresh(
-        pos_p, max_age_minutes=int(getattr(args, "max_positions_age_minutes", 15) or 0)
-    )
 
     forecast_doc = None
     forecast_status = "disabled"
@@ -739,11 +730,49 @@ def main() -> int:
             forecast_status = "unreadable"
             forecast_doc = None
 
+    # Normalize forecast-mode enablement from the on-disk forecast cache.
+    # This keeps recommendations coherent even if the CLI flag default is off.
+    if not (
+        isinstance(forecast_doc, dict)
+        and forecast_doc.get("schema") == "forecast_scores.v1"
+    ):
+        try:
+            if forecast_p.exists():
+                _fd = json.loads(forecast_p.read_text(encoding="utf-8"))
+                if isinstance(_fd, dict) and _fd.get("schema") == "forecast_scores.v1":
+                    forecast_doc = _fd
+        except Exception:
+            pass
+
+    if (
+        isinstance(forecast_doc, dict)
+        and isinstance(forecast_doc.get("scores"), dict)
+        and forecast_doc.get("scores")
+    ):
+        forecast_enabled = True
+        forecast_status = "ok"
+    elif forecast_status == "disabled":
+        forecast_status = "missing" if not forecast_p.exists() else "unreadable"
+
     # Prefer cached sector rows if present (keeps exporter fast/offline-friendly on Jerboa).
     sect_cache = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
     score_rows: List[Dict[str, Any]]
     used_source = "compute_scores"
-    if sect_cache.exists():
+    sect_cache_asof = (
+        _iso_from_epoch(int(sect_cache.stat().st_mtime))
+        if sect_cache.exists()
+        else None
+    )
+    sect_cache_fresh = (
+        _intraday_fresh_or_last_completed_session(
+            sect_cache_asof,
+            int(getattr(args, "max_sectors_age_minutes", 15) or 15),
+        )
+        if sect_cache_asof
+        else False
+    )
+
+    if sect_cache.exists() and sect_cache_fresh:
         try:
             obj = json.loads(sect_cache.read_text(encoding="utf-8"))
             if isinstance(obj, list):
@@ -762,14 +791,62 @@ def main() -> int:
             else:
                 raise ValueError("unexpected sectors cache type")
         except Exception:
-            # Fallback to compute_scores if cache unreadable
             score_rows = compute_scores(
                 sectors=args.sectors, period=args.period, interval=args.interval
             )
+            used_source = "compute_scores"
     else:
         score_rows = compute_scores(
             sectors=args.sectors, period=args.period, interval=args.interval
         )
+        used_source = "compute_scores"
+
+    # Ensure the current-score/display universe covers every forecast-scored symbol.
+    # Otherwise forecast mode can rank a symbol that the display layer cannot hydrate,
+    # which produces candidate rows with Blend/C/H1/H5 = "-".
+    if (
+        isinstance(forecast_doc, dict)
+        and isinstance(forecast_doc.get("scores"), dict)
+        and forecast_doc.get("scores")
+    ):
+        current_syms = set()
+        for row in score_rows:
+            if (
+                isinstance(row, dict)
+                and isinstance(row.get("symbol"), str)
+                and row["symbol"].strip()
+            ):
+                current_syms.add(row["symbol"].strip().upper())
+
+        forecast_syms = {
+            str(sym).strip().upper()
+            for sym in (forecast_doc.get("scores") or {}).keys()
+            if str(sym).strip()
+        }
+
+        missing_syms = sorted(forecast_syms - current_syms)
+        if missing_syms:
+            try:
+                extra_rows = compute_scores(
+                    sectors=missing_syms,
+                    period=args.period,
+                    interval=args.interval,
+                )
+            except Exception:
+                extra_rows = []
+
+            if isinstance(extra_rows, list):
+                for row in extra_rows:
+                    if not isinstance(row, dict):
+                        continue
+                    sym = row.get("symbol")
+                    if not isinstance(sym, str) or not sym.strip():
+                        continue
+                    sym_u = sym.strip().upper()
+                    if sym_u in current_syms:
+                        continue
+                    score_rows.append(row)
+                    current_syms.add(sym_u)
 
     # Stable asof: derived from input mtimes (so idempotency works).
     def mtime(p: Path) -> int:
@@ -822,11 +899,23 @@ def main() -> int:
 
     computed_at = utc_now_iso()
     sectors_asof = _iso_from_epoch(mtime(sect_cache))
+    if used_source == "compute_scores" or not sectors_asof:
+        sectors_asof = snap_iso
+    if not sectors_asof:
+        sectors_asof = snap_iso
+    elif used_source == "compute_scores":
+        sectors_asof = snap_iso
 
     forecast_asof = (
-        forecast_doc.get("snapshot_asof") or forecast_doc.get("asof")
+        (
+            forecast_doc.get("snapshot_asof")
+            or forecast_doc.get("asof")
+            or forecast_doc.get("generated_at")
+            or forecast_doc.get("source_asof")
+            or _iso_from_epoch(mtime(forecast_p))
+        )
         if isinstance(forecast_doc, dict)
-        else None
+        else _iso_from_epoch(mtime(forecast_p))
     )
     forecast_generated_at = (
         forecast_doc.get("generated_at") if isinstance(forecast_doc, dict) else None
@@ -835,14 +924,28 @@ def main() -> int:
         forecast_doc.get("source_asof") if isinstance(forecast_doc, dict) else None
     )
 
-    positions_content_asof = (
+    positions_input_asof = _iso_from_epoch(mtime(Path(args.positions)))
+    positions_cache_asof = _iso_from_epoch(mtime(pos_p))
+    positions_source_asof = (
         positions.get("asof") if isinstance(positions, dict) else None
     )
-    positions_asof = positions_content_asof or positions_asof
+    positions_asof = (
+        positions_source_asof
+        or positions_input_asof
+        or positions_cache_asof
+        or positions_asof
+    )
     positions_is_fresh = _is_market_session_fresh(
-        positions_asof,
+        positions_source_asof or positions_input_asof or positions_cache_asof,
         max_age_minutes=int(getattr(args, "max_positions_age_minutes", 15) or 0),
     )
+
+    ignore_stale_positions = str(
+        os.environ.get("MH_IGNORE_STALE_POSITIONS", "")
+    ).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    if ignore_stale_positions:
+        positions_is_fresh = True
 
     forecast_freshness_asof = forecast_source_asof or forecast_asof
     forecast_is_fresh = _intraday_fresh_or_last_completed_session(
@@ -877,7 +980,30 @@ def main() -> int:
     )
     snapshot_id = computation_fingerprint[:12]
 
-    if not positions_is_fresh:
+    ignore_stale_positions = str(
+        os.environ.get("MH_IGNORE_STALE_POSITIONS", "")
+    ).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+    canonical_positions_cache_p = Path(
+        os.path.expanduser("~/.cache/jerboa/positions.v1.json")
+    )
+
+    positions_gate_uses_cache = True
+    try:
+        positions_gate_uses_cache = (
+            Path(str(args.positions)).expanduser().resolve()
+            == canonical_positions_cache_p.expanduser().resolve()
+        )
+    except Exception:
+        positions_gate_uses_cache = str(getattr(args, "positions", "")) == str(
+            canonical_positions_cache_p
+        )
+
+    if (
+        (not positions_is_fresh)
+        and (not ignore_stale_positions)
+        and positions_gate_uses_cache
+    ):
         doc: Dict[str, Any] = {
             "schema": "recommendations.v1",
             "snapshot_id": snapshot_id,
@@ -941,19 +1067,19 @@ def main() -> int:
 
             doc["inputs"] = inputs
 
-        inputs.setdefault("positions_asof", positions_asof)
+        inputs["positions_asof"] = positions_asof
 
-        inputs.setdefault("positions_mtime_epoch", positions_mtime_epoch)
+        inputs["positions_mtime_epoch"] = positions_mtime_epoch
 
-        inputs.setdefault("forecast_status", forecast_status)
+        inputs["forecast_status"] = forecast_status
 
-        inputs.setdefault("forecast_path", str(forecast_p))
+        inputs["forecast_path"] = str(forecast_p)
 
-        inputs.setdefault("forecast_asof", forecast_asof)
+        inputs["forecast_asof"] = forecast_asof
 
-        inputs.setdefault("forecast_generated_at", forecast_generated_at)
+        inputs["forecast_generated_at"] = forecast_generated_at
 
-        inputs.setdefault("forecast_source_asof", forecast_source_asof)
+        inputs["forecast_source_asof"] = forecast_source_asof
 
         doc.setdefault("snapshot_id", snapshot_id)
 
@@ -991,33 +1117,33 @@ def main() -> int:
         if not isinstance(freshness, dict):
             freshness = {}
 
-        inputs.setdefault("positions_asof", positions_asof)
+        inputs["positions_asof"] = positions_asof
 
-        inputs.setdefault("positions_mtime_epoch", positions_mtime_epoch)
+        inputs["positions_mtime_epoch"] = positions_mtime_epoch
 
-        inputs.setdefault("forecast_status", forecast_status)
+        inputs["forecast_status"] = forecast_status
 
-        inputs.setdefault("forecast_path", str(forecast_p))
+        inputs["forecast_path"] = str(forecast_p)
 
-        inputs.setdefault("forecast_asof", forecast_asof)
+        inputs["forecast_asof"] = forecast_asof
 
-        inputs.setdefault("forecast_generated_at", forecast_generated_at)
+        inputs["forecast_generated_at"] = forecast_generated_at
 
-        inputs.setdefault("forecast_source_asof", forecast_source_asof)
+        inputs["forecast_source_asof"] = forecast_source_asof
 
-        inputs.setdefault("sectors_asof", sectors_asof)
+        inputs["sectors_asof"] = sectors_asof
 
-        source_timestamps.setdefault("positions_asof", positions_asof)
+        source_timestamps["positions_asof"] = positions_asof
 
-        source_timestamps.setdefault("forecast_asof", forecast_asof)
+        source_timestamps["forecast_asof"] = forecast_asof
 
-        source_timestamps.setdefault("forecast_generated_at", forecast_generated_at)
+        source_timestamps["forecast_generated_at"] = forecast_generated_at
 
-        source_timestamps.setdefault("forecast_source_asof", forecast_source_asof)
+        source_timestamps["forecast_source_asof"] = forecast_source_asof
 
-        source_timestamps.setdefault("sectors_asof", sectors_asof)
+        source_timestamps["sectors_asof"] = sectors_asof
 
-        source_timestamps.setdefault("snapshot_asof", snap_iso)
+        source_timestamps["snapshot_asof"] = snap_iso
 
         freshness.setdefault("positions_is_fresh", positions_is_fresh)
 
@@ -1078,7 +1204,11 @@ def main() -> int:
             )
         return 0
 
-    if not positions_is_fresh:
+    if (
+        (not positions_is_fresh)
+        and (not ignore_stale_positions)
+        and positions_gate_uses_cache
+    ):
         rec = SimpleNamespace(
             action="NOOP",
             reason="stale_positions_cache: positions.v1.json is too old for personalized recommendations; refresh positions first.",
@@ -1096,8 +1226,9 @@ def main() -> int:
             to_symbol=None,
         )
     else:
+        _positions_for_engine = positions if forecast_enabled else positions_for_rec
         rec = recommend(
-            positions=positions_for_rec,
+            positions=_positions_for_engine,
             scores=score_rows,
             constraints={
                 "min_improvement_threshold": args.min_improvement,
@@ -1208,19 +1339,19 @@ def main() -> int:
 
         doc["inputs"] = inputs
 
-    inputs.setdefault("positions_asof", positions_asof)
+    inputs["positions_asof"] = positions_asof
 
-    inputs.setdefault("positions_mtime_epoch", positions_mtime_epoch)
+    inputs["positions_mtime_epoch"] = positions_mtime_epoch
 
-    inputs.setdefault("forecast_status", forecast_status)
+    inputs["forecast_status"] = forecast_status
 
-    inputs.setdefault("forecast_path", str(forecast_p))
+    inputs["forecast_path"] = str(forecast_p)
 
-    inputs.setdefault("forecast_asof", forecast_asof)
+    inputs["forecast_asof"] = forecast_asof
 
-    inputs.setdefault("forecast_generated_at", forecast_generated_at)
+    inputs["forecast_generated_at"] = forecast_generated_at
 
-    inputs.setdefault("forecast_source_asof", forecast_source_asof)
+    inputs["forecast_source_asof"] = forecast_source_asof
 
     doc.setdefault("snapshot_id", snapshot_id)
 
@@ -1256,33 +1387,39 @@ def main() -> int:
     if not isinstance(freshness, dict):
         freshness = {}
 
-    inputs.setdefault("positions_asof", positions_asof)
+    inputs["positions_asof"] = positions_asof
+    inputs["positions_source_asof"] = positions_source_asof
+    inputs["positions_input_asof"] = positions_input_asof
+    inputs["positions_cache_asof"] = positions_cache_asof
 
-    inputs.setdefault("positions_mtime_epoch", positions_mtime_epoch)
+    inputs["positions_mtime_epoch"] = positions_mtime_epoch
 
-    inputs.setdefault("forecast_status", forecast_status)
+    inputs["forecast_status"] = forecast_status
 
-    inputs.setdefault("forecast_path", str(forecast_p))
+    inputs["forecast_path"] = str(forecast_p)
 
-    inputs.setdefault("forecast_asof", forecast_asof)
+    inputs["forecast_asof"] = forecast_asof
 
-    inputs.setdefault("forecast_generated_at", forecast_generated_at)
+    inputs["forecast_generated_at"] = forecast_generated_at
 
-    inputs.setdefault("forecast_source_asof", forecast_source_asof)
+    inputs["forecast_source_asof"] = forecast_source_asof
 
-    inputs.setdefault("sectors_asof", sectors_asof)
+    inputs["sectors_asof"] = sectors_asof
 
-    source_timestamps.setdefault("positions_asof", positions_asof)
+    source_timestamps["positions_asof"] = positions_asof
+    source_timestamps["positions_source_asof"] = positions_source_asof
+    source_timestamps["positions_input_asof"] = positions_input_asof
+    source_timestamps["positions_cache_asof"] = positions_cache_asof
 
-    source_timestamps.setdefault("forecast_asof", forecast_asof)
+    source_timestamps["forecast_asof"] = forecast_asof
 
-    source_timestamps.setdefault("forecast_generated_at", forecast_generated_at)
+    source_timestamps["forecast_generated_at"] = forecast_generated_at
 
-    source_timestamps.setdefault("forecast_source_asof", forecast_source_asof)
+    source_timestamps["forecast_source_asof"] = forecast_source_asof
 
-    source_timestamps.setdefault("sectors_asof", sectors_asof)
+    source_timestamps["sectors_asof"] = sectors_asof
 
-    source_timestamps.setdefault("snapshot_asof", snap_iso)
+    source_timestamps["snapshot_asof"] = snap_iso
 
     freshness.setdefault("positions_is_fresh", positions_is_fresh)
 
@@ -1291,6 +1428,12 @@ def main() -> int:
     freshness.setdefault("sectors_is_fresh", sectors_is_fresh)
 
     freshness.setdefault("positions_age_seconds", _age_seconds_from_iso(positions_asof))
+    freshness["positions_source_age_seconds"] = _age_seconds_from_iso(
+        positions_source_asof
+    )
+    freshness["positions_cache_age_seconds"] = _age_seconds_from_iso(
+        positions_cache_asof
+    )
 
     freshness.setdefault(
         "forecast_age_seconds",
@@ -1311,11 +1454,99 @@ def main() -> int:
         int(getattr(args, "max_positions_age_minutes", 15) or 0),
     )
 
-    doc.setdefault("computed_at", computed_at)
+    diag = doc.get("diagnostic") if isinstance(doc.get("diagnostic"), dict) else {}
+    if isinstance(diag.get("candidate_rows"), list):
+        doc["candidate_rows"] = diag.get("candidate_rows")
+    if isinstance(diag.get("candidate_pairs"), list):
+        doc["candidate_pairs"] = diag.get("candidate_pairs")
+    if isinstance(diag.get("held_components"), dict):
+        doc["held_components"] = diag.get("held_components")
+    if isinstance(diag.get("candidate_components"), dict):
+        doc["candidate_components"] = diag.get("candidate_components")
+    if isinstance(diag.get("selected_pair"), dict):
+        doc["selected_pair"] = diag.get("selected_pair")
+    if diag.get("best_candidate") is not None:
+        doc["best_candidate"] = diag.get("best_candidate")
+    if diag.get("weakest_held") is not None:
+        doc["weakest_held"] = diag.get("weakest_held")
+    if diag.get("delta_blended") is not None:
+        doc["delta_blended"] = diag.get("delta_blended")
+    if diag.get("delta_utility") is not None:
+        doc["delta_utility"] = diag.get("delta_utility")
+    if diag.get("decision_metric") is not None:
+        doc["decision_metric"] = diag.get("decision_metric")
+    if diag.get("utility_weights") is not None:
+        doc["utility_weights"] = diag.get("utility_weights")
 
-    doc.setdefault("source_timestamps", source_timestamps)
+    doc["forecast_asof"] = forecast_asof
+    doc["forecast_generated_at"] = forecast_generated_at
+    doc["forecast_source_asof"] = forecast_source_asof
+    doc["positions_asof"] = positions_asof
+    doc["sectors_asof"] = sectors_asof
+    doc["computed_at"] = computed_at
 
-    doc.setdefault("freshness", freshness)
+    doc["source_timestamps"] = source_timestamps
+
+    rec_bucket = (
+        doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
+    )
+    rec_diag = (
+        rec_bucket.get("diagnostics")
+        if isinstance(rec_bucket.get("diagnostics"), dict)
+        else {}
+    )
+    if not rec_diag and isinstance(rec_bucket.get("diagnostic"), dict):
+        rec_diag = rec_bucket.get("diagnostic")
+
+    if rec_diag:
+        doc["diagnostic"] = rec_diag
+        doc["diagnostics"] = rec_diag
+
+        if rec_diag.get("best_candidate") is not None:
+            doc["best_candidate"] = rec_diag.get("best_candidate")
+        if rec_diag.get("weakest_held") is not None:
+            doc["weakest_held"] = rec_diag.get("weakest_held")
+        if rec_diag.get("selected_pair") is not None:
+            doc["selected_pair"] = rec_diag.get("selected_pair")
+        if rec_diag.get("candidate_rows") is not None:
+            doc["candidate_rows"] = rec_diag.get("candidate_rows")
+        if rec_diag.get("candidate_pairs") is not None:
+            doc["candidate_pairs"] = rec_diag.get("candidate_pairs")
+        if rec_diag.get("held_components") is not None:
+            doc["held_components"] = rec_diag.get("held_components")
+        if rec_diag.get("candidate_components") is not None:
+            doc["candidate_components"] = rec_diag.get("candidate_components")
+        if rec_diag.get("decision_metric") is not None:
+            doc["decision_metric"] = rec_diag.get("decision_metric")
+        if rec_diag.get("delta_blended") is not None:
+            doc["delta_blended"] = rec_diag.get("delta_blended")
+        if rec_diag.get("delta_utility") is not None:
+            doc["delta_utility"] = rec_diag.get("delta_utility")
+        if rec_diag.get("utility_weights") is not None:
+            doc["utility_weights"] = rec_diag.get("utility_weights")
+
+    rec_bucket = (
+        doc.get("recommendation") if isinstance(doc.get("recommendation"), dict) else {}
+    )
+
+    rec_bucket["positions_asof"] = positions_asof
+    rec_bucket["positions_source_asof"] = positions_source_asof
+    rec_bucket["positions_input_asof"] = positions_input_asof
+    rec_bucket["positions_cache_asof"] = positions_cache_asof
+
+    rec_st = (
+        rec_bucket.get("source_timestamps")
+        if isinstance(rec_bucket.get("source_timestamps"), dict)
+        else {}
+    )
+    rec_st["positions_asof"] = positions_asof
+    rec_st["positions_source_asof"] = positions_source_asof
+    rec_st["positions_input_asof"] = positions_input_asof
+    rec_st["positions_cache_asof"] = positions_cache_asof
+    rec_bucket["source_timestamps"] = rec_st
+
+    doc["recommendation"] = rec_bucket
+    doc["freshness"] = freshness
 
     doc = to_contract(doc)
     changed = atomic_write_json(out_p, doc)

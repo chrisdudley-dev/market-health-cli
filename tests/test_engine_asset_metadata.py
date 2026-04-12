@@ -75,3 +75,42 @@ def test_compute_scores_attaches_parking_metadata():
     assert row["metal_type"] is None
     assert row["is_basket"] is False
     assert "categories" in row
+
+
+def test_compute_scores_attaches_etf_metadata(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    rows = compute_scores(
+        sectors=["IBIT"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
+    row = rows[0]
+    assert row["symbol"] == "IBIT"
+    assert row["asset_type"] == "etf"
+    assert row["group"] == "ETF"
+    assert row["metal_type"] is None
+    assert row["is_basket"] is False
+    assert row["inverse_or_levered"] is False
+    assert row["strategy_wrapper"] is False
+    assert row["overlap_key"] == "bitcoin"
+    assert "categories" in row
+
+
+def test_compute_scores_attaches_inverse_etf_metadata(monkeypatch):
+    monkeypatch.setenv("MH_ENABLE_ETF_UNIVERSE", "1")
+    rows = compute_scores(
+        sectors=["BITI"],
+        period="6mo",
+        interval="1d",
+        ttl_sec=0,
+        download_fn=fake_download,
+    )
+    row = rows[0]
+    assert row["symbol"] == "BITI"
+    assert row["asset_type"] == "etf"
+    assert row["group"] == "ETF"
+    assert row["inverse_or_levered"] is True
+    assert row["strategy_wrapper"] is False
+    assert row["overlap_key"] == "bitcoin"
