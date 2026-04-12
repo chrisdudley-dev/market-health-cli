@@ -15,6 +15,8 @@
   "recommendation": {
     "action": "NOOP",
     "constraints_applied": [
+      "block_inverse_or_levered_etf",
+      "block_overlap_key",
       "max_precious_holdings",
       "max_swaps_per_day",
       "min_delta"
