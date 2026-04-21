@@ -441,6 +441,42 @@ def _coherent_reco_summary_from_obj(obj):
     }
 
 
+def _forecast_score_to_current_utility(forecast_score, current_utility):
+    try:
+        fs = float(forecast_score)
+    except Exception:
+        return None
+    if abs(fs) > 1.000001:
+        fs = fs / 100.0
+    fs = max(0.0, min(1.0, fs))
+
+    try:
+        cur = float(current_utility)
+    except Exception:
+        return fs
+    if abs(cur) > 1.000001:
+        cur = cur / 100.0
+    cur = max(0.0, min(1.0, cur))
+
+    anchored = cur + (fs - 0.50)
+    return max(0.0, min(1.0, anchored))
+
+
+def _blend_from_components(c_val, h1_val, h5_val):
+    pieces = []
+    for w, v in ((0.50, c_val), (0.25, h1_val), (0.25, h5_val)):
+        if not isinstance(v, (int, float)):
+            continue
+        x = float(v)
+        if abs(x) > 1.000001:
+            x = x / 100.0
+        x = max(0.0, min(1.0, x))
+        pieces.append((w, x))
+    if not pieces:
+        return None
+    return sum(w * x for w, x in pieces) / sum(w for w, _ in pieces)
+
+
 def _extract_blend_from_comp_line(text):
     try:
         m = re.search(r"blend\s+([0-9]+(?:\.[0-9]+)?)", str(text))
@@ -530,6 +566,23 @@ def _coherent_reco_policy_from_obj(obj):
 
     _walk(obj)
 
+    for r in found:
+        if isinstance(r, dict):
+            pieces = []
+            for w, key in ((0.50, "c"), (0.25, "h1"), (0.25, "h5")):
+                v = r.get(key)
+                if not isinstance(v, (int, float)):
+                    continue
+                x = float(v)
+                if abs(x) > 1.000001:
+                    x = x / 100.0
+                x = max(0.0, min(1.0, x))
+                pieces.append((w, x))
+            if pieces:
+                b = sum(w * x for w, x in pieces) / sum(w for w, _ in pieces)
+                r["blend"] = b
+                r["blended"] = b
+                r["utility"] = b
     scored = [r for r in found if r.get("blend") is not None]
     if not scored:
         return None
@@ -1409,8 +1462,8 @@ def render_overview_triscore(order, util, held_syms):
             pieces.append((0.25, h1_val))
         if h5_val is not None:
             pieces.append((0.25, h5_val))
-        denom = sum(w for w, _ in pieces)
-        blend = sum(w * v for w, v in pieces) / denom if denom > 0 else None
+        # denom removed; blend recomputed from displayed C/H1/H5 at row build time
+        # blend now recomputed from displayed C/H1/H5 at row build time
 
         ss = _structure_summary_for_symbol(
             fs, sym, horizon=H5, frames_map=structure_frames
@@ -1463,10 +1516,14 @@ def render_overview_triscore(order, util, held_syms):
         display_rows.append(
             {
                 "sym": f"{sym}•" if sym in held_set else sym,
-                "blend": blend,
+                "blend": _blend_from_components(
+                    c_val,
+                    _forecast_score_to_current_utility(h1_val, c_val),
+                    _forecast_score_to_current_utility(h5_val, c_val),
+                ),
                 "c": c_val,
-                "h1": h1_val,
-                "h5": h5_val,
+                "h1": _forecast_score_to_current_utility(h1_val, c_val),
+                "h5": _forecast_score_to_current_utility(h5_val, c_val),
                 "sup": sup,
                 "res": res,
                 "state": state,
@@ -3537,19 +3594,21 @@ def main() -> int:
 
                 if isinstance(h1_score, (int, float)):
                     row["h1_utility"] = float(h1_score)
-                    row["h1"] = float(h1_score)
+                    row["h1"] = _forecast_score_to_current_utility(
+                        h1_score, current_utility
+                    )
 
                 if isinstance(h5_score, (int, float)):
                     row["h5_utility"] = float(h5_score)
-                    row["h5"] = float(h5_score)
+                    row["h5"] = _forecast_score_to_current_utility(
+                        h5_score, current_utility
+                    )
 
                 if isinstance(h1_score, (int, float)) and isinstance(
                     h5_score, (int, float)
                 ):
-                    blended = (
-                        (current_utility * 0.5)
-                        + (float(h1_score) * 0.25)
-                        + (float(h5_score) * 0.25)
+                    blended = _blend_from_components(
+                        row.get("c"), row.get("h1"), row.get("h5")
                     )
                     row["utility"] = blended
                     row["blended"] = blended

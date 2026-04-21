@@ -127,44 +127,44 @@ def _forecast_payload_for(
     return raw if isinstance(raw, dict) else None
 
 
-def _forecast_utility(payload: Any) -> Optional[float]:
+def _forecast_utility(payload: Any, current_utility: Any = None) -> float | None:
     if not isinstance(payload, dict):
         return None
 
-    fs = payload.get("forecast_score")
-    if isinstance(fs, (int, float)):
-        val = float(fs)
-        return (val / 100.0) if val > 1.5 else val
-
-    pts = payload.get("points")
-    mx = payload.get("max_points")
-    if isinstance(pts, (int, float)) and isinstance(mx, (int, float)) and mx:
-        return float(pts) / float(mx)
-
-    # Fallback: derive utility from forecast payload categories/checks,
-    # same scoring basis used elsewhere in the dashboard.
-    cats = payload.get("categories")
-    if isinstance(cats, dict):
-        pts2 = 0.0
-        mx2 = 0.0
-        for key in ("A", "B", "C", "D", "E"):
-            cat = cats.get(key)
-            if not isinstance(cat, dict):
+    score = None
+    for key in ("forecast_score", "score", "utility", "blend", "blended", "current"):
+        val = payload.get(key)
+        if isinstance(val, (int, float)):
+            score = float(val)
+            break
+        if isinstance(val, str):
+            txt = val.strip().replace("%", "")
+            if not txt:
                 continue
-            checks = cat.get("checks")
-            if not isinstance(checks, list):
+            try:
+                score = float(txt)
+                break
+            except Exception:
                 continue
-            for chk in checks:
-                if not isinstance(chk, dict):
-                    continue
-                sc = chk.get("score")
-                if isinstance(sc, (int, float)):
-                    pts2 += float(sc)
-                    mx2 += 2.0
-        if mx2 > 0:
-            return pts2 / mx2
 
-    return None
+    if score is None:
+        return None
+
+    if abs(score) > 1.000001:
+        score = score / 100.0
+    score = max(0.0, min(1.0, score))
+
+    # Forecast is neutral at 0.50. Anchor horizon utility around current C.
+    if not isinstance(current_utility, (int, float)):
+        return score
+
+    cur = float(current_utility)
+    if abs(cur) > 1.000001:
+        cur = cur / 100.0
+    cur = max(0.0, min(1.0, cur))
+
+    anchored = cur + (score - 0.50)
+    return max(0.0, min(1.0, anchored))
 
 
 def blended_utility_from_scores(
@@ -190,8 +190,12 @@ def blended_utility_from_scores(
 
     for sym, meta in out.items():
         c_util = float(meta.get("utility", 0.0))
-        h1_util = _forecast_utility(_forecast_payload_for(forecast_scores, sym, h1))
-        h5_util = _forecast_utility(_forecast_payload_for(forecast_scores, sym, h5))
+        h1_util = _forecast_utility(
+            _forecast_payload_for(forecast_scores, sym, h1), current_utility=c_util
+        )
+        h5_util = _forecast_utility(
+            _forecast_payload_for(forecast_scores, sym, h5), current_utility=c_util
+        )
 
         parts = {"c": c_util, "h1": h1_util, "h5": h5_util}
         present = {k: v for k, v in parts.items() if isinstance(v, (int, float))}

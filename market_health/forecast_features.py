@@ -27,6 +27,49 @@ def _as_float_list(x: Sequence[Number]) -> List[float]:
     return [float(v) for v in x]
 
 
+def _align_pair(asset_series, benchmark_series):
+    # Prefer true index alignment when pandas-like objects are provided.
+    try:
+        a, b = asset_series.align(benchmark_series, join="inner")
+        mask = a.notna() & b.notna()
+        a = a[mask]
+        b = b[mask]
+        return a, b
+    except Exception:
+        pass
+
+    # Generic fallback for plain sequences / arrays:
+    # keep only the common trailing window so pairwise features can run.
+    try:
+        a = list(asset_series)
+        b = list(benchmark_series)
+    except Exception:
+        return asset_series, benchmark_series
+
+    if not a or not b:
+        return a, b
+
+    n = min(len(a), len(b))
+    a = a[-n:]
+    b = b[-n:]
+
+    # Drop paired missing values conservatively.
+    out_a = []
+    out_b = []
+    for x, y in zip(a, b):
+        if x is None or y is None:
+            continue
+        try:
+            if x != x or y != y:  # NaN check
+                continue
+        except Exception:
+            pass
+        out_a.append(x)
+        out_b.append(y)
+
+    return out_a, out_b
+
+
 def _require_same_length(*series: Sequence[Number]) -> int:
     if not series:
         raise ValueError("No series provided.")
@@ -317,6 +360,7 @@ def close_location_value(
 def rs_ratio(
     asset_close: Sequence[Number], benchmark_close: Sequence[Number]
 ) -> List[Optional[float]]:
+    asset_close, benchmark_close = _align_pair(asset_close, benchmark_close)
     _require_same_length(asset_close, benchmark_close)
     a = _as_float_list(asset_close)
     b = _as_float_list(benchmark_close)
