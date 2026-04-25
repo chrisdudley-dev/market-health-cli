@@ -53,7 +53,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -75,7 +75,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 1,
@@ -84,7 +84,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -218,7 +218,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -299,9 +299,9 @@
             ]
           }
         },
-        "forecast_score": 0.666667,
+        "forecast_score": 0.583333,
         "max_points": 60,
-        "points": 40
+        "points": 35
       },
       "5": {
         "categories": {
@@ -350,7 +350,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -372,7 +372,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 5,
@@ -381,7 +381,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -488,7 +488,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 5,
@@ -515,7 +515,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -533,7 +533,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               }
             ]
           },
@@ -596,9 +596,9 @@
             ]
           }
         },
-        "forecast_score": 0.666667,
+        "forecast_score": 0.55,
         "max_points": 60,
-        "points": 40
+        "points": 33
       }
     },
     "XLB": {
@@ -671,7 +671,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -796,7 +796,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -814,7 +814,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -895,9 +895,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       },
       "5": {
         "categories": {
@@ -968,7 +968,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1093,7 +1093,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1111,7 +1111,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1192,9 +1192,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       }
     },
     "XLC": {
@@ -1267,7 +1267,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -1392,7 +1392,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -1410,7 +1410,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -1491,9 +1491,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       },
       "5": {
         "categories": {
@@ -1564,7 +1564,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1689,7 +1689,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1707,7 +1707,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -1788,9 +1788,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       }
     },
     "XLE": {
@@ -1863,7 +1863,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 1,
@@ -1872,7 +1872,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -2006,7 +2006,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -2087,9 +2087,9 @@
             ]
           }
         },
-        "forecast_score": 0.75,
+        "forecast_score": 0.683333,
         "max_points": 60,
-        "points": 45
+        "points": 41
       },
       "5": {
         "categories": {
@@ -2160,7 +2160,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 5,
@@ -2169,7 +2169,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -2196,7 +2196,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 5,
@@ -2276,7 +2276,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               },
               {
                 "horizon_days": 5,
@@ -2303,7 +2303,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -2321,7 +2321,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 1
               }
             ]
           },
@@ -2384,9 +2384,9 @@
             ]
           }
         },
-        "forecast_score": 0.75,
+        "forecast_score": 0.633333,
         "max_points": 60,
-        "points": 45
+        "points": 38
       }
     },
     "XLF": {
@@ -2459,7 +2459,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -2584,7 +2584,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -2602,7 +2602,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -2620,7 +2620,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 0
+                "score": 1
               }
             ]
           },
@@ -2683,9 +2683,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 24
+        "points": 21
       },
       "5": {
         "categories": {
@@ -2756,7 +2756,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -2881,7 +2881,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -2899,7 +2899,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -2980,9 +2980,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 24
+        "points": 20
       }
     },
     "XLI": {
@@ -3055,7 +3055,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3180,7 +3180,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3198,7 +3198,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3279,9 +3279,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       },
       "5": {
         "categories": {
@@ -3352,7 +3352,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -3477,7 +3477,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -3495,7 +3495,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -3576,9 +3576,9 @@
             ]
           }
         },
-        "forecast_score": 0.45,
+        "forecast_score": 0.366667,
         "max_points": 60,
-        "points": 27
+        "points": 22
       }
     },
     "XLK": {
@@ -3651,7 +3651,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3776,7 +3776,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3794,7 +3794,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -3812,7 +3812,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 0
+                "score": 1
               }
             ]
           },
@@ -3875,9 +3875,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 24
+        "points": 21
       },
       "5": {
         "categories": {
@@ -3948,7 +3948,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4073,7 +4073,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4091,7 +4091,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4172,9 +4172,9 @@
             ]
           }
         },
-        "forecast_score": 0.4,
+        "forecast_score": 0.333333,
         "max_points": 60,
-        "points": 24
+        "points": 20
       }
     },
     "XLP": {
@@ -4247,7 +4247,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -4372,7 +4372,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -4390,7 +4390,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -4471,9 +4471,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       },
       "5": {
         "categories": {
@@ -4544,7 +4544,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4669,7 +4669,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4687,7 +4687,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -4768,9 +4768,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       }
     },
     "XLRE": {
@@ -4843,7 +4843,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -4968,7 +4968,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -4986,7 +4986,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -5067,9 +5067,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       },
       "5": {
         "categories": {
@@ -5140,7 +5140,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5265,7 +5265,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5283,7 +5283,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5364,9 +5364,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       }
     },
     "XLU": {
@@ -5439,7 +5439,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -5564,7 +5564,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -5582,7 +5582,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -5663,9 +5663,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       },
       "5": {
         "categories": {
@@ -5736,7 +5736,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5861,7 +5861,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5879,7 +5879,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -5960,9 +5960,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       }
     },
     "XLV": {
@@ -6035,7 +6035,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6160,7 +6160,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6178,7 +6178,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6259,9 +6259,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       },
       "5": {
         "categories": {
@@ -6332,7 +6332,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -6457,7 +6457,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -6475,7 +6475,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -6556,9 +6556,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       }
     },
     "XLY": {
@@ -6631,7 +6631,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6756,7 +6756,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6774,7 +6774,7 @@
                   "horizon_days": 1,
                   "horizon_scale": 1.0
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 1,
@@ -6855,9 +6855,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       },
       "5": {
         "categories": {
@@ -6928,7 +6928,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 1
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -7053,7 +7053,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -7071,7 +7071,7 @@
                   "horizon_days": 5,
                   "horizon_scale": 2.23606797749979
                 },
-                "score": 2
+                "score": 0
               },
               {
                 "horizon_days": 5,
@@ -7152,9 +7152,9 @@
             ]
           }
         },
-        "forecast_score": 0.433333,
+        "forecast_score": 0.35,
         "max_points": 60,
-        "points": 26
+        "points": 21
       }
     }
   },
