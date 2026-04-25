@@ -12,7 +12,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from market_health.forecast_features import OHLCV
 from market_health.forecast_score_provider import compute_forecast_universe
 from market_health.universe import INVERSE_SYMBOLS, get_default_scoring_symbols
-import yfinance as yf
+
+try:
+    import yfinance as yf
+except Exception:
+    yf = None
 
 Number = Union[int, float]
 
@@ -251,6 +255,9 @@ def _download_missing_ohlcv(
     out: Dict[str, OHLCV] = {}
     if not symbols:
         return out
+
+    if yf is None:
+        return {}
 
     data = yf.download(
         tickers=symbols,

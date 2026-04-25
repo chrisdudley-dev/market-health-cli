@@ -140,6 +140,20 @@ def validate(doc: Dict[str, Any]) -> List[str]:
                             f"scores[{sym}][{h}].categories[{code}].checks[{i}].metrics must be object",
                         )
 
+                    sq = chk.get("source_quality")
+                    if sq not in ("direct", "proxy", "neutral"):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].source_quality must be one of direct/proxy/neutral",
+                        )
+
+                    fb = chk.get("fallback_used")
+                    if not isinstance(fb, bool):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].fallback_used must be bool",
+                        )
+
             diag = payload.get("diagnostics")
             if diag is not None and not isinstance(diag, dict):
                 _err(

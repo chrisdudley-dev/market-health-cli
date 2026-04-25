@@ -24,6 +24,8 @@ class ForecastCheck:
     meaning: str
     score: int
     metrics: Dict[str, Any]
+    source_quality: str = "proxy"
+    fallback_used: bool = False
 
 
 def cap_score(x: int) -> int:
@@ -33,7 +35,14 @@ def cap_score(x: int) -> int:
 
 def neutral_check(label: str, meaning: str, note: str) -> ForecastCheck:
     """Return neutral score=1 when inputs are missing."""
-    return ForecastCheck(label=label, meaning=meaning, score=1, metrics={"note": note})
+    return ForecastCheck(
+        label=label,
+        meaning=meaning,
+        score=1,
+        metrics={"note": note},
+        source_quality="neutral",
+        fallback_used=True,
+    )
 
 
 def sum_points(checks: List[ForecastCheck]) -> Tuple[int, int]:
@@ -73,6 +82,8 @@ def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str
                 "score": int(c.score),
                 "horizon_days": H,
                 "metrics": metrics,
+                "source_quality": c.source_quality,
+                "fallback_used": bool(c.fallback_used),
             }
         )
 
