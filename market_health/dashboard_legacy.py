@@ -968,16 +968,12 @@ def _structure_summary_for_symbol(fs_doc, symbol, *, horizon=None, frames_map=No
             state_tags = []
         state_text = (
             ss.get("state_text")
-            or _walk_find(ss, ["state_text", "state"])
+            or _walk_find(ss, ["state_text", "structure_state", "state"])
             or _walk_find(
                 payload,
                 [
                     "state_text",
-                    "state",
-                    "risk_state",
-                    "overlay_state",
                     "structure_state",
-                    "regime",
                 ],
             )
         )
