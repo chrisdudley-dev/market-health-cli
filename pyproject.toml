@@ -19,9 +19,9 @@ dependencies = [
 ]
 
 [project.scripts]
-market-health = "market_health.mh_cli:main"
-market-health-pi = "market_health.mh_cli:main"
-mh = "market_health.mh_cli:main"
+market-health = "market_health.dashboard_legacy:main"
+market-health-pi = "market_health.dashboard_legacy:main"
+mh = "market_health.dashboard_legacy:main"
 [tool.setuptools]
 packages = ["market_health"]
 py-modules = ["market_ui"]
