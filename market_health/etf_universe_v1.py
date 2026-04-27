@@ -147,6 +147,58 @@ GLOBAL_BROAD_MARKET_ETFS: list[dict[str, Any]] = [
 
 DEFAULT_ETFS.extend(GLOBAL_BROAD_MARKET_ETFS)
 
+
+FACTOR_STYLE_ETF_ROWS: list[tuple[str, str, str, str]] = [
+    # symbol, sleeve, description, overlap_key
+    ("SPMO", "momentum", "S&P 500 momentum", "factor_momentum_us_equity"),
+    ("MTUM", "momentum", "MSCI USA momentum", "factor_momentum_us_equity"),
+    ("QUAL", "quality", "MSCI USA quality", "factor_quality_us_equity"),
+    ("SPHQ", "quality", "S&P 500 quality", "factor_quality_us_equity"),
+    ("VLUE", "value", "MSCI USA value", "factor_value_us_equity"),
+    ("IVE", "value", "S&P 500 value", "factor_value_us_equity"),
+    ("RPV", "value", "S&P 500 pure value", "factor_value_us_equity"),
+    ("IWF", "growth", "Russell 1000 growth", "factor_growth_us_equity"),
+    ("SPYG", "growth", "S&P 500 growth", "factor_growth_us_equity"),
+    ("RPG", "growth", "S&P 500 pure growth", "factor_growth_us_equity"),
+    (
+        "USMV",
+        "low_volatility",
+        "MSCI USA minimum volatility",
+        "factor_low_volatility_us_equity",
+    ),
+    (
+        "SPLV",
+        "low_volatility",
+        "S&P 500 low volatility",
+        "factor_low_volatility_us_equity",
+    ),
+    ("RSP", "equal_weight", "S&P 500 equal weight", "factor_equal_weight_us_equity"),
+    ("IWM", "size", "Russell 2000 small cap", "factor_size_us_equity"),
+    ("IJR", "size", "S&P SmallCap 600", "factor_size_us_equity"),
+    ("MDY", "size", "S&P MidCap 400", "factor_size_us_equity"),
+    ("IJH", "size", "S&P MidCap 400", "factor_size_us_equity"),
+]
+
+
+FACTOR_STYLE_ETFS: list[dict[str, Any]] = [
+    {
+        "symbol": symbol,
+        "enabled": True,
+        "inverse_or_levered": False,
+        "strategy_wrapper": False,
+        "overlap_key": overlap_key,
+        "family": "factor_style",
+        "sleeve": sleeve,
+        "factor": sleeve,
+        "description": description,
+        "region": "United States",
+        "exposure": "us_factor_style_equity",
+    }
+    for symbol, sleeve, description, overlap_key in FACTOR_STYLE_ETF_ROWS
+]
+
+DEFAULT_ETFS.extend(FACTOR_STYLE_ETFS)
+
 ENV_VAR = "JERBOA_ETF_UNIVERSE_JSON"
 
 
