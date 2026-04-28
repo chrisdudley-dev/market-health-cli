@@ -432,3 +432,217 @@ def generate_stop_buy_candidates(
             ),
         )
     ]
+
+
+def _candidate_level(candidate: dict[str, Any]) -> float | None:
+    try:
+        return float(candidate["level"])
+    except Exception:
+        return None
+
+
+def _candidate_weight(candidate: dict[str, Any]) -> float:
+    try:
+        return max(float(candidate.get("weight", 1.0)), 0.0)
+    except Exception:
+        return 1.0
+
+
+def _candidate_recency(candidate: dict[str, Any]) -> int | None:
+    try:
+        value = candidate.get("recency")
+        return None if value is None else int(value)
+    except Exception:
+        return None
+
+
+def _cluster_threshold(
+    *,
+    reference_level: float,
+    current_price: float | None,
+    atr: float | None,
+    max_distance_pct: float,
+    max_distance_atr: float,
+) -> float:
+    anchors = [abs(float(reference_level))]
+
+    if current_price is not None:
+        anchors.append(abs(float(current_price)))
+
+    pct_threshold = max(anchors) * float(max_distance_pct)
+
+    if atr is not None and atr > 0:
+        atr_threshold = float(atr) * float(max_distance_atr)
+        return max(pct_threshold, atr_threshold)
+
+    return pct_threshold
+
+
+def cluster_stop_buy_candidates(
+    candidates: list[dict[str, Any]],
+    *,
+    kind: CandidateKind | None = None,
+    current_price: float | None = None,
+    atr: float | None = None,
+    max_distance_pct: float = 0.0075,
+    max_distance_atr: float = 0.50,
+    min_cluster_weight: float = 0.0,
+    min_cluster_size: int = 1,
+) -> list[dict[str, Any]]:
+    """Cluster nearby Stop/Buy candidates and leave distant levels as separate outliers.
+
+    This is clustering only. It does not select final dashboard Stop/Buy levels and
+    does not change existing dashboard behavior.
+    """
+
+    normalized: list[dict[str, Any]] = []
+
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+
+        candidate_kind = candidate.get("kind")
+        if candidate_kind not in {"floor", "ceiling"}:
+            continue
+        if kind is not None and candidate_kind != kind:
+            continue
+
+        level = _candidate_level(candidate)
+        if level is None:
+            continue
+
+        weight = _candidate_weight(candidate)
+
+        normalized.append(
+            {
+                "level": float(level),
+                "kind": candidate_kind,
+                "source": str(candidate.get("source") or "unknown"),
+                "weight": weight,
+                "recency": _candidate_recency(candidate),
+                "detail": candidate.get("detail"),
+            }
+        )
+
+    normalized.sort(key=lambda item: (item["kind"], item["level"], item["source"]))
+
+    clusters_raw: list[list[dict[str, Any]]] = []
+
+    for candidate in normalized:
+        if not clusters_raw:
+            clusters_raw.append([candidate])
+            continue
+
+        previous_cluster = clusters_raw[-1]
+        previous_kind = previous_cluster[0]["kind"]
+
+        if candidate["kind"] != previous_kind:
+            clusters_raw.append([candidate])
+            continue
+
+        total_weight = sum(_candidate_weight(item) for item in previous_cluster)
+        if total_weight > 0:
+            reference_level = (
+                sum(
+                    float(item["level"]) * _candidate_weight(item)
+                    for item in previous_cluster
+                )
+                / total_weight
+            )
+        else:
+            reference_level = float(previous_cluster[-1]["level"])
+
+        threshold = _cluster_threshold(
+            reference_level=reference_level,
+            current_price=current_price,
+            atr=atr,
+            max_distance_pct=max_distance_pct,
+            max_distance_atr=max_distance_atr,
+        )
+
+        if abs(float(candidate["level"]) - reference_level) <= threshold:
+            previous_cluster.append(candidate)
+        else:
+            clusters_raw.append([candidate])
+
+    clusters: list[dict[str, Any]] = []
+
+    for cluster in clusters_raw:
+        total_weight = sum(_candidate_weight(item) for item in cluster)
+        if len(cluster) < int(min_cluster_size):
+            continue
+        if total_weight < float(min_cluster_weight):
+            continue
+
+        levels = [float(item["level"]) for item in cluster]
+        if total_weight > 0:
+            center = (
+                sum(float(item["level"]) * _candidate_weight(item) for item in cluster)
+                / total_weight
+            )
+        else:
+            center = sum(levels) / len(levels)
+
+        recencies = [
+            int(item["recency"]) for item in cluster if item.get("recency") is not None
+        ]
+        sources = sorted({str(item["source"]) for item in cluster})
+
+        cluster_kind = str(cluster[0]["kind"])
+        strength = total_weight * (1.0 + 0.15 * max(len(sources) - 1, 0))
+
+        clusters.append(
+            {
+                "kind": cluster_kind,
+                "center": round(float(center), 6),
+                "lower": round(float(min(levels)), 6),
+                "upper": round(float(max(levels)), 6),
+                "weight": round(float(total_weight), 6),
+                "strength": round(float(strength), 6),
+                "count": len(cluster),
+                "sources": sources,
+                "nearest_recency": min(recencies) if recencies else None,
+                "is_outlier": len(cluster) == 1,
+            }
+        )
+
+    return sorted(
+        clusters,
+        key=lambda item: (
+            str(item["kind"]),
+            -float(item["strength"]),
+            -int(item["count"]),
+            float(item["center"]),
+        ),
+    )
+
+
+def strongest_stop_buy_clusters(
+    candidates: list[dict[str, Any]],
+    *,
+    current_price: float | None = None,
+    atr: float | None = None,
+    max_distance_pct: float = 0.0075,
+    max_distance_atr: float = 0.50,
+    min_cluster_weight: float = 0.0,
+    min_cluster_size: int = 1,
+) -> dict[str, dict[str, Any] | None]:
+    """Return the strongest floor and ceiling clusters from candidate levels."""
+
+    clusters = cluster_stop_buy_candidates(
+        candidates,
+        current_price=current_price,
+        atr=atr,
+        max_distance_pct=max_distance_pct,
+        max_distance_atr=max_distance_atr,
+        min_cluster_weight=min_cluster_weight,
+        min_cluster_size=min_cluster_size,
+    )
+
+    floors = [cluster for cluster in clusters if cluster["kind"] == "floor"]
+    ceilings = [cluster for cluster in clusters if cluster["kind"] == "ceiling"]
+
+    return {
+        "floor": floors[0] if floors else None,
+        "ceiling": ceilings[0] if ceilings else None,
+    }
