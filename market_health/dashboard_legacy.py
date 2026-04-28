@@ -852,8 +852,53 @@ def _direct_structure_summary_from_df(df):
     support_cushion_atr = max(0.0, (last_close - recent_low) / atr_last)
     overhead_resistance_atr = max(0.0, (recent_high - last_close) / atr_last)
 
-    stop = recent_low - (0.25 * atr_last)
-    buy = recent_high + (0.25 * atr_last)
+    fallback_stop = recent_low - (0.25 * atr_last)
+    fallback_buy = recent_high + (0.25 * atr_last)
+    stop = fallback_stop
+    buy = fallback_buy
+    stop_source = "recent_low_atr_fallback"
+    buy_source = "recent_high_atr_fallback"
+
+    try:
+        from market_health.stop_buy_levels import (
+            generate_stop_buy_candidates,
+            strongest_stop_buy_clusters,
+        )
+
+        ohlcv_df = next(
+            (
+                value
+                for value in locals().values()
+                if hasattr(value, "columns")
+                and hasattr(value, "empty")
+                and "Close" in value.columns
+            ),
+            None,
+        )
+
+        if ohlcv_df is not None:
+            candidates = generate_stop_buy_candidates(ohlcv_df)
+            clusters = strongest_stop_buy_clusters(
+                candidates,
+                current_price=last_close,
+                atr=atr_last,
+                min_cluster_size=2,
+            )
+            floor_cluster = clusters.get("floor")
+            ceiling_cluster = clusters.get("ceiling")
+
+            if floor_cluster is not None:
+                stop = float(floor_cluster["lower"]) - (0.25 * atr_last)
+                stop_source = "clustered_floor"
+
+            if ceiling_cluster is not None:
+                buy = float(ceiling_cluster["upper"]) + (0.25 * atr_last)
+                buy_source = "clustered_ceiling"
+    except Exception:
+        stop = fallback_stop
+        buy = fallback_buy
+        stop_source = "recent_low_atr_fallback"
+        buy_source = "recent_high_atr_fallback"
 
     state_tags = []
     if support_cushion_atr <= 0.25:
@@ -879,6 +924,8 @@ def _direct_structure_summary_from_df(df):
         "stop_candidate": round(stop, 6),
         "catastrophic_stop_candidate": round(stop, 6),
         "buy": round(buy, 6),
+        "stop_source": stop_source,
+        "buy_source": buy_source,
         "buy_candidate": round(buy, 6),
         "stop_buy_candidate": round(buy, 6),
         "breakout_trigger": round(buy, 6),
