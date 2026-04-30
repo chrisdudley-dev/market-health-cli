@@ -14,7 +14,7 @@ if [ "${1:-}" = "--force" ]; then
 fi
 
 REPO="${HOME}/projects/market-health-cli"
-[ -d "$REPO" ] || REPO="/mnt/ssd/projects/market-health-cli"
+[ -d "$REPO" ] || REPO="${REPO_ROOT}"
 cd "$REPO" || { echo "ERROR: repo not found"; exit 1; }
 
 # Gate: only run during regular NYSE session unless forced.
