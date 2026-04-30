@@ -511,6 +511,8 @@ def main() -> int:
             return 2
 
     universe = {k: v for k, v in ohlcv_map.items() if k != "SPY"}
+    if spy is None or getattr(spy, "close", None) is None:
+        raise SystemExit("forecast refresh failed: missing SPY benchmark data")
     spy, universe = _align_universe_lengths(spy, universe)
 
     scores = compute_forecast_universe(

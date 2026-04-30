@@ -2,8 +2,10 @@
 set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 POSITIONS_REFRESH="${SCRIPT_DIR}/jerboa-market-health-positions-refresh"
+MARKET_REFRESH="${SCRIPT_DIR}/jerboa-market-health-refresh"
 FORECAST_REFRESH="${SCRIPT_DIR}/jerboa-market-health-forecast-scores-refresh"
 RECOMMEND_REFRESH="${SCRIPT_DIR}/jerboa-market-health-recommendations-refresh"
+UI_EXPORT="${SCRIPT_DIR}/jerboa-market-health-ui-export"
 
 FORCE=0
 ARGS=()
@@ -72,9 +74,9 @@ fi
 
 # Market refresh (safe arg passing)
 if [ "$FORCE" -eq 1 ]; then
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" --force "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${MARKET_REFRESH}" --force "${ARGS[@]}" || mkt_rc=$?
 else
-  JERBOA_SUPPRESS_BREADCRUMBS=1 "${HOME}/bin/jerboa-market-health-refresh" "${ARGS[@]}" || mkt_rc=$?
+  JERBOA_SUPPRESS_BREADCRUMBS=1 "${MARKET_REFRESH}" "${ARGS[@]}" || mkt_rc=$?
 fi
 
 a_env="$(mtime "$ENV_JSON")"
@@ -90,71 +92,116 @@ changed_rec=0
 [ "$a_pos"  -gt "$b_pos"  ] && changed_pos=1
 [ "$a_rec"  -gt "$b_rec"  ] && changed_rec=1
 
-# Decide status + reason
+# JERBOA_UI_EXPORT_V1
+# Update derived artifacts after source refreshes. Capture failures instead of hiding them.
+forecast_rc=0
+ui_rc=0
+
+if [ -x "${FORECAST_REFRESH}" ]; then
+  "${FORECAST_REFRESH}" --quiet >/dev/null || forecast_rc=$?
+else
+  forecast_rc=127
+fi
+
+if [ -x "${RECOMMEND_REFRESH}" ]; then
+  "${RECOMMEND_REFRESH}" --quiet >/dev/null || rec_rc=$?
+else
+  rec_rc=127
+fi
+
+b_ui="$(mtime "${HOME}/.cache/jerboa/market_health.ui.v1.json")"
+"${UI_EXPORT}" --quiet >/dev/null || ui_rc=$?
+a_rec="$(mtime "$REC_JSON")"
+a_ui="$(mtime "${HOME}/.cache/jerboa/market_health.ui.v1.json")"
+
+changed_rec=0
+changed_ui=0
+[ "$a_rec" -gt "$b_rec" ] && changed_rec=1
+[ "$a_ui" -gt "$b_ui" ] && changed_ui=1
+
+# Decide status + reason after all downstream steps have run.
 status="ok"
 reason="updated"
+
 if [ "$pos_rc" -ne 0 ] || [ "$mkt_rc" -ne 0 ]; then
   status="error"
-  reason="subcommand-failed"
-elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ] && [ "$changed_rec" -eq 0 ]; then
+  reason="source-refresh-failed"
+elif [ "$forecast_rc" -ne 0 ] || [ "$rec_rc" -ne 0 ] || [ "$ui_rc" -ne 0 ]; then
+  status="error"
+  reason="partial-refresh-failed"
+
+  # If source inputs changed but derived artifacts failed, do not leave stale
+  # recommendation/UI caches behind for mh/mh_dev to reuse silently.
+  if [ "$changed_market" -eq 1 ] || [ "$changed_pos" -eq 1 ]; then
+    rm -f "$REC_JSON" "${HOME}/.cache/jerboa/market_health.ui.v1.json"
+  fi
+elif [ "$changed_market" -eq 0 ] && [ "$changed_pos" -eq 0 ] && [ "$changed_rec" -eq 0 ] && [ "$changed_ui" -eq 0 ]; then
   status="skipped"
   reason="no-changes"
 fi
 
-# Persist state snapshot for doctor/debug (always)
+# Persist state snapshot for doctor/debug.
 python3 - <<PY
 import json, os
 from datetime import datetime, timezone
+
 p = os.path.expanduser("~/.cache/jerboa/state/market_health_refresh_all.state.json")
 os.makedirs(os.path.dirname(p), exist_ok=True)
+
 state = {
   "schema": "jerboa.market_health_refresh_all.state.v1",
   "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
   "status": "$status",
   "reason": "$reason",
   "forced": bool(int("$FORCE")),
-  "rc": {"positions": int("$pos_rc"), "market": int("$mkt_rc"), "recommendations": int("$rec_rc")},
-  "changed": {"market": int("$changed_market"), "positions": int("$changed_pos"), "recommendations": int("$changed_rec")},
+  "rc": {
+    "positions": int("$pos_rc"),
+    "market": int("$mkt_rc"),
+    "forecast": int("$forecast_rc"),
+    "recommendations": int("$rec_rc"),
+    "ui": int("$ui_rc"),
+  },
+  "changed": {
+    "market": int("$changed_market"),
+    "positions": int("$changed_pos"),
+    "recommendations": int("$changed_rec"),
+    "ui": int("$changed_ui"),
+  },
   "mtimes": {
-    "before": {"env": int("$b_env"), "sectors": int("$b_sect"), "positions": int("$b_pos"), "recommendations": int("$b_rec")},
-    "after":  {"env": int("$a_env"), "sectors": int("$a_sect"), "positions": int("$a_pos"), "recommendations": int("$a_rec")},
+    "before": {
+      "env": int("$b_env"),
+      "sectors": int("$b_sect"),
+      "positions": int("$b_pos"),
+      "recommendations": int("$b_rec"),
+      "ui": int("$b_ui"),
+    },
+    "after": {
+      "env": int("$a_env"),
+      "sectors": int("$a_sect"),
+      "positions": int("$a_pos"),
+      "recommendations": int("$a_rec"),
+      "ui": int("$a_ui"),
+    },
   },
 }
+
 with open(p, "w", encoding="utf-8") as f:
-  json.dump(state, f, indent=2, sort_keys=True); f.write("\n")
+  json.dump(state, f, indent=2, sort_keys=True)
+  f.write("\n")
 PY
-
-# Journald: one line max, only when meaningful
-
-# JERBOA_UI_EXPORT_V1
-# Update UI contract (React/web reads this single file)
-
-  # Forecast scores (fail-soft)
-  if [ -x "${FORECAST_REFRESH}" ]; then
-    "${FORECAST_REFRESH}" --quiet >/dev/null || true
-  fi
-
-  # Recommendations refresh (fail-soft)
-  if [ -x "${RECOMMEND_REFRESH}" ]; then
-    "${RECOMMEND_REFRESH}" --quiet >/dev/null || rec_rc=$?
-  else
-    rec_rc=127
-  fi
-
-  "${HOME}/bin/jerboa-market-health-ui-export" --quiet >/dev/null || true
 
 if [ -n "${INVOCATION_ID:-}" ]; then
   if [ "$status" = "error" ]; then
-    echo "ERR: refresh-all failed (market_rc=$mkt_rc positions_rc=$pos_rc)"
+    echo "ERR: refresh-all failed (market_rc=$mkt_rc positions_rc=$pos_rc forecast_rc=$forecast_rc rec_rc=$rec_rc ui_rc=$ui_rc)"
   elif [ "$changed_market" -eq 1 ] || [ "$changed_pos" -eq 1 ]; then
-    echo "OK: refresh-all updated (market=$changed_market positions=$changed_pos)"
+    echo "OK: refresh-all updated (market=$changed_market positions=$changed_pos rec=$changed_rec ui=$changed_ui)"
   fi
 else
-  echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec rec_rc=$rec_rc"
+  echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec ui_changed=$changed_ui forecast_rc=$forecast_rc rec_rc=$rec_rc ui_rc=$ui_rc"
 fi
 
-# Exit non-zero only if a subcommand failed
 if [ "$status" = "error" ]; then
   exit 1
 fi
+
 exit 0
