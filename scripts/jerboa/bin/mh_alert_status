@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB="${JERBOA_ALERT_DB:-$HOME/.cache/jerboa/market_health_alerts.v1.sqlite}"
+REPO="${JERBOA_MARKET_HEALTH_REPO:-$PWD}"
+
+exec python -m market_health.alert_status \
+  --db "$DB" \
+  --repo "$REPO" \
+  "$@"
