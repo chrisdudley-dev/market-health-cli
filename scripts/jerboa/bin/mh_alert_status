@@ -2,9 +2,20 @@
 set -euo pipefail
 
 DB="${JERBOA_ALERT_DB:-$HOME/.cache/jerboa/market_health_alerts.v1.sqlite}"
-REPO="${JERBOA_MARKET_HEALTH_REPO:-$PWD}"
+REPO="${JERBOA_MARKET_HEALTH_REPO:-$HOME/market-health-cli}"
 
-exec python -m market_health.alert_status \
+cd "$REPO"
+
+PYTHON="${JERBOA_MARKET_HEALTH_PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+  if [ -x "$REPO/.venv/bin/python" ]; then
+    PYTHON="$REPO/.venv/bin/python"
+  else
+    PYTHON="python"
+  fi
+fi
+
+exec "$PYTHON" -m market_health.alert_status \
   --db "$DB" \
   --repo "$REPO" \
   "$@"
