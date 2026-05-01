@@ -100,3 +100,83 @@ def detect_position_inventory_changes(
         )
 
     return alerts
+
+
+def _normalize_state_tokens(value: Optional[str]) -> Set[str]:
+    if value is None:
+        return set()
+
+    text = str(value).strip()
+    if not text:
+        return set()
+
+    parts = text.replace(",", " ").replace("|", " ").replace(";", " ").split()
+    tokens: Set[str] = set()
+    for part in parts:
+        token = part.strip().upper()
+        if not token or token in {"-", "—", "CLEAN", "OK", "NONE", "NULL", "N/A"}:
+            continue
+        tokens.add(token)
+    return tokens
+
+
+def detect_position_state_changes(
+    *,
+    previous_states: Dict[str, Optional[str]],
+    current_states: Dict[str, Optional[str]],
+) -> List[AlertCandidate]:
+    """Detect meaningful state transitions for symbols present in both snapshots."""
+
+    previous_by_symbol = {
+        str(symbol).strip().upper(): state
+        for symbol, state in previous_states.items()
+        if str(symbol).strip()
+    }
+    current_by_symbol = {
+        str(symbol).strip().upper(): state
+        for symbol, state in current_states.items()
+        if str(symbol).strip()
+    }
+
+    alerts: List[AlertCandidate] = []
+    for symbol in sorted(set(previous_by_symbol) & set(current_by_symbol)):
+        previous_tokens = _normalize_state_tokens(previous_by_symbol[symbol])
+        current_tokens = _normalize_state_tokens(current_by_symbol[symbol])
+
+        if previous_tokens == current_tokens:
+            continue
+
+        added = sorted(current_tokens - previous_tokens)
+        removed = sorted(previous_tokens - current_tokens)
+
+        if current_tokens and not previous_tokens:
+            severity = "warning"
+        elif not current_tokens and previous_tokens:
+            severity = "info"
+        elif added:
+            severity = "warning"
+        else:
+            severity = "info"
+
+        previous_label = ",".join(sorted(previous_tokens)) or "clean"
+        current_label = ",".join(sorted(current_tokens)) or "clean"
+
+        alerts.append(
+            AlertCandidate(
+                alert_key=f"position_state:{symbol}:{previous_label}->{current_label}",
+                alert_type="position_state_changed",
+                severity=severity,
+                symbol=symbol,
+                title=f"{symbol} state changed: {previous_label} -> {current_label}",
+                message=f"{symbol} state changed from {previous_label} to {current_label}.",
+                payload={
+                    "symbol": symbol,
+                    "previous_state": previous_label,
+                    "current_state": current_label,
+                    "added_tags": added,
+                    "removed_tags": removed,
+                },
+            )
+        )
+
+    return alerts
