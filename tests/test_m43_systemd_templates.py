@@ -22,6 +22,7 @@ def test_alert_run_once_wrapper_exists_and_calls_python_runner() -> None:
     assert "JERBOA_MARKET_HEALTH_UI" in text
     assert "JERBOA_TELEGRAM_CONFIG" in text
     assert "JERBOA_ALERT_TELEGRAM_MODE" in text
+    assert '"$@"' in text
 
 
 def test_alert_service_is_user_oneshot_with_timeout_and_journald_identifier() -> None:

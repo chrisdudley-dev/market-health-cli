@@ -23,4 +23,5 @@ exec "$PYTHON" -m market_health.alert_runner \
   --ui "$UI" \
   --telegram-config "$TELEGRAM_CONFIG" \
   --telegram-mode "$TELEGRAM_MODE" \
-  --trigger-name systemd-timer
+  --trigger-name systemd-timer \
+  "$@"
