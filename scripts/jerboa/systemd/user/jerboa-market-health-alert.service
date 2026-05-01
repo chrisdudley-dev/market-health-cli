@@ -1,0 +1,26 @@
+[Unit]
+Description=Jerboa Market Health - M43 alert run-once service
+Documentation=https://github.com/chrisdudley-dev/market-health-cli
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/jerboa-market-health-alert-run-once
+TimeoutStartSec=10min
+
+# Logs go to journald by default for user services.
+SyslogIdentifier=jerboa-market-health-alert
+
+# Be gentle to the Pi.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+# Safe hardening. The service still writes under $HOME.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB="${JERBOA_ALERT_DB:-$HOME/.cache/jerboa/market_health_alerts.v1.sqlite}"
+UI="${JERBOA_MARKET_HEALTH_UI:-$HOME/.cache/jerboa/market_health.ui.v1.json}"
+TELEGRAM_CONFIG="${JERBOA_TELEGRAM_CONFIG:-$HOME/.config/jerboa/telegram.json}"
+TELEGRAM_MODE="${JERBOA_ALERT_TELEGRAM_MODE:-disabled}"
+
+exec python -m market_health.alert_runner \
+  --db "$DB" \
+  --ui "$UI" \
+  --telegram-config "$TELEGRAM_CONFIG" \
+  --telegram-mode "$TELEGRAM_MODE" \
+  --trigger-name systemd-timer
