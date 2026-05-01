@@ -48,6 +48,26 @@ def _one(conn, sql: str):
     return conn.execute(sql).fetchone()
 
 
+def _json_timestamp(path: Path, keys: tuple[str, ...]) -> str | None:
+    if not path.exists():
+        return None
+
+    try:
+        obj = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    if not isinstance(obj, dict):
+        return None
+
+    for key in keys:
+        value = obj.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return None
+
+
 def _sqlite_status(db_path: Path) -> dict:
     status = {
         "db_path": str(db_path),
@@ -116,6 +136,8 @@ def _sqlite_status(db_path: Path) -> dict:
         )
         status["latest_positions_timestamp"] = (
             latest_positions["ts_utc"] if latest_positions else None
+        ) or _json_timestamp(
+            db_path.parent / "positions.v1.json", ("asof", "generated_at")
         )
 
         latest_forecast = _one(
@@ -128,6 +150,9 @@ def _sqlite_status(db_path: Path) -> dict:
         )
         status["latest_forecast_timestamp"] = (
             latest_forecast["ts_utc"] if latest_forecast else None
+        ) or _json_timestamp(
+            db_path.parent / "forecast_scores.v1.json",
+            ("generated_at", "asof", "snapshot_asof", "source_asof"),
         )
 
         latest_alert = _one(
