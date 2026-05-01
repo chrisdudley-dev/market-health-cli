@@ -17,10 +17,8 @@ Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=6
 
-# Safe hardening. The service still writes under $HOME.
+# User-service-compatible hardening.
+# Avoid root-only sandboxing directives here; some Raspberry Pi user managers
+# fail before ExecStart with status=218/CAPABILITIES.
 NoNewPrivileges=yes
 PrivateTmp=yes
-ProtectSystem=strict
-ProtectKernelTunables=yes
-ProtectKernelModules=yes
-ProtectControlGroups=yes
