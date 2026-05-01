@@ -18,10 +18,17 @@ if [ -z "$PYTHON" ]; then
   fi
 fi
 
+EXTRA_ARGS=()
+if [ -n "${JERBOA_ALERT_RUNNER_ARGS:-}" ]; then
+  # shellcheck disable=SC2206
+  EXTRA_ARGS=($JERBOA_ALERT_RUNNER_ARGS)
+fi
+
 exec "$PYTHON" -m market_health.alert_runner \
   --db "$DB" \
   --ui "$UI" \
   --telegram-config "$TELEGRAM_CONFIG" \
   --telegram-mode "$TELEGRAM_MODE" \
   --trigger-name systemd-timer \
+  "${EXTRA_ARGS[@]}" \
   "$@"
