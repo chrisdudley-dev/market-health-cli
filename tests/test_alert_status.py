@@ -184,7 +184,10 @@ def test_wrapper_script_exists_and_calls_module() -> None:
     text = p.read_text(encoding="utf-8")
 
     assert text.startswith("#!/usr/bin/env bash")
-    assert "python -m market_health.alert_status" in text
+    assert '"$PYTHON" -m market_health.alert_status' in text
+    assert "JERBOA_MARKET_HEALTH_PYTHON" in text
+    assert "$REPO/.venv/bin/python" in text
+    assert 'cd "$REPO"' in text
     assert "JERBOA_ALERT_DB" in text
     assert "JERBOA_MARKET_HEALTH_REPO" in text
 
