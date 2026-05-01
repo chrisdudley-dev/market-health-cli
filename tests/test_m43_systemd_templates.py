@@ -14,6 +14,8 @@ def test_alert_run_once_wrapper_exists_and_calls_python_runner() -> None:
     assert "set -euo pipefail" in text
     assert "python -m market_health.alert_runner" in text
     assert "--trigger-name systemd-timer" in text
+    assert "JERBOA_MARKET_HEALTH_REPO" in text
+    assert 'cd "$REPO"' in text
     assert "JERBOA_ALERT_DB" in text
     assert "JERBOA_MARKET_HEALTH_UI" in text
     assert "JERBOA_TELEGRAM_CONFIG" in text
