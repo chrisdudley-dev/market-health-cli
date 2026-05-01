@@ -20,14 +20,23 @@ if [ -f "$SRC_DEFAULT" ]; then
   args+=(--source "$SRC_DEFAULT")
 fi
 
+PYTHON="${JERBOA_MARKET_HEALTH_PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+  if [ -x "$ROOT/.venv/bin/python" ]; then
+    PYTHON="$ROOT/.venv/bin/python"
+  else
+    PYTHON="python3"
+  fi
+fi
+
 if [ "$QUIET" -eq 1 ]; then
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" --quiet || rc=$?
+  PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" --quiet || rc=$?
 else
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" || rc=$?
+  PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/export_forecast_scores_v1.py" "${args[@]}" || rc=$?
 fi
 
 if [ "$rc" -eq 0 ] && [ -f "$OUT" ]; then
-  PYTHONPATH="$ROOT" python3 "$ROOT/scripts/validate_forecast_scores_v1.py" --path "$OUT" >/dev/null || rc=$?
+  PYTHONPATH="$ROOT" "$PYTHON" "$ROOT/scripts/validate_forecast_scores_v1.py" --path "$OUT" >/dev/null || rc=$?
 fi
 
 if [ "$QUIET" -ne 1 ]; then
