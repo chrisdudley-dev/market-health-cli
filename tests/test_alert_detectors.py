@@ -1,4 +1,7 @@
-from market_health.alert_detectors import detect_position_inventory_changes
+from market_health.alert_detectors import (
+    detect_position_inventory_changes,
+    detect_position_state_changes,
+)
 
 
 def test_position_inventory_suppresses_first_run_alert_storm() -> None:
@@ -91,3 +94,89 @@ def test_position_inventory_equal_sets_have_no_alerts() -> None:
     )
 
     assert alerts == []
+
+
+def test_position_state_detects_clean_to_dmg() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "clean"},
+        current_states={"SPY": "DMG"},
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].alert_type == "position_state_changed"
+    assert alerts[0].severity == "warning"
+    assert alerts[0].symbol == "SPY"
+    assert alerts[0].payload["previous_state"] == "clean"
+    assert alerts[0].payload["current_state"] == "DMG"
+    assert alerts[0].payload["added_tags"] == ["DMG"]
+    assert alerts[0].payload["removed_tags"] == []
+
+
+def test_position_state_detects_dmg_to_dmg_rcl() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "DMG"},
+        current_states={"SPY": "DMG,RCL"},
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].severity == "warning"
+    assert alerts[0].payload["previous_state"] == "DMG"
+    assert alerts[0].payload["current_state"] == "DMG,RCL"
+    assert alerts[0].payload["added_tags"] == ["RCL"]
+    assert alerts[0].payload["removed_tags"] == []
+
+
+def test_position_state_detects_brk_and_oh_brk() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "clean", "XLF": "DMG"},
+        current_states={"SPY": "BRK", "XLF": "OH,BRK"},
+    )
+
+    assert [a.symbol for a in alerts] == ["SPY", "XLF"]
+    assert alerts[0].payload["added_tags"] == ["BRK"]
+    assert alerts[1].payload["added_tags"] == ["BRK", "OH"]
+    assert all(a.severity == "warning" for a in alerts)
+
+
+def test_position_state_detects_rcl_disappears() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "DMG,RCL"},
+        current_states={"SPY": "DMG"},
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].severity == "info"
+    assert alerts[0].payload["added_tags"] == []
+    assert alerts[0].payload["removed_tags"] == ["RCL"]
+
+
+def test_position_state_detects_damaged_to_clean() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "DMG,BRK"},
+        current_states={"SPY": "clean"},
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].severity == "info"
+    assert alerts[0].payload["previous_state"] == "BRK,DMG"
+    assert alerts[0].payload["current_state"] == "clean"
+    assert alerts[0].payload["removed_tags"] == ["BRK", "DMG"]
+
+
+def test_position_state_ignores_formatting_only_changes() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"spy": "DMG, RCL", "xlf": "clean"},
+        current_states={"SPY": "RCL DMG", "XLF": "OK"},
+    )
+
+    assert alerts == []
+
+
+def test_position_state_ignores_symbols_not_present_in_both_snapshots() -> None:
+    alerts = detect_position_state_changes(
+        previous_states={"SPY": "DMG", "XLF": "BRK"},
+        current_states={"SPY": "DMG,RCL", "XLK": "DMG"},
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].symbol == "SPY"
