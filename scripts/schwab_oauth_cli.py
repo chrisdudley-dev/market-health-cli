@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 
@@ -24,6 +25,22 @@ from market_health.brokers.schwab_oauth import (
     refresh_access_token,
     token_is_fresh,
 )
+
+
+def _config_status(path: str) -> tuple[bool, list[str]]:
+    cfg_path = os.path.expanduser(path)
+    if not os.path.exists(cfg_path):
+        return False, ["missing_file"]
+
+    try:
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return True, ["unreadable_json"]
+
+    required = ["client_id", "client_secret", "redirect_uri", "auth_url", "token_url"]
+    missing = [key for key in required if not str(data.get(key, "")).strip()]
+    return True, missing
 
 
 def main() -> int:
@@ -56,13 +73,22 @@ def main() -> int:
     tok_path = os.path.expanduser(args.token)
 
     if args.status:
+        cfg_exists, cfg_missing = _config_status(cfg_path)
+        print(f"CONFIG: {cfg_path}")
+        print(f"config_exists={cfg_exists}")
+        print("config_missing=" + ",".join(cfg_missing))
+
         tok = load_token(tok_path)
-        if not tok:
-            print(f"NO TOKEN: {tok_path}")
-            return 0
-        fresh = token_is_fresh(tok)
         print(f"TOKEN: {tok_path}")
+        if not tok:
+            print("token_exists=False")
+            return 0
+
+        fresh = token_is_fresh(tok)
+        print("token_exists=True")
         print(f"fresh={fresh} expires_at={tok.get('expires_at', '?')}")
+        print(f"has_access_token={bool(str(tok.get('access_token', '')).strip())}")
+        print(f"has_refresh_token={bool(str(tok.get('refresh_token', '')).strip())}")
         return 0
 
     try:
