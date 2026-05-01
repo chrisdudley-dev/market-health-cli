@@ -9,7 +9,16 @@ TELEGRAM_MODE="${JERBOA_ALERT_TELEGRAM_MODE:-disabled}"
 
 cd "$REPO"
 
-exec python -m market_health.alert_runner \
+PYTHON="${JERBOA_MARKET_HEALTH_PYTHON:-}"
+if [ -z "$PYTHON" ]; then
+  if [ -x "$REPO/.venv/bin/python" ]; then
+    PYTHON="$REPO/.venv/bin/python"
+  else
+    PYTHON="python"
+  fi
+fi
+
+exec "$PYTHON" -m market_health.alert_runner \
   --db "$DB" \
   --ui "$UI" \
   --telegram-config "$TELEGRAM_CONFIG" \
