@@ -16,8 +16,8 @@ from typing import Any, Dict
 import getpass
 
 
-def _sanitize_for_disk(obj):
-    """Drop secrets before writing JSON to disk."""
+def _sanitize_for_display(obj):
+    """Return a redacted copy suitable for logs/stdout."""
     if not isinstance(obj, dict):
         return obj
     out = dict(obj)
@@ -28,7 +28,8 @@ def _sanitize_for_disk(obj):
         "refresh_token",
         "id_token",
     ):
-        out.pop(k, None)
+        if k in out:
+            out[k] = "***"
     return out
 
 
@@ -49,7 +50,7 @@ def _read_json(p: Path) -> Dict[str, Any]:
 def _write_json_secure(p: Path, obj: Dict[str, Any]) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text("token exchange complete (tokens not stored)\n", encoding="utf-8")
+    tmp.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(tmp, p)
     try:
         os.chmod(p, 0o600)
@@ -196,14 +197,9 @@ def main() -> int:
             pass
 
     token_path = Path(os.path.expanduser(args.token))
-    tok_disk = {
-        "expires_at": tok.get("expires_at"),
-        "expires_in": tok.get("expires_in"),
-        "token_type": tok.get("token_type"),
-        "scope": tok.get("scope"),
-    }
+    tok_disk = dict(tok)
     _write_json_secure(token_path, tok_disk)
-    print(f"OK: wrote token marker -> {token_path} (tokens not stored)")
+    print(f"OK: wrote token cache -> {token_path} (0600; secrets not printed)")
     return 0
 
 
