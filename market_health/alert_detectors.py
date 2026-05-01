@@ -180,3 +180,129 @@ def detect_position_state_changes(
         )
 
     return alerts
+
+
+def _score_band(value: Optional[float]) -> str:
+    if value is None:
+        return "unknown"
+    if value >= 70:
+        return "green"
+    if value >= 55:
+        return "yellow"
+    return "red"
+
+
+def _band_rank(band: str) -> int:
+    return {"unknown": 0, "red": 1, "yellow": 2, "green": 3}.get(band, 0)
+
+
+def _is_band_worse(previous: Optional[float], current: Optional[float]) -> bool:
+    return _band_rank(_score_band(current)) < _band_rank(_score_band(previous))
+
+
+def detect_forecast_warnings(
+    *,
+    symbol: str,
+    current_score: Optional[float],
+    h1_score: Optional[float],
+    h5_score: Optional[float],
+    previous_h1_score: Optional[float] = None,
+    previous_h5_score: Optional[float] = None,
+    current_drop_threshold: float = 5.0,
+    previous_drop_threshold: float = 7.0,
+) -> List[AlertCandidate]:
+    """Detect forecast deterioration for one held symbol."""
+
+    normalized_symbol = str(symbol).strip().upper()
+    if not normalized_symbol:
+        return []
+
+    alerts: List[AlertCandidate] = []
+
+    horizon_values = {
+        "H1": h1_score,
+        "H5": h5_score,
+    }
+    previous_values = {
+        "H1": previous_h1_score,
+        "H5": previous_h5_score,
+    }
+
+    for horizon, forecast_score in horizon_values.items():
+        if current_score is not None and forecast_score is not None:
+            drop = float(current_score) - float(forecast_score)
+            if drop >= current_drop_threshold:
+                alerts.append(
+                    AlertCandidate(
+                        alert_key=f"forecast_warning:{normalized_symbol}:{horizon}:below_current",
+                        alert_type="forecast_below_current",
+                        severity="warning",
+                        symbol=normalized_symbol,
+                        title=f"{normalized_symbol} {horizon} forecast below current score",
+                        message=(
+                            f"{normalized_symbol} {horizon} forecast is {drop:.1f} points "
+                            "below the current score."
+                        ),
+                        payload={
+                            "symbol": normalized_symbol,
+                            "horizon": horizon,
+                            "current_score": float(current_score),
+                            "forecast_score": float(forecast_score),
+                            "drop": drop,
+                            "threshold": float(current_drop_threshold),
+                        },
+                    )
+                )
+
+        previous_score = previous_values[horizon]
+        if previous_score is not None and forecast_score is not None:
+            weakening = float(previous_score) - float(forecast_score)
+            if weakening >= previous_drop_threshold:
+                alerts.append(
+                    AlertCandidate(
+                        alert_key=f"forecast_warning:{normalized_symbol}:{horizon}:weakened",
+                        alert_type="forecast_weakened",
+                        severity="warning",
+                        symbol=normalized_symbol,
+                        title=f"{normalized_symbol} {horizon} forecast weakened",
+                        message=(
+                            f"{normalized_symbol} {horizon} forecast weakened by "
+                            f"{weakening:.1f} points since the previous snapshot."
+                        ),
+                        payload={
+                            "symbol": normalized_symbol,
+                            "horizon": horizon,
+                            "previous_score": float(previous_score),
+                            "forecast_score": float(forecast_score),
+                            "weakening": weakening,
+                            "threshold": float(previous_drop_threshold),
+                        },
+                    )
+                )
+
+            if _is_band_worse(previous_score, forecast_score):
+                previous_band = _score_band(previous_score)
+                current_band = _score_band(forecast_score)
+                alerts.append(
+                    AlertCandidate(
+                        alert_key=f"forecast_warning:{normalized_symbol}:{horizon}:band_worse",
+                        alert_type="forecast_band_worsened",
+                        severity="warning",
+                        symbol=normalized_symbol,
+                        title=f"{normalized_symbol} {horizon} forecast band worsened",
+                        message=(
+                            f"{normalized_symbol} {horizon} forecast band worsened "
+                            f"from {previous_band} to {current_band}."
+                        ),
+                        payload={
+                            "symbol": normalized_symbol,
+                            "horizon": horizon,
+                            "previous_score": float(previous_score),
+                            "forecast_score": float(forecast_score),
+                            "previous_band": previous_band,
+                            "current_band": current_band,
+                        },
+                    )
+                )
+
+    return alerts
