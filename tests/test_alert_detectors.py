@@ -180,3 +180,117 @@ def test_position_state_ignores_symbols_not_present_in_both_snapshots() -> None:
 
     assert len(alerts) == 1
     assert alerts[0].symbol == "SPY"
+
+
+def test_forecast_warning_detects_h1_and_h5_below_current() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    alerts = detect_forecast_warnings(
+        symbol="spy",
+        current_score=72,
+        h1_score=66,
+        h5_score=60,
+    )
+
+    assert [a.alert_type for a in alerts] == [
+        "forecast_below_current",
+        "forecast_below_current",
+    ]
+    assert [a.payload["horizon"] for a in alerts] == ["H1", "H5"]
+    assert alerts[0].symbol == "SPY"
+    assert alerts[0].payload["drop"] == 6.0
+    assert alerts[1].payload["drop"] == 12.0
+
+
+def test_forecast_warning_current_drop_threshold_is_configurable() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    alerts = detect_forecast_warnings(
+        symbol="SPY",
+        current_score=72,
+        h1_score=68,
+        h5_score=67,
+        current_drop_threshold=4,
+    )
+
+    assert [a.payload["horizon"] for a in alerts] == ["H1", "H5"]
+
+
+def test_forecast_warning_detects_previous_snapshot_weakening() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    alerts = detect_forecast_warnings(
+        symbol="SPY",
+        current_score=70,
+        h1_score=60,
+        h5_score=58,
+        previous_h1_score=68,
+        previous_h5_score=70,
+        previous_drop_threshold=7,
+    )
+
+    weakened = [a for a in alerts if a.alert_type == "forecast_weakened"]
+    assert [a.payload["horizon"] for a in weakened] == ["H1", "H5"]
+    assert weakened[0].payload["weakening"] == 8.0
+    assert weakened[1].payload["weakening"] == 12.0
+
+
+def test_forecast_warning_detects_band_worsening() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    alerts = detect_forecast_warnings(
+        symbol="SPY",
+        current_score=72,
+        h1_score=54,
+        h5_score=69,
+        previous_h1_score=56,
+        previous_h5_score=71,
+    )
+
+    band_alerts = [a for a in alerts if a.alert_type == "forecast_band_worsened"]
+    assert [a.payload["horizon"] for a in band_alerts] == ["H1", "H5"]
+    assert band_alerts[0].payload["previous_band"] == "yellow"
+    assert band_alerts[0].payload["current_band"] == "red"
+    assert band_alerts[1].payload["previous_band"] == "green"
+    assert band_alerts[1].payload["current_band"] == "yellow"
+
+
+def test_forecast_warning_no_alert_when_scores_are_stable() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    alerts = detect_forecast_warnings(
+        symbol="SPY",
+        current_score=70,
+        h1_score=68,
+        h5_score=66,
+        previous_h1_score=69,
+        previous_h5_score=67,
+    )
+
+    assert alerts == []
+
+
+def test_forecast_warning_ignores_missing_scores_and_blank_symbol() -> None:
+    from market_health.alert_detectors import detect_forecast_warnings
+
+    assert (
+        detect_forecast_warnings(
+            symbol="",
+            current_score=70,
+            h1_score=60,
+            h5_score=55,
+        )
+        == []
+    )
+
+    assert (
+        detect_forecast_warnings(
+            symbol="SPY",
+            current_score=None,
+            h1_score=None,
+            h5_score=60,
+            previous_h1_score=None,
+            previous_h5_score=None,
+        )
+        == []
+    )
