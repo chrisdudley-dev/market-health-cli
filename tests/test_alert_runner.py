@@ -1,0 +1,207 @@
+import json
+import sqlite3
+from pathlib import Path
+from unittest.mock import Mock
+
+from market_health.alert_runner import AlertRunnerConfig, main, run_once_alert_service
+from market_health.alert_store import count_rows
+
+
+def _write_ui(
+    path: Path, *, state: str = "clean", h1: float = 69.0, h5: float = 68.0
+) -> None:
+    doc = {
+        "schema": "jerboa.market_health.ui.v1",
+        "asof": "2026-05-01T15:00:00Z",
+        "data": {
+            "positions": {
+                "schema": "positions.v1",
+                "positions": [{"symbol": "SPY", "last_price": 510.0}],
+            },
+            "sectors": [
+                {
+                    "symbol": "SPY",
+                    "C": 72.0,
+                    "Blend": 70.0,
+                    "H1": h1,
+                    "H5": h5,
+                    "State": state,
+                    "SupATR": 1.2,
+                    "ResATR": 0.8,
+                }
+            ],
+        },
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc), encoding="utf-8")
+
+
+def _alert_rows(db: Path):
+    conn = sqlite3.connect(str(db))
+    rows = conn.execute(
+        "SELECT alert_key, alert_type, delivery_status, error_text FROM alerts ORDER BY id"
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def _run_status(db: Path, run_id: int) -> str:
+    conn = sqlite3.connect(str(db))
+    row = conn.execute("SELECT status FROM runs WHERE id = ?", (run_id,)).fetchone()
+    conn.close()
+    return row[0]
+
+
+def test_runner_first_run_writes_snapshots_without_inventory_storm(
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+    _write_ui(ui)
+
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    assert result.exit_code == 0
+    assert result.status == "success"
+    assert result.snapshots_written == 1
+    assert result.candidates_count == 0
+    assert count_rows(db, "runs") == 1
+    assert count_rows(db, "symbol_snapshots") == 1
+    assert count_rows(db, "alerts") == 0
+
+
+def test_runner_detects_and_records_state_alert_on_second_run(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean")
+    run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="dry-run", no_refresh=True
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    _write_ui(ui, state="DMG")
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="dry-run", no_refresh=True
+        ),
+        now_utc="2026-05-01T15:15:00Z",
+    )
+
+    assert result.exit_code == 0
+    assert result.candidates_count == 1
+    assert result.allowed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][1] == "position_state_changed"
+    assert rows[0][2] == "dry-run"
+
+
+def test_runner_records_forecast_alert_and_suppresses_duplicate(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean", h1=60, h5=68)
+    result1 = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="dry-run", no_refresh=True
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+    result2 = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="dry-run", no_refresh=True
+        ),
+        now_utc="2026-05-01T15:10:00Z",
+    )
+
+    assert result1.allowed_count == 1
+    assert result2.suppressed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][1] == "forecast_below_current"
+
+
+def test_runner_refresh_failure_returns_exit_code_2(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "missing.json"
+
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="disabled", no_refresh=False
+        ),
+        refresh_fn=lambda: 7,
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    assert result.exit_code == 2
+    assert result.status == "failed"
+    assert _run_status(db, result.run_id) == "failed"
+    assert count_rows(db, "system_events") == 1
+
+
+def test_runner_uses_injected_telegram_sender_in_test_mode(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+    cfg = tmp_path / "telegram.json"
+    cfg.write_text(
+        json.dumps({"mode": "test", "bot_token": "token", "chat_id": "chat"}),
+        encoding="utf-8",
+    )
+
+    _write_ui(ui, state="clean")
+    run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_config_path=cfg, no_refresh=True
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    _write_ui(ui, state="DMG")
+    sender = Mock()
+    response = Mock()
+    sender.return_value = response
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_config_path=cfg, no_refresh=True
+        ),
+        telegram_sender=sender,
+        now_utc="2026-05-01T15:15:00Z",
+    )
+
+    assert result.allowed_count == 1
+    sender.assert_called_once()
+    data = sender.call_args.args[1]
+    assert data["text"].startswith("TEST: SPY state changed")
+
+
+def test_runner_main_supports_no_refresh_fixture_mode(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+    _write_ui(ui)
+
+    code = main(
+        [
+            "--db",
+            str(db),
+            "--ui",
+            str(ui),
+            "--telegram-mode",
+            "dry-run",
+            "--no-refresh",
+        ]
+    )
+
+    assert code == 0
+    assert count_rows(db, "runs") == 1
+    assert count_rows(db, "symbol_snapshots") == 1
