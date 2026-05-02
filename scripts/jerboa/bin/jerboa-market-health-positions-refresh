@@ -61,7 +61,30 @@ chmod 700 "$POS_DIR" 2>/dev/null || true
 
 RAW_SCHWAB_JSON="${HOME}/.cache/jerboa/schwab_accounts.live.json"
 TOKEN_FILE="${HOME}/.cache/jerboa/schwab.token.json"
+SCHWAB_CONFIG_FILE="${HOME}/.config/jerboa/schwab_oauth.json"
 RAW_MAX_AGE_MINUTES="${JERBOA_SCHWAB_RAW_MAX_AGE_MINUTES:-15}"
+
+print_schwab_setup_hint() {
+  if [ "${JERBOA_POSITIONS_HIDE_SCHWAB_HINT:-0}" = "1" ]; then
+    return 0
+  fi
+
+  echo "Schwab live: not ready or not selected."
+  echo "Schwab OAuth status:"
+  hint_python="${JERBOA_MARKET_HEALTH_PYTHON:-}"
+  if [ -z "$hint_python" ]; then
+    if [ -x "$REPO_ROOT/.venv/bin/python" ]; then
+      hint_python="$REPO_ROOT/.venv/bin/python"
+    else
+      hint_python="python3"
+    fi
+  fi
+
+  "$hint_python" "$REPO_ROOT/scripts/schwab_oauth_cli.py" --status 2>/dev/null | sed 's/^/  /' || true
+  echo "To enable Schwab live positions, complete local config/token setup:"
+  echo "  config: $SCHWAB_CONFIG_FILE"
+  echo "  token:  $TOKEN_FILE"
+}
 
 if [ -z "$SCHWAB_JSON" ] && [ -z "$CSV" ] && [ "$OUT" = "$DEFAULT_OUT" ] && [ -f "$TOKEN_FILE" ]; then
   echo "Refreshing live Schwab data via token cache..."
@@ -135,6 +158,8 @@ if [ -n "$best" ]; then
   echo "Using ToS CSV: $best"
   exec "${REPO_ROOT}/scripts/cache/refresh_positions_cache.sh" --csv "$best" --out "$OUT"
 fi
+
+print_schwab_setup_hint
 
 if [ -s "$OUT" ]; then
   echo "Positions: keeping existing cache: $OUT"
