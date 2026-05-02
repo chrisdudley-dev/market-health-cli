@@ -52,6 +52,7 @@ class AlertRunnerConfig:
     git_commit: Optional[str] = None
     current_drop_threshold: float = 5.0
     previous_drop_threshold: float = 7.0
+    healthy_score_floor: float = 55.0
 
 
 @dataclass(frozen=True)
@@ -141,6 +142,7 @@ def _detect_alerts(
     current_snapshots: Sequence[HeldPositionSnapshot],
     current_drop_threshold: float,
     previous_drop_threshold: float,
+    healthy_score_floor: float,
 ) -> List[AlertCandidate]:
     current_symbols = [snapshot.symbol for snapshot in current_snapshots]
 
@@ -169,6 +171,7 @@ def _detect_alerts(
                 h1_score=snapshot.h1_score,
                 h5_score=snapshot.h5_score,
                 blend_score=getattr(snapshot, "blend_score", None),
+                healthy_score_floor=healthy_score_floor,
                 previous_h1_score=prev.get("h1_score"),  # type: ignore[arg-type]
                 previous_h5_score=prev.get("h5_score"),  # type: ignore[arg-type]
                 current_drop_threshold=current_drop_threshold,
@@ -242,6 +245,7 @@ def run_once_alert_service(
             current_snapshots=current_snapshots,
             current_drop_threshold=config.current_drop_threshold,
             previous_drop_threshold=config.previous_drop_threshold,
+            healthy_score_floor=config.healthy_score_floor,
         )
         history = read_alert_history_from_store(db_path=config.db_path)
         allowed, suppressed = apply_alert_cooldowns(
@@ -339,6 +343,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--trigger-name", default="manual")
     parser.add_argument("--git-commit", default=None)
+    parser.add_argument(
+        "--healthy-score-floor",
+        type=float,
+        default=55.0,
+        help="Held-position healthy score floor for C/H1/H5/blend alerts.",
+    )
+
     return parser
 
 
