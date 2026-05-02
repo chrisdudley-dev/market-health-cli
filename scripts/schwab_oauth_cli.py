@@ -5,12 +5,16 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 
 # Allow running from repo checkout without installing the package
 from pathlib import Path as _Path
 
 _REPO_ROOT = _Path(__file__).resolve().parents[1]
+DEFAULT_EXAMPLE_CONFIG_PATH = (
+    _REPO_ROOT / "docs" / "examples" / "schwab_oauth.json.example"
+)
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
@@ -57,6 +61,16 @@ def main() -> int:
         "--status", action="store_true", help="Show token status (no network calls)"
     )
     ap.add_argument(
+        "--init-config",
+        action="store_true",
+        help="Create a local Schwab OAuth config template with 0600 permissions",
+    )
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow --init-config to overwrite an existing config file",
+    )
+    ap.add_argument(
         "--print-auth-url", action="store_true", help="Print the authorize URL"
     )
     ap.add_argument(
@@ -71,6 +85,31 @@ def main() -> int:
 
     cfg_path = os.path.expanduser(args.config)
     tok_path = os.path.expanduser(args.token)
+
+    if args.init_config:
+        dst = _Path(cfg_path)
+        if dst.exists() and not args.force:
+            print(f"ERR: config already exists: {dst}", file=sys.stderr)
+            print("Use --force to overwrite it.", file=sys.stderr)
+            return 2
+
+        if not DEFAULT_EXAMPLE_CONFIG_PATH.exists():
+            print(
+                f"ERR: example config missing: {DEFAULT_EXAMPLE_CONFIG_PATH}",
+                file=sys.stderr,
+            )
+            return 2
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(DEFAULT_EXAMPLE_CONFIG_PATH, dst)
+        try:
+            os.chmod(dst, 0o600)
+        except Exception:
+            pass
+
+        print(f"OK: wrote config template: {dst}")
+        print("Fill in client_id and client_secret locally; secrets were not printed.")
+        return 0
 
     if args.status:
         cfg_exists, cfg_missing = _config_status(cfg_path)
