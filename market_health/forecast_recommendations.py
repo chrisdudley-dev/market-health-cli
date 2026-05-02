@@ -71,6 +71,7 @@ def _component_snapshot(
     if not isinstance(meta, dict):
         return {}
     cur = meta.get("current_utility")
+    blend_diagnostic = meta.get("utility_blend_diagnostic")
     return {
         "c": cur,
         "current": cur,
@@ -78,6 +79,10 @@ def _component_snapshot(
         "h5": meta.get("h5_utility"),
         "blend": meta.get("utility"),
         "blended": meta.get("utility"),
+        "utility_weights": meta.get("utility_weights"),
+        "blend_diagnostic": blend_diagnostic
+        if isinstance(blend_diagnostic, dict)
+        else {},
     }
 
 
