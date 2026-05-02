@@ -193,10 +193,10 @@ def test_forecast_warning_detects_h1_and_h5_below_current() -> None:
     )
 
     assert [a.alert_type for a in alerts] == [
-        "forecast_below_current",
-        "forecast_below_current",
+        "held_forecast_divergence",
+        "held_forecast_divergence",
     ]
-    assert [a.payload["horizon"] for a in alerts] == ["H1", "H5"]
+    assert [a.payload["triggered_rule"] for a in alerts] == ["C>H1", "C>H5"]
     assert alerts[0].symbol == "SPY"
     assert alerts[0].payload["drop"] == 6.0
     assert alerts[1].payload["drop"] == 12.0
@@ -213,7 +213,7 @@ def test_forecast_warning_current_drop_threshold_is_configurable() -> None:
         current_drop_threshold=4,
     )
 
-    assert [a.payload["horizon"] for a in alerts] == ["H1", "H5"]
+    assert [a.payload["triggered_rule"] for a in alerts] == ["C>H1", "C>H5"]
 
 
 def test_forecast_warning_detects_previous_snapshot_weakening() -> None:
@@ -294,3 +294,38 @@ def test_forecast_warning_ignores_missing_scores_and_blank_symbol() -> None:
         )
         == []
     )
+
+
+def test_held_forecast_divergence_detects_blend_independently() -> None:
+    from market_health.alert_detectors import detect_held_forecast_divergence
+
+    alerts = detect_held_forecast_divergence(
+        symbol="SPY",
+        current_score=72,
+        h1_score=71,
+        h5_score=70,
+        blend_score=66,
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].alert_type == "held_forecast_divergence"
+    assert alerts[0].alert_key == "held_forecast_divergence:SPY:blend"
+    assert alerts[0].payload["triggered_rule"] == "C>blend"
+    assert alerts[0].payload["c_score"] == 72.0
+    assert alerts[0].payload["blend_score"] == 66.0
+    assert alerts[0].payload["threshold"] == 5.0
+
+
+def test_held_forecast_divergence_no_alert_when_below_threshold() -> None:
+    from market_health.alert_detectors import detect_held_forecast_divergence
+
+    alerts = detect_held_forecast_divergence(
+        symbol="SPY",
+        current_score=72,
+        h1_score=68,
+        h5_score=67.1,
+        blend_score=69,
+        threshold=5,
+    )
+
+    assert alerts == []
