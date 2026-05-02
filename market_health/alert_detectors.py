@@ -200,12 +200,77 @@ def _is_band_worse(previous: Optional[float], current: Optional[float]) -> bool:
     return _band_rank(_score_band(current)) < _band_rank(_score_band(previous))
 
 
+def detect_held_forecast_divergence(
+    *,
+    symbol: str,
+    current_score: Optional[float],
+    h1_score: Optional[float],
+    h5_score: Optional[float],
+    blend_score: Optional[float] = None,
+    threshold: float = 5.0,
+) -> List[AlertCandidate]:
+    """Detect held-position forecast divergence: C is stronger than H1/H5/blend."""
+
+    normalized_symbol = str(symbol).strip().upper()
+    if not normalized_symbol or current_score is None:
+        return []
+
+    current = float(current_score)
+    targets = {
+        "H1": h1_score,
+        "H5": h5_score,
+        "blend": blend_score,
+    }
+
+    alerts: List[AlertCandidate] = []
+    for rule, target in targets.items():
+        if target is None:
+            continue
+
+        target_score = float(target)
+        drop = current - target_score
+        if drop < float(threshold):
+            continue
+
+        label = rule.upper() if rule != "blend" else "blend"
+        alerts.append(
+            AlertCandidate(
+                alert_key=f"held_forecast_divergence:{normalized_symbol}:{rule}",
+                alert_type="held_forecast_divergence",
+                severity="warning",
+                symbol=normalized_symbol,
+                title=f"{normalized_symbol} forecast divergence: C > {label}",
+                message=(
+                    f"{normalized_symbol} current score is {drop:.1f} points "
+                    f"above {label}."
+                ),
+                payload={
+                    "symbol": normalized_symbol,
+                    "triggered_rule": f"C>{label}",
+                    "current_score": current,
+                    "c_score": current,
+                    "h1_score": float(h1_score) if h1_score is not None else None,
+                    "h5_score": float(h5_score) if h5_score is not None else None,
+                    "blend_score": float(blend_score)
+                    if blend_score is not None
+                    else None,
+                    "comparison_score": target_score,
+                    "drop": drop,
+                    "threshold": float(threshold),
+                },
+            )
+        )
+
+    return alerts
+
+
 def detect_forecast_warnings(
     *,
     symbol: str,
     current_score: Optional[float],
     h1_score: Optional[float],
     h5_score: Optional[float],
+    blend_score: Optional[float] = None,
     previous_h1_score: Optional[float] = None,
     previous_h5_score: Optional[float] = None,
     current_drop_threshold: float = 5.0,
@@ -218,6 +283,16 @@ def detect_forecast_warnings(
         return []
 
     alerts: List[AlertCandidate] = []
+    alerts.extend(
+        detect_held_forecast_divergence(
+            symbol=normalized_symbol,
+            current_score=current_score,
+            h1_score=h1_score,
+            h5_score=h5_score,
+            blend_score=blend_score,
+            threshold=current_drop_threshold,
+        )
+    )
 
     horizon_values = {
         "H1": h1_score,
@@ -229,31 +304,6 @@ def detect_forecast_warnings(
     }
 
     for horizon, forecast_score in horizon_values.items():
-        if current_score is not None and forecast_score is not None:
-            drop = float(current_score) - float(forecast_score)
-            if drop >= current_drop_threshold:
-                alerts.append(
-                    AlertCandidate(
-                        alert_key=f"forecast_warning:{normalized_symbol}:{horizon}:below_current",
-                        alert_type="forecast_below_current",
-                        severity="warning",
-                        symbol=normalized_symbol,
-                        title=f"{normalized_symbol} {horizon} forecast below current score",
-                        message=(
-                            f"{normalized_symbol} {horizon} forecast is {drop:.1f} points "
-                            "below the current score."
-                        ),
-                        payload={
-                            "symbol": normalized_symbol,
-                            "horizon": horizon,
-                            "current_score": float(current_score),
-                            "forecast_score": float(forecast_score),
-                            "drop": drop,
-                            "threshold": float(current_drop_threshold),
-                        },
-                    )
-                )
-
         previous_score = previous_values[horizon]
         if previous_score is not None and forecast_score is not None:
             weakening = float(previous_score) - float(forecast_score)

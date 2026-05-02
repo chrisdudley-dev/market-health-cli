@@ -8,7 +8,12 @@ from market_health.alert_store import count_rows
 
 
 def _write_ui(
-    path: Path, *, state: str = "clean", h1: float = 69.0, h5: float = 68.0
+    path: Path,
+    *,
+    state: str = "clean",
+    h1: float = 69.0,
+    h5: float = 68.0,
+    blend: float = 70.0,
 ) -> None:
     doc = {
         "schema": "jerboa.market_health.ui.v1",
@@ -22,7 +27,7 @@ def _write_ui(
                 {
                     "symbol": "SPY",
                     "C": 72.0,
-                    "Blend": 70.0,
+                    "Blend": blend,
                     "H1": h1,
                     "H5": h5,
                     "State": state,
@@ -107,7 +112,9 @@ def test_runner_detects_and_records_state_alert_on_second_run(tmp_path: Path) ->
     assert rows[0][2] == "dry-run"
 
 
-def test_runner_records_forecast_alert_and_suppresses_duplicate(tmp_path: Path) -> None:
+def test_runner_records_forecast_divergence_alert_and_suppresses_duplicate(
+    tmp_path: Path,
+) -> None:
     db = tmp_path / "alerts.sqlite"
     ui = tmp_path / "market_health.ui.v1.json"
 
@@ -129,7 +136,7 @@ def test_runner_records_forecast_alert_and_suppresses_duplicate(tmp_path: Path) 
     assert result2.suppressed_count == 1
     rows = _alert_rows(db)
     assert len(rows) == 1
-    assert rows[0][1] == "forecast_below_current"
+    assert rows[0][1] == "held_forecast_divergence"
 
 
 def test_runner_refresh_failure_returns_exit_code_2(tmp_path: Path) -> None:
@@ -205,3 +212,25 @@ def test_runner_main_supports_no_refresh_fixture_mode(tmp_path: Path) -> None:
     assert code == 0
     assert count_rows(db, "runs") == 1
     assert count_rows(db, "symbol_snapshots") == 1
+
+
+def test_runner_records_blend_divergence_alert(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean", h1=71, h5=70, blend=66)
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    assert result.allowed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][0] == "held_forecast_divergence:SPY:blend"
+    assert rows[0][1] == "held_forecast_divergence"

@@ -168,6 +168,7 @@ def _detect_alerts(
                 current_score=snapshot.current_score,
                 h1_score=snapshot.h1_score,
                 h5_score=snapshot.h5_score,
+                blend_score=getattr(snapshot, "blend_score", None),
                 previous_h1_score=prev.get("h1_score"),  # type: ignore[arg-type]
                 previous_h5_score=prev.get("h5_score"),  # type: ignore[arg-type]
                 current_drop_threshold=current_drop_threshold,
