@@ -208,3 +208,29 @@ def test_sqlite_status_handles_existing_empty_db(tmp_path: Path) -> None:
 
     assert status["database"]["db_exists"] is True
     assert status["database"]["last_run"] == {}
+
+
+def test_sqlite_status_uses_cache_artifact_timestamps_when_snapshots_missing(
+    tmp_path: Path,
+) -> None:
+    from market_health.alert_status import _sqlite_status
+    from market_health.alert_store import apply_migrations, connect
+
+    db_path = tmp_path / "market_health_alerts.v1.sqlite"
+
+    with connect(db_path) as conn:
+        apply_migrations(conn)
+
+    (tmp_path / "positions.v1.json").write_text(
+        '{"schema":"positions.v1","asof":"2026-05-01T15:00:00Z"}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "forecast_scores.v1.json").write_text(
+        '{"schema":"forecast_scores.v1","generated_at":"2026-05-01T16:00:00Z"}\n',
+        encoding="utf-8",
+    )
+
+    status = _sqlite_status(db_path)
+
+    assert status["latest_positions_timestamp"] == "2026-05-01T15:00:00Z"
+    assert status["latest_forecast_timestamp"] == "2026-05-01T16:00:00Z"
