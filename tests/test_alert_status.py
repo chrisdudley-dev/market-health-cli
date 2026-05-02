@@ -234,3 +234,66 @@ def test_sqlite_status_uses_cache_artifact_timestamps_when_snapshots_missing(
 
     assert status["latest_positions_timestamp"] == "2026-05-01T15:00:00Z"
     assert status["latest_forecast_timestamp"] == "2026-05-01T16:00:00Z"
+
+
+def test_sqlite_status_reports_only_system_errors_after_latest_success(
+    tmp_path: Path,
+) -> None:
+    from market_health.alert_status import _sqlite_status
+    from market_health.alert_store import apply_migrations, connect
+
+    db_path = tmp_path / "market_health_alerts.v1.sqlite"
+
+    with connect(db_path) as conn:
+        apply_migrations(conn)
+        conn.execute(
+            """
+            INSERT INTO runs (
+                started_at_utc, finished_at_utc, status, mode, trigger_name
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "2026-05-01T10:00:00Z",
+                "2026-05-01T10:01:00Z",
+                "failed",
+                "dry-run",
+                "manual",
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO system_events (
+                run_id, ts_utc, event_type, severity, message, payload_json
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                1,
+                "2026-05-01T10:00:30Z",
+                "runner_failed",
+                "error",
+                "old failure",
+                "{}",
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO runs (
+                started_at_utc, finished_at_utc, status, mode, trigger_name
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                "2026-05-01T11:00:00Z",
+                "2026-05-01T11:01:00Z",
+                "success",
+                "test",
+                "manual",
+            ),
+        )
+
+    status = _sqlite_status(db_path)
+
+    assert status["latest_system_health_event"]["event_type"] == "runner_failed"
+    assert status["latest_system_error_after_success"] == {}

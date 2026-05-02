@@ -80,6 +80,7 @@ def _sqlite_status(db_path: Path) -> dict:
         "latest_forecast_timestamp": None,
         "latest_telegram_alert": None,
         "latest_system_health_event": None,
+        "latest_system_error_after_success": None,
     }
 
     if not db_path.exists():
@@ -178,6 +179,29 @@ def _sqlite_status(db_path: Path) -> dict:
         )
         status["latest_system_health_event"] = dict(latest_system or {})
 
+        latest_system_error_after_success = _one(
+            conn,
+            """
+            SELECT id, ts_utc, event_type, severity, message
+            FROM system_events
+            WHERE severity IN ('error', 'critical')
+              AND ts_utc > COALESCE(
+                (
+                  SELECT MAX(finished_at_utc)
+                  FROM runs
+                  WHERE status = 'success'
+                    AND finished_at_utc IS NOT NULL
+                ),
+                ''
+              )
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+        )
+        status["latest_system_error_after_success"] = dict(
+            latest_system_error_after_success or {}
+        )
+
     return status
 
 
@@ -245,6 +269,7 @@ def format_status_text(status: dict) -> str:
     timer = status["timer"]
     latest_alert = db.get("latest_telegram_alert") or {}
     latest_system = db.get("latest_system_health_event") or {}
+    latest_system_error = db.get("latest_system_error_after_success") or {}
 
     lines = [
         "m43-alert-status:",
@@ -270,6 +295,13 @@ def format_status_text(status: dict) -> str:
             f"type={latest_system.get('event_type', 'none')} "
             f"severity={latest_system.get('severity', 'none')} "
             f"ts={latest_system.get('ts_utc', 'none')}"
+        ),
+        (
+            "  latest_system_error_after_success: "
+            f"id={latest_system_error.get('id', 'none')} "
+            f"type={latest_system_error.get('event_type', 'none')} "
+            f"severity={latest_system_error.get('severity', 'none')} "
+            f"ts={latest_system_error.get('ts_utc', 'none')}"
         ),
     ]
     return "\n".join(lines)
