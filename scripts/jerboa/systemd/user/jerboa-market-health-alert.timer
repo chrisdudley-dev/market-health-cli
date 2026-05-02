@@ -2,8 +2,7 @@
 Description=Jerboa Market Health - run M43 alert service every 15 minutes
 
 [Timer]
-OnBootSec=5m
-OnUnitActiveSec=15m
+OnCalendar=*-*-* *:0/15:00
 Persistent=true
 Unit=jerboa-market-health-alert.service
 
