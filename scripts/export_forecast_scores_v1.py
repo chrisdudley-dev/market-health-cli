@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from market_health.forecast_features import OHLCV
+from market_health.forecast_input_inventory import forecast_input_inventory
 from market_health.forecast_score_provider import compute_forecast_universe
 from market_health.universe import INVERSE_SYMBOLS, get_default_scoring_symbols
 
@@ -539,6 +540,7 @@ def main() -> int:
             "sources": sources,
             "cache_dir": str(cache_dir),
             "symbols": len(scores),
+            "forecast_input_inventory": forecast_input_inventory(),
         },
     }
 
