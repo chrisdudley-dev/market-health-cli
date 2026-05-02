@@ -28,6 +28,116 @@ class ForecastCheck:
     fallback_used: bool = False
 
 
+def _canonical_source_quality(value: str) -> str:
+    text = str(value or "").strip().lower()
+    if text == "direct":
+        return "real"
+    if text in {"real", "proxy", "neutral", "disabled"}:
+        return text
+    return "proxy"
+
+
+def _json_safe(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return str(value)
+
+
+def _first_numeric_metric(metrics: Dict[str, Any]) -> float | None:
+    ignored = {
+        "H",
+        "horizon",
+        "horizon_days",
+        "horizon_scale",
+        "window",
+        "lookback",
+    }
+    preferred_markers = (
+        "u",
+        "z",
+        "slope",
+        "ratio",
+        "pct",
+        "percent",
+        "share",
+        "rank",
+        "freq",
+        "corr",
+        "dispersion",
+        "width",
+        "atr",
+        "iv",
+        "distance",
+        "momentum",
+        "change",
+        "value",
+        "raw",
+        "score_input",
+    )
+
+    for key, value in metrics.items():
+        key_text = str(key)
+        key_l = key_text.lower()
+        if key_text in ignored or key_l in {x.lower() for x in ignored}:
+            continue
+        if not isinstance(value, (int, float)):
+            continue
+        if any(marker in key_l for marker in preferred_markers):
+            return float(value)
+
+    for key, value in metrics.items():
+        key_text = str(key)
+        key_l = key_text.lower()
+        if key_text in ignored or key_l in {x.lower() for x in ignored}:
+            continue
+        if isinstance(value, (int, float)):
+            return float(value)
+
+    return None
+
+
+def _audit_cutoffs(metrics: Dict[str, Any]) -> Dict[str, Any]:
+    markers = (
+        "cutoff",
+        "threshold",
+        "strong",
+        "weak",
+        "warn",
+        "hot",
+        "warm",
+        "ok",
+        "min",
+        "max",
+    )
+    out: Dict[str, Any] = {}
+    for key, value in metrics.items():
+        key_text = str(key).lower()
+        if any(marker in key_text for marker in markers):
+            out[str(key)] = _json_safe(value)
+    return out
+
+
+def _audit_fields(check: ForecastCheck) -> Dict[str, Any]:
+    raw_inputs = _json_safe(dict(check.metrics or {}))
+    source_quality = _canonical_source_quality(check.source_quality)
+
+    return {
+        "source_quality": source_quality,
+        "fallback_used": bool(check.fallback_used),
+        "raw_inputs": raw_inputs,
+        "u": _first_numeric_metric(dict(check.metrics or {})),
+        "cutoffs": _audit_cutoffs(dict(check.metrics or {})),
+        "orientation": str(
+            (check.metrics or {}).get("orientation") or "higher_score_is_better"
+        ),
+        "margin_to_flip": (check.metrics or {}).get("margin_to_flip"),
+    }
+
+
 def cap_score(x: int) -> int:
     """Clamp to {0,1,2}."""
     return 0 if x < 0 else 2 if x > 2 else x
@@ -75,6 +185,8 @@ def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str
         metrics["horizon_days"] = H
         metrics["horizon_scale"] = float(H**0.5)
 
+        audit = _audit_fields(c)
+
         out["checks"].append(
             {
                 "label": c.label,
@@ -82,8 +194,13 @@ def category_dict(checks: List[ForecastCheck], *, horizon_days: int) -> Dict[str
                 "score": int(c.score),
                 "horizon_days": H,
                 "metrics": metrics,
-                "source_quality": c.source_quality,
-                "fallback_used": bool(c.fallback_used),
+                "source_quality": audit["source_quality"],
+                "fallback_used": audit["fallback_used"],
+                "raw_inputs": audit["raw_inputs"],
+                "u": audit["u"],
+                "cutoffs": audit["cutoffs"],
+                "orientation": audit["orientation"],
+                "margin_to_flip": audit["margin_to_flip"],
             }
         )
 
