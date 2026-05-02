@@ -31,6 +31,26 @@ from market_health.brokers.schwab_oauth import (
 )
 
 
+def _looks_like_placeholder(value: object) -> bool:
+    text = str(value or "").strip().lower()
+    if not text:
+        return True
+
+    placeholder_markers = (
+        "replace",
+        "your_",
+        "your-",
+        "todo",
+        "example",
+        "placeholder",
+        "changeme",
+        "change_me",
+        "<",
+        ">",
+    )
+    return any(marker in text for marker in placeholder_markers)
+
+
 def _config_status(path: str) -> tuple[bool, list[str]]:
     cfg_path = os.path.expanduser(path)
     if not os.path.exists(cfg_path):
@@ -43,7 +63,7 @@ def _config_status(path: str) -> tuple[bool, list[str]]:
         return True, ["unreadable_json"]
 
     required = ["client_id", "client_secret", "redirect_uri", "auth_url", "token_url"]
-    missing = [key for key in required if not str(data.get(key, "")).strip()]
+    missing = [key for key in required if _looks_like_placeholder(data.get(key))]
     return True, missing
 
 

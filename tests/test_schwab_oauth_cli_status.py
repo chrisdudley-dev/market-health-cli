@@ -81,3 +81,30 @@ def test_status_reports_presence_without_printing_secret_values(tmp_path: Path) 
     assert "SECRET_VALUE_SHOULD_NOT_PRINT" not in proc.stdout
     assert "ACCESS_VALUE_SHOULD_NOT_PRINT" not in proc.stdout
     assert "REFRESH_VALUE_SHOULD_NOT_PRINT" not in proc.stdout
+
+
+def test_status_reports_placeholder_config_values_as_missing(tmp_path: Path) -> None:
+    config = tmp_path / "schwab_oauth.json"
+    token = tmp_path / "schwab.token.json"
+
+    config.write_text(
+        json.dumps(
+            {
+                "client_id": "REPLACE_WITH_CLIENT_ID",
+                "client_secret": "REPLACE_WITH_CLIENT_SECRET",
+                "redirect_uri": "https://127.0.0.1/callback",
+                "auth_url": "https://api.schwabapi.com/v1/oauth/authorize",
+                "token_url": "https://api.schwabapi.com/v1/oauth/token",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    proc = run_status(config, token)
+
+    assert proc.returncode == 0
+    assert "config_exists=True" in proc.stdout
+    assert "config_missing=client_id,client_secret" in proc.stdout
+    assert "REPLACE_WITH_CLIENT_ID" not in proc.stdout
+    assert "REPLACE_WITH_CLIENT_SECRET" not in proc.stdout
