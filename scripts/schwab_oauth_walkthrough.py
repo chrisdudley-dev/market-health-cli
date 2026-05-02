@@ -16,6 +16,11 @@ from typing import Any, Dict
 import getpass
 
 
+DEFAULT_REDIRECT_URI = "http://127.0.0.1:8080/callback"
+DEFAULT_AUTH_URL = "https://api.schwabapi.com/v1/oauth/authorize"
+DEFAULT_TOKEN_URL = "https://api.schwabapi.com/v1/oauth/token"
+
+
 def _sanitize_for_display(obj):
     """Return a redacted copy suitable for logs/stdout."""
     if not isinstance(obj, dict):
@@ -47,6 +52,44 @@ def _read_json(p: Path) -> Dict[str, Any]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def _looks_like_placeholder(value: object) -> bool:
+    text = str(value or "").strip().lower()
+    if not text:
+        return True
+
+    placeholder_markers = (
+        "replace",
+        "your_",
+        "your-",
+        "todo",
+        "example",
+        "placeholder",
+        "changeme",
+        "change_me",
+        "<",
+        ">",
+    )
+    return any(marker in text for marker in placeholder_markers)
+
+
+def _prompt_text(prompt: str) -> str:
+    try:
+        with open("/dev/tty", "r+", encoding="utf-8") as tty:
+            tty.write(prompt)
+            tty.flush()
+            return tty.readline().strip()
+    except OSError:
+        return input(prompt).strip()
+
+
+def _prompt_secret(prompt: str) -> str:
+    try:
+        with open("/dev/tty", "r+", encoding="utf-8") as tty:
+            return getpass.getpass(prompt, stream=tty).strip()
+    except OSError:
+        return getpass.getpass(prompt).strip()
+
+
 def _write_json_secure(p: Path, obj: Dict[str, Any]) -> None:
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(p.suffix + ".tmp")
@@ -68,16 +111,45 @@ def _chmod_dir_private(p: Path) -> None:
 
 def load_cfg(path: str) -> Cfg:
     p = Path(os.path.expanduser(path))
-    d = _read_json(p)
-    d["client_secret"] = (
-        d.get("client_secret")
-        or os.environ.get("SCHWAB_CLIENT_SECRET")
-        or getpass.getpass("SCHWAB_CLIENT_SECRET: ")
-    )
-    need = ["client_id", "redirect_uri", "auth_url", "token_url"]
-    missing = [k for k in need if not d.get(k)]
+    if p.exists():
+        d = _read_json(p)
+    else:
+        d = {}
+
+    changed = False
+
+    if _looks_like_placeholder(d.get("client_id")):
+        env_client_id = os.environ.get("SCHWAB_CLIENT_ID", "").strip()
+        d["client_id"] = env_client_id or _prompt_text("SCHWAB_CLIENT_ID: ")
+        changed = True
+
+    if _looks_like_placeholder(d.get("client_secret")):
+        env_client_secret = os.environ.get("SCHWAB_CLIENT_SECRET", "").strip()
+        d["client_secret"] = env_client_secret or _prompt_secret(
+            "SCHWAB_CLIENT_SECRET: "
+        )
+        changed = True
+
+    defaults = {
+        "redirect_uri": DEFAULT_REDIRECT_URI,
+        "auth_url": DEFAULT_AUTH_URL,
+        "token_url": DEFAULT_TOKEN_URL,
+        "scope": "",
+    }
+    for key, default in defaults.items():
+        if _looks_like_placeholder(d.get(key)):
+            d[key] = default
+            changed = True
+
+    need = ["client_id", "client_secret", "redirect_uri", "auth_url", "token_url"]
+    missing = [k for k in need if _looks_like_placeholder(d.get(k))]
     if missing:
         raise SystemExit(f"ERR: missing keys in {p}: {', '.join(missing)}")
+
+    if changed or not p.exists():
+        _write_json_secure(p, d)
+        print(f"OK: wrote OAuth config -> {p} (0600; secrets not printed)")
+
     return Cfg(
         client_id=str(d["client_id"]),
         client_secret=str(d["client_secret"]),
@@ -144,7 +216,7 @@ def token_is_fresh(tok: Dict[str, Any], leeway: int = 60) -> bool:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        description="Schwab OAuth walkthrough: print auth URL, paste redirect URL, save token cache"
+        description="Schwab OAuth walkthrough: first-run setup, browser authorization, token cache"
     )
     ap.add_argument(
         "--config",
@@ -174,7 +246,7 @@ def main() -> int:
     )
 
     try:
-        redirect_url = input("Redirect URL: ").strip()
+        redirect_url = _prompt_text("Redirect URL: ")
     except KeyboardInterrupt:
         print("\nCanceled. No changes made.")
         return 130
