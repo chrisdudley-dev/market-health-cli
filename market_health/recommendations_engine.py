@@ -167,6 +167,47 @@ def _forecast_utility(payload: Any, current_utility: Any = None) -> float | None
     return max(0.0, min(1.0, anchored))
 
 
+def _blend_utility_diagnostic(
+    *,
+    parts: Dict[str, Any],
+    weights: Dict[str, float],
+    blended: float,
+) -> Dict[str, Any]:
+    order = ("c", "h1", "h5")
+    present = {k: parts.get(k) for k in order if isinstance(parts.get(k), (int, float))}
+    denominator = sum(float(weights[k]) for k in present)
+
+    components: Dict[str, Dict[str, Any]] = {}
+    for key in order:
+        value = parts.get(key)
+        is_present = isinstance(value, (int, float))
+        base_weight = float(weights.get(key, 0.0))
+        effective_weight = (
+            base_weight / denominator if is_present and denominator > 0 else 0.0
+        )
+        numeric_value = float(value) if is_present else None
+        contribution = (
+            effective_weight * numeric_value if numeric_value is not None else 0.0
+        )
+        components[key] = {
+            "present": is_present,
+            "value": numeric_value,
+            "base_weight": base_weight,
+            "effective_weight": effective_weight,
+            "contribution": contribution,
+        }
+
+    return {
+        "formula": "blend=sum(effective_weight(component)*utility(component)) over present c,h1,h5 components",
+        "component_order": list(order),
+        "raw_weights": {k: float(weights.get(k, 0.0)) for k in order},
+        "present_components": [k for k in order if k in present],
+        "denominator": denominator,
+        "components": components,
+        "blended_utility": float(blended),
+    }
+
+
 def blended_utility_from_scores(
     rows: Iterable[Dict[str, Any]],
     *,
@@ -213,6 +254,11 @@ def blended_utility_from_scores(
                 "h1_utility": h1_util,
                 "h5_utility": h5_util,
                 "utility_weights": dict(weights),
+                "utility_blend_diagnostic": _blend_utility_diagnostic(
+                    parts=parts,
+                    weights=weights,
+                    blended=blended,
+                ),
             }
         )
     return out
