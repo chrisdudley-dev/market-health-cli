@@ -82,6 +82,8 @@ def c1_extension_risk(*, horizon_days: int, ext_z_20: Optional[float]) -> Foreca
             "warn_z_threshold": warn_z,
             "danger_z_threshold": danger_z,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -129,6 +131,8 @@ def c2_volume_climax_risk(
             "danger_vol_threshold": danger_vol,
             "weak_clv_threshold": weak_clv,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -179,6 +183,8 @@ def c3_breadth_thinning(
             "warn_ratio_threshold": warn_ratio,
             "danger_ratio_threshold": danger_ratio,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -336,6 +342,8 @@ def c5_positioning_asymmetry(
             "warn_freq_threshold": warn_freq,
             "danger_freq_threshold": danger_freq,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -388,4 +396,6 @@ def c6_correlation_crowding(
             "thin_disp": thin_disp,
             "soft_thin_disp": soft_thin_disp,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )

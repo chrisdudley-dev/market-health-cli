@@ -102,6 +102,8 @@ def e1_spy_outlook(
             "soft_bull_threshold": soft_bull,
             "clear_bear_threshold": clear_bear,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -156,6 +158,8 @@ def e2_vix_outlook(
             "danger_rank_threshold": danger_rank,
             "flat_or_worse_slope_threshold": flat_or_worse_slope,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -243,6 +247,8 @@ def e3_leadership_persistence(
             "ok_span_threshold": ok_span,
             "good_avg_rank_threshold": good_avg_rank,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -281,6 +287,8 @@ def e4_breadth_regime(
             "strong_dispersion_threshold": strong_dispersion,
             "ok_dispersion_threshold": ok_dispersion,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -384,6 +392,8 @@ def e5_cross_regime_pressure(
             "regime": regime,
             "is_defensive": is_def,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -466,4 +476,6 @@ def e6_driver_alignment(
             "mild_negative_threshold": mild_neg,
             "deep_negative_threshold": deep_neg,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
