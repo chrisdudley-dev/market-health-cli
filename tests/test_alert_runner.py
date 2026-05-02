@@ -11,6 +11,7 @@ def _write_ui(
     path: Path,
     *,
     state: str = "clean",
+    c: float = 72.0,
     h1: float = 69.0,
     h5: float = 68.0,
     blend: float = 70.0,
@@ -26,7 +27,7 @@ def _write_ui(
             "sectors": [
                 {
                     "symbol": "SPY",
-                    "C": 72.0,
+                    "C": c,
                     "Blend": blend,
                     "H1": h1,
                     "H5": h5,
@@ -234,3 +235,26 @@ def test_runner_records_blend_divergence_alert(tmp_path: Path) -> None:
     assert len(rows) == 1
     assert rows[0][0] == "held_forecast_divergence:SPY:blend"
     assert rows[0][1] == "held_forecast_divergence"
+
+
+def test_runner_records_unhealthy_floor_alert(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean", c=56, h1=54, h5=56, blend=56)
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+            healthy_score_floor=55,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    assert result.allowed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][0] == "held_unhealthy_floor:SPY:h1"
+    assert rows[0][1] == "held_unhealthy_floor"

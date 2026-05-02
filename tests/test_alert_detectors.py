@@ -329,3 +329,43 @@ def test_held_forecast_divergence_no_alert_when_below_threshold() -> None:
     )
 
     assert alerts == []
+
+
+def test_held_unhealthy_floor_detects_rising_but_unhealthy_scores() -> None:
+    from market_health.alert_detectors import detect_held_unhealthy_floor
+
+    alerts = detect_held_unhealthy_floor(
+        symbol="SPY",
+        current_score=42,
+        h1_score=47,
+        h5_score=51,
+        blend_score=49,
+        healthy_floor=55,
+    )
+
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.alert_type == "held_unhealthy_floor"
+    assert alert.alert_key == "held_unhealthy_floor:SPY:c-h1-h5-blend"
+    assert alert.payload["symbol"] == "SPY"
+    assert alert.payload["c_score"] == 42.0
+    assert alert.payload["h1_score"] == 47.0
+    assert alert.payload["h5_score"] == 51.0
+    assert alert.payload["blend_score"] == 49.0
+    assert alert.payload["healthy_floor"] == 55.0
+    assert alert.payload["breached_fields"] == ["C", "H1", "H5", "blend"]
+
+
+def test_held_unhealthy_floor_no_alert_when_all_scores_are_healthy() -> None:
+    from market_health.alert_detectors import detect_held_unhealthy_floor
+
+    alerts = detect_held_unhealthy_floor(
+        symbol="SPY",
+        current_score=56,
+        h1_score=57,
+        h5_score=58,
+        blend_score=59,
+        healthy_floor=55,
+    )
+
+    assert alerts == []

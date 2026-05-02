@@ -264,6 +264,75 @@ def detect_held_forecast_divergence(
     return alerts
 
 
+def _as_float_score(value: Optional[float]) -> Optional[float]:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def detect_held_unhealthy_floor(
+    *,
+    symbol: str,
+    current_score: Optional[float],
+    h1_score: Optional[float],
+    h5_score: Optional[float],
+    blend_score: Optional[float] = None,
+    healthy_floor: float = 55.0,
+) -> List[AlertCandidate]:
+    """Detect held-position scores below the configured healthy floor."""
+
+    normalized_symbol = str(symbol).strip().upper()
+    if not normalized_symbol:
+        return []
+
+    floor = float(healthy_floor)
+    values = {
+        "C": _as_float_score(current_score),
+        "H1": _as_float_score(h1_score),
+        "H5": _as_float_score(h5_score),
+        "blend": _as_float_score(blend_score),
+    }
+    breached = [
+        field
+        for field, score in values.items()
+        if score is not None and float(score) < floor
+    ]
+
+    if not breached:
+        return []
+
+    key_suffix = "-".join(field.lower() for field in breached)
+    breach_text = ", ".join(
+        f"{field}={values[field]:.1f}"
+        for field in breached
+        if values[field] is not None
+    )
+
+    return [
+        AlertCandidate(
+            alert_key=f"held_unhealthy_floor:{normalized_symbol}:{key_suffix}",
+            alert_type="held_unhealthy_floor",
+            severity="warning",
+            symbol=normalized_symbol,
+            title=f"{normalized_symbol} below healthy floor",
+            message=(
+                f"{normalized_symbol} has held-position score fields below "
+                f"the healthy floor {floor:.1f}: {breach_text}."
+            ),
+            payload={
+                "symbol": normalized_symbol,
+                "current_score": values["C"],
+                "c_score": values["C"],
+                "h1_score": values["H1"],
+                "h5_score": values["H5"],
+                "blend_score": values["blend"],
+                "healthy_floor": floor,
+                "breached_fields": breached,
+            },
+        )
+    ]
+
+
 def detect_forecast_warnings(
     *,
     symbol: str,
@@ -271,6 +340,7 @@ def detect_forecast_warnings(
     h1_score: Optional[float],
     h5_score: Optional[float],
     blend_score: Optional[float] = None,
+    healthy_score_floor: float = 55.0,
     previous_h1_score: Optional[float] = None,
     previous_h5_score: Optional[float] = None,
     current_drop_threshold: float = 5.0,
@@ -291,6 +361,16 @@ def detect_forecast_warnings(
             h5_score=h5_score,
             blend_score=blend_score,
             threshold=current_drop_threshold,
+        )
+    )
+    alerts.extend(
+        detect_held_unhealthy_floor(
+            symbol=normalized_symbol,
+            current_score=current_score,
+            h1_score=h1_score,
+            h5_score=h5_score,
+            blend_score=blend_score,
+            healthy_floor=healthy_score_floor,
         )
     )
 
