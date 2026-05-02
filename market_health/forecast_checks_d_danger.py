@@ -208,6 +208,8 @@ def d1_volatility_trend(
             "iv_elevated": iv_elevated,
             "note": note,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -275,6 +277,8 @@ def d2_tail_gap_risk(
             "warn_atr_h_threshold": warn_atr_h,
             "danger_atr_h_threshold": danger_atr_h,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -326,6 +330,8 @@ def d3_market_coupling_trend(
             "warned": warned,
             "rising": rising,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -403,6 +409,8 @@ def d4_liquidity_stress(
             "danger_negative_share_threshold": danger_neg_share,
             "warn_negative_share_threshold": warn_neg_share,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -451,6 +459,8 @@ def d5_drawdown_vulnerability(
             "strong_room_threshold": strong_room,
             "ok_room_threshold": ok_room,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -508,4 +518,6 @@ def d6_risk_reward_feasibility(
             "warn_corr_threshold": warn_corr,
             "high_atr_threshold": high_atr,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )

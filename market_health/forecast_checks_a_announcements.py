@@ -27,6 +27,8 @@ def make_check(label, meaning, score, metrics):
         meaning=str(meaning),
         metrics=(metrics or {}),
         score=sc,
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -185,6 +187,8 @@ def a2_macro_calendar_pressure(
             "danger_rank_threshold": danger_rank,
             "warn_slope_threshold": warn_slope,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -241,6 +245,8 @@ def a3_earnings_cluster(
             "earnings_symbols_in_window": calendar.get("earnings_symbols_in_window"),
             "danger_count_threshold": danger_count,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -278,6 +284,8 @@ def a4_policy_reg_risk(
             "horizon_scale": h_scale,
             "policy_decision_in_window": policy_risk,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -327,6 +335,8 @@ def a5_headline_shock_proxy(
             "warn_atr_threshold": warn_atr,
             "danger_atr_threshold": danger_atr,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -378,4 +388,6 @@ def a6_narrative_momentum(
             "strong_reversal_max": strong_reversal_max,
             "ok_reversal_max": ok_reversal_max,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )

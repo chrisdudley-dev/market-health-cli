@@ -113,6 +113,8 @@ def b1_trend_persistence(
             "strong_slope_threshold": strong_slope,
             "ok_slope_threshold": ok_slope,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -162,6 +164,8 @@ def b2_follow_through_setup(
             "strong_clv_threshold": strong_clv,
             "ok_clv_threshold": ok_clv,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -204,6 +208,8 @@ def b3_rs_momentum(
             "ok_rs_threshold": ok_rs,
             "max_good_z_threshold": max_good_z,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -249,6 +255,8 @@ def b4_support_cushion(
             "strong_cushion_threshold": strong_cushion,
             "ok_cushion_threshold": ok_cushion,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -309,6 +317,8 @@ def b5_participation_trend(
             "ok_rs_threshold": ok_rs,
             "early_rs_floor_threshold": early_rs_floor,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
 
 
@@ -362,4 +372,6 @@ def b6_acceleration_vs_exhaustion(
             "ok_ext_max_threshold": ok_ext_max,
             "clean_vol_max_threshold": clean_vol_max,
         },
+        source_quality="proxy",
+        fallback_used=False,
     )
