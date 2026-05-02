@@ -116,12 +116,21 @@ def _is_market_session_fresh(value: Any, max_age_minutes: int = 15):
     if dt is None:
         return False
 
+    if max_age_minutes <= 0:
+        return True
+
     now_utc = datetime.now(timezone.utc)
     ttl_seconds = max_age_minutes * 60
 
     def _within_ttl() -> bool:
         age = (now_utc - dt).total_seconds()
         return 0 <= age <= ttl_seconds
+
+    # Live broker/cache inputs that were just refreshed should be accepted
+    # regardless of market-session timing. Session-aware logic below is only
+    # needed for accepting the last completed market session outside intraday TTL.
+    if _within_ttl():
+        return True
 
     try:
         from zoneinfo import ZoneInfo
