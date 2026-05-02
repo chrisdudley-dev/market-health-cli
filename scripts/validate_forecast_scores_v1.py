@@ -7,6 +7,8 @@ import re as _re
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
+from market_health.forecast_input_inventory import forecast_input_inventory
+
 
 def _err(errors: List[str], msg: str) -> None:
     errors.append(msg)
@@ -276,6 +278,11 @@ def main() -> int:
         default="",
         help="Comma-separated horizon pair/list for --audit-symbol, e.g. 1,5",
     )
+    ap.add_argument(
+        "--input-inventory",
+        action="store_true",
+        help="Print upstream forecast input inventory",
+    )
     args = ap.parse_args()
 
     p = Path(args.path)
@@ -302,6 +309,18 @@ def main() -> int:
         if not horizons:
             horizons = [1, 5]
         print_audit(doc, symbol=args.audit_symbol, horizons=horizons)
+
+    if args.input_inventory:
+        print("forecast-input-inventory")
+        for row in forecast_input_inventory():
+            print(
+                f" {row['check']} "
+                f"label={row['label']} "
+                f"dependency={row['dependency']} "
+                f"current_handling={row['current_handling']} "
+                f"source_quality_when_missing={row['source_quality_when_missing']} "
+                f"missing_behavior={row['missing_behavior']}"
+            )
 
     return 0
 
