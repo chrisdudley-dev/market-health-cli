@@ -46,11 +46,11 @@ def test_alert_service_is_user_oneshot_with_timeout_and_journald_identifier() ->
 def test_alert_timer_runs_every_15_minutes_and_installs_to_timers_target() -> None:
     text = TIMER.read_text(encoding="utf-8")
 
-    assert "OnBootSec=5m" in text
-    assert "OnUnitActiveSec=15m" in text
+    assert "OnCalendar=*-*-* *:0/15:00" in text
     assert "Persistent=true" in text
     assert "Unit=jerboa-market-health-alert.service" in text
     assert "WantedBy=timers.target" in text
+    assert "OnUnitActiveSec=15m" not in text
 
 
 def test_service_and_timer_do_not_enable_themselves() -> None:
