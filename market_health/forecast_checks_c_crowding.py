@@ -236,7 +236,7 @@ def c4_flow_pressure(
                 "strong_oi_threshold": strong_oi,
                 "flow_status": fs,
             },
-            source_quality="direct",
+            source_quality="real",
             fallback_used=False,
         )
 

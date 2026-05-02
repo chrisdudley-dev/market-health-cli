@@ -141,10 +141,10 @@ def validate(doc: Dict[str, Any]) -> List[str]:
                         )
 
                     sq = chk.get("source_quality")
-                    if sq not in ("direct", "proxy", "neutral"):
+                    if sq not in ("real", "proxy", "neutral", "disabled"):
                         _err(
                             errors,
-                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].source_quality must be one of direct/proxy/neutral",
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].source_quality must be one of real/proxy/neutral/disabled",
                         )
 
                     fb = chk.get("fallback_used")
@@ -152,6 +152,52 @@ def validate(doc: Dict[str, Any]) -> List[str]:
                         _err(
                             errors,
                             f"scores[{sym}][{h}].categories[{code}].checks[{i}].fallback_used must be bool",
+                        )
+
+                    if not isinstance(chk.get("raw_inputs"), dict):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].raw_inputs must be object",
+                        )
+
+                    if "u" not in chk:
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].u must be present",
+                        )
+                    elif chk.get("u") is not None and not isinstance(
+                        chk.get("u"), (int, float)
+                    ):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].u must be number or null",
+                        )
+
+                    if not isinstance(chk.get("cutoffs"), dict):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].cutoffs must be object",
+                        )
+
+                    if not isinstance(chk.get("orientation"), str) or not chk.get(
+                        "orientation"
+                    ):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].orientation must be non-empty string",
+                        )
+
+                    if "margin_to_flip" not in chk:
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].margin_to_flip must be present",
+                        )
+                    elif chk.get("margin_to_flip") is not None and not isinstance(
+                        chk.get("margin_to_flip"), (int, float)
+                    ):
+                        _err(
+                            errors,
+                            f"scores[{sym}][{h}].categories[{code}].checks[{i}].margin_to_flip must be number or null",
                         )
 
             diag = payload.get("diagnostics")
@@ -164,9 +210,72 @@ def validate(doc: Dict[str, Any]) -> List[str]:
     return errors
 
 
+def _horizon_payload(
+    scores: Dict[str, Any], symbol: str, horizon: int
+) -> Dict[str, Any]:
+    by_symbol = scores.get(symbol)
+    if not isinstance(by_symbol, dict):
+        raise SystemExit(f"ERR: symbol not found: {symbol}")
+
+    payload = by_symbol.get(horizon)
+    if payload is None:
+        payload = by_symbol.get(str(horizon))
+    if not isinstance(payload, dict):
+        raise SystemExit(f"ERR: horizon not found for {symbol}: {horizon}")
+
+    return payload
+
+
+def print_audit(doc: Dict[str, Any], *, symbol: str, horizons: List[int]) -> None:
+    scores = doc.get("scores")
+    if not isinstance(scores, dict):
+        raise SystemExit("ERR: scores must be an object before audit can print")
+
+    for horizon in horizons:
+        payload = _horizon_payload(scores, symbol, horizon)
+        cats = payload.get("categories")
+        if not isinstance(cats, dict):
+            raise SystemExit(f"ERR: categories missing for {symbol} H{horizon}")
+
+        print(f"forecast-audit symbol={symbol} horizon={horizon}")
+        for code in ["A", "B", "C", "D", "E"]:
+            cat = cats.get(code)
+            if not isinstance(cat, dict):
+                continue
+            checks = cat.get("checks")
+            if not isinstance(checks, list):
+                continue
+            for idx, chk in enumerate(checks, start=1):
+                if not isinstance(chk, dict):
+                    continue
+                print(
+                    " "
+                    f"{code}{idx} "
+                    f"label={chk.get('label')} "
+                    f"score={chk.get('score')} "
+                    f"source_quality={chk.get('source_quality')} "
+                    f"fallback_used={chk.get('fallback_used')} "
+                    f"u={chk.get('u')} "
+                    f"orientation={chk.get('orientation')} "
+                    f"margin_to_flip={chk.get('margin_to_flip')} "
+                    f"cutoffs={json.dumps(chk.get('cutoffs', {}), sort_keys=True)} "
+                    f"raw_inputs={json.dumps(chk.get('raw_inputs', {}), sort_keys=True)}"
+                )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate forecast_scores.v1.json")
     ap.add_argument("--path", required=True, help="Path to forecast_scores.v1.json")
+    ap.add_argument(
+        "--audit-symbol",
+        default="",
+        help="Print per-check pre-quant audit fields for this symbol",
+    )
+    ap.add_argument(
+        "--audit-horizons",
+        default="",
+        help="Comma-separated horizon pair/list for --audit-symbol, e.g. 1,5",
+    )
     args = ap.parse_args()
 
     p = Path(args.path)
@@ -183,6 +292,17 @@ def main() -> int:
         return 1
 
     print("OK: forecast_scores.v1 valid")
+
+    if args.audit_symbol:
+        horizons = [
+            int(x.strip())
+            for x in str(args.audit_horizons or "").split(",")
+            if x.strip()
+        ]
+        if not horizons:
+            horizons = [1, 5]
+        print_audit(doc, symbol=args.audit_symbol, horizons=horizons)
+
     return 0
 
 
