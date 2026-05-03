@@ -324,3 +324,40 @@ def test_runner_does_not_alert_on_score_band_improvement(tmp_path: Path) -> None
     assert result.allowed_count == 0
     rows = _alert_rows(db)
     assert rows == []
+
+
+def test_runner_records_significant_score_drop_alert_without_band_change(
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean", c=84, h1=84, h5=84, blend=84)
+    run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+            score_drop_threshold=7,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    _write_ui(ui, state="clean", c=76, h1=84, h5=84, blend=84)
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+            score_drop_threshold=7,
+        ),
+        now_utc="2026-05-01T15:15:00Z",
+    )
+
+    assert result.allowed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][0] == "held_significant_score_drop:SPY:c"
+    assert rows[0][1] == "held_significant_score_drop"
