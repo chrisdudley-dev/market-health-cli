@@ -486,6 +486,62 @@ def detect_held_band_state_degradation(
     ]
 
 
+def detect_held_significant_score_drop(
+    *,
+    symbol: str,
+    previous_values: Mapping[str, Any],
+    current_values: Mapping[str, Any],
+    threshold: float = 7.0,
+) -> List[AlertCandidate]:
+    """Detect material held-position score drops between snapshots."""
+
+    normalized_symbol = str(symbol).strip().upper()
+    if not normalized_symbol:
+        return []
+
+    drops: Dict[str, float] = {}
+    affected_fields: List[str] = []
+
+    for score_field in ("C", "H1", "H5", "blend"):
+        previous_score = _score_value(previous_values, score_field)
+        current_score = _score_value(current_values, score_field)
+        if previous_score is None or current_score is None:
+            continue
+
+        drop = float(previous_score) - float(current_score)
+        if drop >= float(threshold):
+            affected_fields.append(score_field)
+            drops[score_field] = drop
+
+    if not affected_fields:
+        return []
+
+    key_suffix = "-".join(field.lower() for field in affected_fields)
+    drop_text = ", ".join(f"{field} -{drops[field]:.1f}" for field in affected_fields)
+
+    return [
+        AlertCandidate(
+            alert_key=f"held_significant_score_drop:{normalized_symbol}:{key_suffix}",
+            alert_type="held_significant_score_drop",
+            severity="warning",
+            symbol=normalized_symbol,
+            title=f"{normalized_symbol} significant held score drop",
+            message=(
+                f"{normalized_symbol} held-position score dropped materially: "
+                f"{drop_text}."
+            ),
+            payload={
+                "symbol": normalized_symbol,
+                "previous_values": _score_values_payload(previous_values),
+                "current_values": _score_values_payload(current_values),
+                "drops": drops,
+                "threshold": float(threshold),
+                "affected_fields": affected_fields,
+            },
+        )
+    ]
+
+
 def detect_forecast_warnings(
     *,
     symbol: str,

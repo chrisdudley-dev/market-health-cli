@@ -442,3 +442,82 @@ def test_held_band_state_degradation_no_alert_when_improving() -> None:
     )
 
     assert alerts == []
+
+
+def test_held_significant_score_drop_detects_c_drop() -> None:
+    from market_health.alert_detectors import detect_held_significant_score_drop
+
+    alerts = detect_held_significant_score_drop(
+        symbol="SPY",
+        previous_values={"C": 92, "H1": 90, "H5": 88, "blend": 89},
+        current_values={"C": 82, "H1": 90, "H5": 88, "blend": 89},
+        threshold=7,
+    )
+
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.alert_type == "held_significant_score_drop"
+    assert alert.alert_key == "held_significant_score_drop:SPY:c"
+    assert alert.payload["affected_fields"] == ["C"]
+    assert alert.payload["drops"]["C"] == 10.0
+    assert alert.payload["previous_values"]["c_score"] == 92.0
+    assert alert.payload["current_values"]["c_score"] == 82.0
+    assert alert.payload["threshold"] == 7.0
+
+
+def test_held_significant_score_drop_detects_h1_drop() -> None:
+    from market_health.alert_detectors import detect_held_significant_score_drop
+
+    alerts = detect_held_significant_score_drop(
+        symbol="SPY",
+        previous_values={"C": 82, "H1": 90, "H5": 88, "blend": 89},
+        current_values={"C": 82, "H1": 78, "H5": 88, "blend": 89},
+        threshold=7,
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].payload["affected_fields"] == ["H1"]
+    assert alerts[0].payload["drops"]["H1"] == 12.0
+
+
+def test_held_significant_score_drop_detects_h5_drop() -> None:
+    from market_health.alert_detectors import detect_held_significant_score_drop
+
+    alerts = detect_held_significant_score_drop(
+        symbol="SPY",
+        previous_values={"C": 82, "H1": 90, "H5": 88, "blend": 89},
+        current_values={"C": 82, "H1": 90, "H5": 76, "blend": 89},
+        threshold=7,
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].payload["affected_fields"] == ["H5"]
+    assert alerts[0].payload["drops"]["H5"] == 12.0
+
+
+def test_held_significant_score_drop_detects_blend_drop() -> None:
+    from market_health.alert_detectors import detect_held_significant_score_drop
+
+    alerts = detect_held_significant_score_drop(
+        symbol="SPY",
+        previous_values={"C": 82, "H1": 90, "H5": 88, "blend": 89},
+        current_values={"C": 82, "H1": 90, "H5": 88, "blend": 80},
+        threshold=7,
+    )
+
+    assert len(alerts) == 1
+    assert alerts[0].payload["affected_fields"] == ["blend"]
+    assert alerts[0].payload["drops"]["blend"] == 9.0
+
+
+def test_held_significant_score_drop_no_alert_below_threshold() -> None:
+    from market_health.alert_detectors import detect_held_significant_score_drop
+
+    alerts = detect_held_significant_score_drop(
+        symbol="SPY",
+        previous_values={"C": 92, "H1": 90, "H5": 88, "blend": 89},
+        current_values={"C": 86, "H1": 84, "H5": 82, "blend": 83},
+        threshold=7,
+    )
+
+    assert alerts == []

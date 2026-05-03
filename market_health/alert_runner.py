@@ -15,6 +15,7 @@ from market_health.alert_detectors import (
     AlertCandidate,
     detect_forecast_warnings,
     detect_held_band_state_degradation,
+    detect_held_significant_score_drop,
     detect_position_inventory_changes,
 )
 from market_health.alert_snapshots import (
@@ -52,6 +53,7 @@ class AlertRunnerConfig:
     git_commit: Optional[str] = None
     current_drop_threshold: float = 5.0
     previous_drop_threshold: float = 7.0
+    score_drop_threshold: float = 7.0
     healthy_score_floor: float = 55.0
 
 
@@ -142,6 +144,7 @@ def _detect_alerts(
     current_snapshots: Sequence[HeldPositionSnapshot],
     current_drop_threshold: float,
     previous_drop_threshold: float,
+    score_drop_threshold: float,
     healthy_score_floor: float,
 ) -> List[AlertCandidate]:
     current_symbols = [snapshot.symbol for snapshot in current_snapshots]
@@ -156,23 +159,34 @@ def _detect_alerts(
     for snapshot in current_snapshots:
         prev = previous.get(snapshot.symbol, {})
         if prev:
+            previous_values = {
+                "C": prev.get("current_score"),
+                "H1": prev.get("h1_score"),
+                "H5": prev.get("h5_score"),
+                "blend": prev.get("blend_score"),
+            }
+            current_values = {
+                "C": snapshot.current_score,
+                "H1": snapshot.h1_score,
+                "H5": snapshot.h5_score,
+                "blend": snapshot.blend_score,
+            }
+
             candidates.extend(
                 detect_held_band_state_degradation(
                     symbol=snapshot.symbol,
                     previous_state=prev.get("state"),  # type: ignore[arg-type]
                     current_state=snapshot.state,
-                    previous_values={
-                        "C": prev.get("current_score"),
-                        "H1": prev.get("h1_score"),
-                        "H5": prev.get("h5_score"),
-                        "blend": prev.get("blend_score"),
-                    },
-                    current_values={
-                        "C": snapshot.current_score,
-                        "H1": snapshot.h1_score,
-                        "H5": snapshot.h5_score,
-                        "blend": snapshot.blend_score,
-                    },
+                    previous_values=previous_values,
+                    current_values=current_values,
+                )
+            )
+            candidates.extend(
+                detect_held_significant_score_drop(
+                    symbol=snapshot.symbol,
+                    previous_values=previous_values,
+                    current_values=current_values,
+                    threshold=score_drop_threshold,
                 )
             )
 
@@ -257,6 +271,7 @@ def run_once_alert_service(
             current_snapshots=current_snapshots,
             current_drop_threshold=config.current_drop_threshold,
             previous_drop_threshold=config.previous_drop_threshold,
+            score_drop_threshold=config.score_drop_threshold,
             healthy_score_floor=config.healthy_score_floor,
         )
         history = read_alert_history_from_store(db_path=config.db_path)
@@ -361,6 +376,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=55.0,
         help="Held-position healthy score floor for C/H1/H5/blend alerts.",
     )
+    parser.add_argument(
+        "--score-drop-threshold",
+        type=float,
+        default=7.0,
+        help="Material held-position score-drop threshold for C/H1/H5/blend.",
+    )
 
     return parser
 
@@ -376,6 +397,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         refresh_cmd=tuple(shlex.split(args.refresh_cmd)),
         trigger_name=args.trigger_name,
         git_commit=args.git_commit,
+        score_drop_threshold=args.score_drop_threshold,
         healthy_score_floor=args.healthy_score_floor,
     )
     result = run_once_alert_service(config)
