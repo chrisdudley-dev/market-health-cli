@@ -369,3 +369,76 @@ def test_held_unhealthy_floor_no_alert_when_all_scores_are_healthy() -> None:
     )
 
     assert alerts == []
+
+
+def test_held_band_state_degradation_detects_one_step_score_worsening() -> None:
+    from market_health.alert_detectors import detect_held_band_state_degradation
+
+    alerts = detect_held_band_state_degradation(
+        symbol="SPY",
+        previous_state="clean",
+        current_state="clean",
+        previous_values={"C": 72, "H1": 66, "H5": 70, "blend": 71},
+        current_values={"C": 68, "H1": 66, "H5": 70, "blend": 71},
+    )
+
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.alert_type == "held_band_state_degraded"
+    assert alert.alert_key == "held_band_state_degradation:SPY:c"
+    assert alert.payload["previous_bands"]["C"] == "green"
+    assert alert.payload["current_bands"]["C"] == "yellow"
+    assert alert.payload["degraded_fields"] == ["C"]
+    assert alert.payload["state_degraded"] is False
+    assert "C band green->yellow" in alert.payload["reason"]
+
+
+def test_held_band_state_degradation_detects_severe_state_and_score_worsening() -> None:
+    from market_health.alert_detectors import detect_held_band_state_degradation
+
+    alerts = detect_held_band_state_degradation(
+        symbol="SPY",
+        previous_state="hold",
+        current_state="unhealthy",
+        previous_values={"C": 72, "H1": 70, "H5": 69, "blend": 71},
+        current_values={"C": 54, "H1": 50, "H5": 52, "blend": 53},
+    )
+
+    assert len(alerts) == 1
+    alert = alerts[0]
+    assert alert.severity == "warning"
+    assert alert.payload["previous_state"] == "HOLD"
+    assert alert.payload["current_state"] == "UNHEALTHY"
+    assert alert.payload["state_degraded"] is True
+    assert alert.payload["degraded_fields"] == ["C", "H1", "H5", "blend"]
+    assert alert.payload["previous_values"]["c_score"] == 72.0
+    assert alert.payload["current_values"]["c_score"] == 54.0
+    assert "state HOLD->UNHEALTHY" in alert.payload["reason"]
+
+
+def test_held_band_state_degradation_no_alert_when_unchanged() -> None:
+    from market_health.alert_detectors import detect_held_band_state_degradation
+
+    alerts = detect_held_band_state_degradation(
+        symbol="SPY",
+        previous_state="caution",
+        current_state="caution",
+        previous_values={"C": 68, "H1": 61, "H5": 59, "blend": 63},
+        current_values={"C": 66, "H1": 60, "H5": 58, "blend": 62},
+    )
+
+    assert alerts == []
+
+
+def test_held_band_state_degradation_no_alert_when_improving() -> None:
+    from market_health.alert_detectors import detect_held_band_state_degradation
+
+    alerts = detect_held_band_state_degradation(
+        symbol="SPY",
+        previous_state="unhealthy",
+        current_state="clean",
+        previous_values={"C": 54, "H1": 50, "H5": 52, "blend": 53},
+        current_values={"C": 68, "H1": 60, "H5": 59, "blend": 62},
+    )
+
+    assert alerts == []

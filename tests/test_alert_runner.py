@@ -109,7 +109,7 @@ def test_runner_detects_and_records_state_alert_on_second_run(tmp_path: Path) ->
     assert result.allowed_count == 1
     rows = _alert_rows(db)
     assert len(rows) == 1
-    assert rows[0][1] == "position_state_changed"
+    assert rows[0][1] == "held_band_state_degraded"
     assert rows[0][2] == "dry-run"
 
 
@@ -190,7 +190,7 @@ def test_runner_uses_injected_telegram_sender_in_test_mode(tmp_path: Path) -> No
     assert result.allowed_count == 1
     sender.assert_called_once()
     data = sender.call_args.args[1]
-    assert data["text"].startswith("TEST: SPY state changed")
+    assert data["text"].startswith("TEST: SPY held state/score degraded")
 
 
 def test_runner_main_supports_no_refresh_fixture_mode(tmp_path: Path) -> None:
@@ -258,3 +258,69 @@ def test_runner_records_unhealthy_floor_alert(tmp_path: Path) -> None:
     assert len(rows) == 1
     assert rows[0][0] == "held_unhealthy_floor:SPY:h1"
     assert rows[0][1] == "held_unhealthy_floor"
+
+
+def test_runner_records_score_band_degradation_alert(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="clean", c=72, h1=69, h5=68, blend=70)
+    run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    _write_ui(ui, state="clean", c=68, h1=69, h5=68, blend=70)
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+        ),
+        now_utc="2026-05-01T15:15:00Z",
+    )
+
+    assert result.allowed_count == 1
+    rows = _alert_rows(db)
+    assert len(rows) == 1
+    assert rows[0][0] == "held_band_state_degradation:SPY:c"
+    assert rows[0][1] == "held_band_state_degraded"
+
+
+def test_runner_does_not_alert_on_score_band_improvement(tmp_path: Path) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+
+    _write_ui(ui, state="DMG", c=54, h1=56, h5=56, blend=56)
+    run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+            healthy_score_floor=40,
+        ),
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    _write_ui(ui, state="clean", c=68, h1=68, h5=68, blend=68)
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db,
+            ui_path=ui,
+            telegram_mode="dry-run",
+            no_refresh=True,
+            healthy_score_floor=40,
+        ),
+        now_utc="2026-05-01T15:15:00Z",
+    )
+
+    assert result.allowed_count == 0
+    rows = _alert_rows(db)
+    assert rows == []

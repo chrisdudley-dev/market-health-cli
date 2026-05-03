@@ -14,8 +14,8 @@ from market_health.alert_cooldowns import (
 from market_health.alert_detectors import (
     AlertCandidate,
     detect_forecast_warnings,
+    detect_held_band_state_degradation,
     detect_position_inventory_changes,
-    detect_position_state_changes,
 )
 from market_health.alert_snapshots import (
     HeldPositionSnapshot,
@@ -92,7 +92,7 @@ def _read_previous_snapshots(
 
         rows = conn.execute(
             """
-            SELECT symbol, state, current_score, h1_score, h5_score
+            SELECT symbol, state, current_score, blend_score, h1_score, h5_score
             FROM symbol_snapshots
             WHERE run_id = ? AND is_held = 1
             ORDER BY symbol
@@ -153,17 +153,29 @@ def _detect_alerts(
             current_symbols=current_symbols,
         )
     )
-    candidates.extend(
-        detect_position_state_changes(
-            previous_states={
-                symbol: row.get("state") for symbol, row in previous.items()
-            },
-            current_states=_snapshot_states(current_snapshots),
-        )
-    )
-
     for snapshot in current_snapshots:
         prev = previous.get(snapshot.symbol, {})
+        if prev:
+            candidates.extend(
+                detect_held_band_state_degradation(
+                    symbol=snapshot.symbol,
+                    previous_state=prev.get("state"),  # type: ignore[arg-type]
+                    current_state=snapshot.state,
+                    previous_values={
+                        "C": prev.get("current_score"),
+                        "H1": prev.get("h1_score"),
+                        "H5": prev.get("h5_score"),
+                        "blend": prev.get("blend_score"),
+                    },
+                    current_values={
+                        "C": snapshot.current_score,
+                        "H1": snapshot.h1_score,
+                        "H5": snapshot.h5_score,
+                        "blend": snapshot.blend_score,
+                    },
+                )
+            )
+
         candidates.extend(
             detect_forecast_warnings(
                 symbol=snapshot.symbol,
@@ -364,6 +376,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         refresh_cmd=tuple(shlex.split(args.refresh_cmd)),
         trigger_name=args.trigger_name,
         git_commit=args.git_commit,
+        healthy_score_floor=args.healthy_score_floor,
     )
     result = run_once_alert_service(config)
     return result.exit_code

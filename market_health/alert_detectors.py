@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set
 
 
 @dataclass(frozen=True)
@@ -328,6 +328,159 @@ def detect_held_unhealthy_floor(
                 "blend_score": values["blend"],
                 "healthy_floor": floor,
                 "breached_fields": breached,
+            },
+        )
+    ]
+
+
+def _state_label(value: Optional[str]) -> str:
+    tokens = _normalize_state_tokens(value)
+    return ",".join(sorted(tokens)) or "clean"
+
+
+def _state_degradation_rank(value: Optional[str]) -> int:
+    tokens = _normalize_state_tokens(value)
+    if not tokens:
+        return 0
+
+    unhealthy = {
+        "BRK",
+        "BROKEN",
+        "DAMAGE",
+        "DAMAGED",
+        "DMG",
+        "FAIL",
+        "FAILED",
+        "RED",
+        "UNHEALTHY",
+    }
+    caution = {
+        "CAUTION",
+        "RCL",
+        "RISK",
+        "WATCH",
+        "WARN",
+        "WARNING",
+        "YELLOW",
+        "OH",
+    }
+    clean = {"GREEN", "HEALTHY", "HOLD"}
+
+    rank = 0
+    for token in tokens:
+        if token in unhealthy:
+            rank = max(rank, 2)
+        elif token in caution:
+            rank = max(rank, 1)
+        elif token in clean:
+            rank = max(rank, 0)
+        else:
+            rank = max(rank, 1)
+    return rank
+
+
+def _score_value(values: Mapping[str, Any], field: str) -> Optional[float]:
+    aliases = {
+        "C": ("C", "c", "current", "current_score", "score"),
+        "H1": ("H1", "h1", "h1_score"),
+        "H5": ("H5", "h5", "h5_score"),
+        "blend": ("blend", "Blend", "blended", "blend_score"),
+    }
+    for key in aliases[field]:
+        if key in values:
+            return _as_float_score(values[key])
+    return None
+
+
+def _score_values_payload(values: Mapping[str, Any]) -> Dict[str, Optional[float]]:
+    c = _score_value(values, "C")
+    return {
+        "current_score": c,
+        "c_score": c,
+        "h1_score": _score_value(values, "H1"),
+        "h5_score": _score_value(values, "H5"),
+        "blend_score": _score_value(values, "blend"),
+    }
+
+
+def _score_bands_payload(values: Mapping[str, Any]) -> Dict[str, str]:
+    return {
+        "C": _score_band(_score_value(values, "C")),
+        "H1": _score_band(_score_value(values, "H1")),
+        "H5": _score_band(_score_value(values, "H5")),
+        "blend": _score_band(_score_value(values, "blend")),
+    }
+
+
+def detect_held_band_state_degradation(
+    *,
+    symbol: str,
+    previous_state: Optional[str],
+    current_state: Optional[str],
+    previous_values: Mapping[str, Any],
+    current_values: Mapping[str, Any],
+) -> List[AlertCandidate]:
+    """Detect held-position score-band or state degradation between snapshots."""
+
+    normalized_symbol = str(symbol).strip().upper()
+    if not normalized_symbol:
+        return []
+
+    previous_state_label = _state_label(previous_state)
+    current_state_label = _state_label(current_state)
+
+    reasons: List[str] = []
+    degraded_fields: List[str] = []
+
+    previous_state_rank = _state_degradation_rank(previous_state)
+    current_state_rank = _state_degradation_rank(current_state)
+    state_degraded = current_state_rank > previous_state_rank
+    if state_degraded:
+        reasons.append(f"state {previous_state_label}->{current_state_label}")
+
+    for score_field in ("C", "H1", "H5", "blend"):
+        previous_score = _score_value(previous_values, score_field)
+        current_score = _score_value(current_values, score_field)
+        if previous_score is None or current_score is None:
+            continue
+
+        previous_band = _score_band(previous_score)
+        current_band = _score_band(current_score)
+        if _band_rank(current_band) < _band_rank(previous_band):
+            degraded_fields.append(score_field)
+            reasons.append(f"{score_field} band {previous_band}->{current_band}")
+
+    if not reasons:
+        return []
+
+    reason_parts = []
+    if state_degraded:
+        reason_parts.append("state")
+    reason_parts.extend(field.lower() for field in degraded_fields)
+    reason_key = "-".join(reason_parts)
+
+    return [
+        AlertCandidate(
+            alert_key=f"held_band_state_degradation:{normalized_symbol}:{reason_key}",
+            alert_type="held_band_state_degraded",
+            severity="warning",
+            symbol=normalized_symbol,
+            title=f"{normalized_symbol} held state/score degraded",
+            message=f"{normalized_symbol} held position degraded: {'; '.join(reasons)}.",
+            payload={
+                "symbol": normalized_symbol,
+                "previous_state": previous_state_label,
+                "current_state": current_state_label,
+                "previous_values": _score_values_payload(previous_values),
+                "current_values": _score_values_payload(current_values),
+                "previous_bands": _score_bands_payload(previous_values),
+                "current_bands": _score_bands_payload(current_values),
+                "previous_state_rank": previous_state_rank,
+                "current_state_rank": current_state_rank,
+                "state_degraded": state_degraded,
+                "degraded_fields": degraded_fields,
+                "reason": "; ".join(reasons),
+                "reasons": reasons,
             },
         )
     ]
