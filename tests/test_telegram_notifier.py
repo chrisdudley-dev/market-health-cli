@@ -234,3 +234,143 @@ def test_send_and_record_alert_candidate_records_send_error(tmp_path: Path) -> N
     conn.close()
 
     assert row == ("error", "network down")
+
+
+def test_format_held_forecast_divergence_message_is_actionable() -> None:
+    candidate = AlertCandidate(
+        alert_key="held_forecast_divergence:SPY:H1",
+        alert_type="held_forecast_divergence",
+        severity="warning",
+        symbol="SPY",
+        title="SPY forecast divergence: C > H1",
+        message="SPY current score is 6.0 points above H1.",
+        payload={
+            "symbol": "SPY",
+            "triggered_rule": "C>H1",
+            "c_score": 72.0,
+            "h1_score": 66.0,
+            "h5_score": 60.0,
+            "blend_score": 68.0,
+            "drop": 6.0,
+            "threshold": 5.0,
+        },
+    )
+
+    text = format_alert_message(candidate, test_prefix=True)
+
+    assert text.startswith("TEST: SPY forecast divergence: C > H1")
+    assert "Severity: warning" in text
+    assert "Rule: C>H1" in text
+    assert "Scores: C=72.0 | H1=66.0 | H5=60.0 | blend=68.0" in text
+    assert "Drop: 6.0 points; threshold=5.0" in text
+    assert "/root" not in text
+
+
+def test_format_held_unhealthy_floor_message_is_actionable() -> None:
+    candidate = AlertCandidate(
+        alert_key="held_unhealthy_floor:SPY:h1",
+        alert_type="held_unhealthy_floor",
+        severity="warning",
+        symbol="SPY",
+        title="SPY below healthy floor",
+        message="SPY has held-position score fields below the healthy floor 55.0: H1=54.0.",
+        payload={
+            "symbol": "SPY",
+            "c_score": 56.0,
+            "h1_score": 54.0,
+            "h5_score": 56.0,
+            "blend_score": 56.0,
+            "healthy_floor": 55.0,
+            "breached_fields": ["H1"],
+        },
+    )
+
+    text = format_alert_message(candidate)
+
+    assert text.startswith("SPY below healthy floor")
+    assert "Rule: below healthy floor" in text
+    assert "Scores: C=56.0 | H1=54.0 | H5=56.0 | blend=56.0" in text
+    assert "Healthy floor: 55.0" in text
+    assert "Breached: H1" in text
+    assert "/root" not in text
+
+
+def test_format_held_band_state_degraded_message_is_actionable() -> None:
+    candidate = AlertCandidate(
+        alert_key="held_band_state_degradation:SPY:state-c",
+        alert_type="held_band_state_degraded",
+        severity="warning",
+        symbol="SPY",
+        title="SPY held state/score degraded",
+        message="SPY held position degraded.",
+        payload={
+            "symbol": "SPY",
+            "previous_state": "HOLD",
+            "current_state": "UNHEALTHY",
+            "previous_values": {
+                "c_score": 72.0,
+                "h1_score": 70.0,
+                "h5_score": 69.0,
+                "blend_score": 71.0,
+            },
+            "current_values": {
+                "c_score": 54.0,
+                "h1_score": 50.0,
+                "h5_score": 52.0,
+                "blend_score": 53.0,
+            },
+            "degraded_fields": ["C", "H1", "H5", "blend"],
+            "reason": "state HOLD->UNHEALTHY; C band green->red",
+        },
+    )
+
+    text = format_alert_message(candidate, test_prefix=True)
+
+    assert text.startswith("TEST: SPY held state/score degraded")
+    assert "Rule: held state/score degradation" in text
+    assert "State: HOLD -> UNHEALTHY" in text
+    assert "Previous: C=72.0 | H1=70.0 | H5=69.0 | blend=71.0" in text
+    assert "Current: C=54.0 | H1=50.0 | H5=52.0 | blend=53.0" in text
+    assert "Degraded fields: C, H1, H5, blend" in text
+    assert "Reason: state HOLD->UNHEALTHY; C band green->red" in text
+    assert "/root" not in text
+
+
+def test_format_held_significant_score_drop_message_is_actionable() -> None:
+    candidate = AlertCandidate(
+        alert_key="held_significant_score_drop:SPY:c",
+        alert_type="held_significant_score_drop",
+        severity="warning",
+        symbol="SPY",
+        title="SPY significant held score drop",
+        message="SPY held-position score dropped materially: C -8.0.",
+        payload={
+            "symbol": "SPY",
+            "previous_values": {
+                "c_score": 84.0,
+                "h1_score": 84.0,
+                "h5_score": 84.0,
+                "blend_score": 84.0,
+            },
+            "current_values": {
+                "c_score": 76.0,
+                "h1_score": 84.0,
+                "h5_score": 84.0,
+                "blend_score": 84.0,
+            },
+            "drops": {"C": 8.0},
+            "threshold": 7.0,
+            "affected_fields": ["C"],
+        },
+    )
+
+    text = format_alert_message(candidate)
+
+    assert text.startswith("SPY significant held score drop")
+    assert "Rule: significant score drop" in text
+    assert "Previous: C=84.0 | H1=84.0 | H5=84.0 | blend=84.0" in text
+    assert "Current: C=76.0 | H1=84.0 | H5=84.0 | blend=84.0" in text
+    assert "Drops: C -8.0" in text
+    assert "Threshold: 7.0" in text
+    assert "Affected: C" in text
+    assert "/root" not in text

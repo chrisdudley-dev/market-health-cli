@@ -73,12 +73,151 @@ def _default_sender(url: str, data: Mapping[str, str], timeout: int) -> Any:
     return requests.post(url, data=dict(data), timeout=timeout)
 
 
+def _fmt_score(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        return f"{float(value):.1f}"
+    return "n/a"
+
+
+def _fmt_threshold(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        return f"{float(value):.1f}"
+    return "n/a"
+
+
+def _score_line(payload: Mapping[str, Any]) -> str:
+    return (
+        "Scores: "
+        f"C={_fmt_score(payload.get('c_score', payload.get('current_score')))} | "
+        f"H1={_fmt_score(payload.get('h1_score'))} | "
+        f"H5={_fmt_score(payload.get('h5_score'))} | "
+        f"blend={_fmt_score(payload.get('blend_score'))}"
+    )
+
+
+def _score_values_line(label: str, values: Mapping[str, Any]) -> str:
+    return (
+        f"{label}: "
+        f"C={_fmt_score(values.get('c_score', values.get('current_score')))} | "
+        f"H1={_fmt_score(values.get('h1_score'))} | "
+        f"H5={_fmt_score(values.get('h5_score'))} | "
+        f"blend={_fmt_score(values.get('blend_score'))}"
+    )
+
+
+def _safe_join(values: Any) -> str:
+    if isinstance(values, list):
+        return ", ".join(str(v) for v in values if str(v).strip()) or "n/a"
+    return str(values) if values is not None else "n/a"
+
+
+def _format_held_forecast_divergence(candidate: AlertCandidate, *, prefix: str) -> str:
+    payload = candidate.payload
+    return "\n".join(
+        [
+            f"{prefix}{candidate.title}",
+            f"Severity: {candidate.severity}",
+            f"Rule: {payload.get('triggered_rule', 'C>forecast')}",
+            _score_line(payload),
+            (
+                f"Drop: {_fmt_score(payload.get('drop'))} "
+                f"points; threshold={_fmt_threshold(payload.get('threshold'))}"
+            ),
+            f"Reason: {candidate.message}",
+        ]
+    )
+
+
+def _format_held_unhealthy_floor(candidate: AlertCandidate, *, prefix: str) -> str:
+    payload = candidate.payload
+    return "\n".join(
+        [
+            f"{prefix}{candidate.title}",
+            f"Severity: {candidate.severity}",
+            "Rule: below healthy floor",
+            _score_line(payload),
+            f"Healthy floor: {_fmt_threshold(payload.get('healthy_floor'))}",
+            f"Breached: {_safe_join(payload.get('breached_fields'))}",
+            f"Reason: {candidate.message}",
+        ]
+    )
+
+
+def _format_held_band_state_degraded(candidate: AlertCandidate, *, prefix: str) -> str:
+    payload = candidate.payload
+    previous_values = payload.get("previous_values")
+    current_values = payload.get("current_values")
+    previous_values = previous_values if isinstance(previous_values, Mapping) else {}
+    current_values = current_values if isinstance(current_values, Mapping) else {}
+
+    return "\n".join(
+        [
+            f"{prefix}{candidate.title}",
+            f"Severity: {candidate.severity}",
+            "Rule: held state/score degradation",
+            (
+                f"State: {payload.get('previous_state', 'n/a')} -> "
+                f"{payload.get('current_state', 'n/a')}"
+            ),
+            _score_values_line("Previous", previous_values),
+            _score_values_line("Current", current_values),
+            f"Degraded fields: {_safe_join(payload.get('degraded_fields'))}",
+            f"Reason: {payload.get('reason') or candidate.message}",
+        ]
+    )
+
+
+def _format_held_significant_score_drop(
+    candidate: AlertCandidate, *, prefix: str
+) -> str:
+    payload = candidate.payload
+    previous_values = payload.get("previous_values")
+    current_values = payload.get("current_values")
+    previous_values = previous_values if isinstance(previous_values, Mapping) else {}
+    current_values = current_values if isinstance(current_values, Mapping) else {}
+    drops = payload.get("drops")
+    drops = drops if isinstance(drops, Mapping) else {}
+    affected = payload.get("affected_fields")
+
+    drop_text = ", ".join(
+        f"{field} -{_fmt_score(drops.get(field))}"
+        for field in affected
+        if isinstance(affected, list)
+    )
+
+    return "\n".join(
+        [
+            f"{prefix}{candidate.title}",
+            f"Severity: {candidate.severity}",
+            "Rule: significant score drop",
+            _score_values_line("Previous", previous_values),
+            _score_values_line("Current", current_values),
+            f"Drops: {drop_text or 'n/a'}",
+            f"Threshold: {_fmt_threshold(payload.get('threshold'))}",
+            f"Affected: {_safe_join(affected)}",
+        ]
+    )
+
+
 def format_alert_message(
     candidate: AlertCandidate,
     *,
     test_prefix: bool = False,
 ) -> str:
     prefix = "TEST: " if test_prefix else ""
+
+    if candidate.alert_type == "held_forecast_divergence":
+        return _format_held_forecast_divergence(candidate, prefix=prefix)
+
+    if candidate.alert_type == "held_unhealthy_floor":
+        return _format_held_unhealthy_floor(candidate, prefix=prefix)
+
+    if candidate.alert_type == "held_band_state_degraded":
+        return _format_held_band_state_degraded(candidate, prefix=prefix)
+
+    if candidate.alert_type == "held_significant_score_drop":
+        return _format_held_significant_score_drop(candidate, prefix=prefix)
+
     parts = [
         f"{prefix}{candidate.title}",
         candidate.message,
