@@ -171,3 +171,75 @@ def test_write_from_file(tmp_path: Path) -> None:
 
     assert row_ids == [1, 2]
     assert count_rows(db, "symbol_snapshots") == 2
+
+
+def _score_payload(symbol: str, total: int) -> dict:
+    scores = []
+    remaining = int(total)
+    for _ in range(30):
+        value = min(2, max(0, remaining))
+        scores.append(value)
+        remaining -= value
+
+    idx = 0
+    categories = {}
+    for cat in ("A", "B", "C", "D", "E"):
+        checks = []
+        for i in range(6):
+            checks.append({"id": f"{cat}{i + 1}", "score": scores[idx]})
+            idx += 1
+        categories[cat] = {"checks": checks}
+
+    return {"symbol": symbol, "categories": categories}
+
+
+def test_collect_derives_scores_from_nested_ui_contract_payloads() -> None:
+    h1 = _score_payload("SPY", 37)
+    h1["forecast_score"] = 37 / 60
+    h1["structure_summary"] = {
+        "state_tags": ["near_damage_zone", "overhead_heavy", "breakout_ready"],
+        "support_cushion_atr": 0.25,
+        "overhead_resistance_atr": 0.75,
+        "tactical_stop_candidate": 99.5,
+        "stop_buy_candidate": 101.25,
+    }
+
+    h5 = _score_payload("SPY", 33)
+    h5["forecast_score"] = 33 / 60
+
+    doc = {
+        "schema": "market_health.ui.v1",
+        "asof": "2026-05-04T16:52:34Z",
+        "data": {
+            "positions": {
+                "positions": [
+                    {
+                        "symbol": "SPY",
+                        "qty": 1,
+                        "mark_price": "100.25",
+                    }
+                ]
+            },
+            "sectors": [_score_payload("SPY", 34)],
+            "forecast_scores": {
+                "horizons_trading_days": [1, 5],
+                "scores": {"SPY": {"1": h1, "5": h5}},
+            },
+        },
+    }
+
+    snapshots = collect_held_position_snapshots(doc)
+
+    assert len(snapshots) == 1
+    snap = snapshots[0]
+    assert snap.symbol == "SPY"
+    assert round(snap.current_score or 0, 2) == 56.67
+    assert round(snap.h1_score or 0, 2) == 68.33
+    assert round(snap.h5_score or 0, 2) == 61.67
+    assert round(snap.blend_score or 0, 2) == 60.83
+    assert snap.state == "DMG,OH,BRK"
+    assert snap.sup_atr == 0.25
+    assert snap.res_atr == 0.75
+    assert snap.stop_price == 99.5
+    assert snap.buy_price == 101.25
+    assert snap.last_price == 100.25

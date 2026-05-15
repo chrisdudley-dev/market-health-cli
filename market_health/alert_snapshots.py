@@ -67,6 +67,187 @@ def _rows_by_symbol(rows: Iterable[Mapping[str, Any]]) -> Dict[str, Mapping[str,
     return out
 
 
+_SCORE_CAT_KEYS = ("A", "B", "C", "D", "E")
+
+
+def _first_not_none(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _looks_like_score_payload(value: Any) -> bool:
+    if not isinstance(value, Mapping):
+        return False
+
+    categories = value.get("categories")
+    if isinstance(categories, Mapping):
+        return all(key in categories for key in _SCORE_CAT_KEYS)
+
+    return all(key in value for key in _SCORE_CAT_KEYS)
+
+
+def _cat_node(payload: Mapping[str, Any], cat: str) -> Any:
+    categories = payload.get("categories")
+    if isinstance(categories, Mapping):
+        return categories.get(cat)
+    return payload.get(cat)
+
+
+def _checks_for_cat(
+    payload: Optional[Mapping[str, Any]], cat: str
+) -> List[Mapping[str, Any]]:
+    if not isinstance(payload, Mapping):
+        return []
+
+    node = _cat_node(payload, cat)
+    if isinstance(node, Mapping) and isinstance(node.get("checks"), list):
+        return [x for x in node["checks"] if isinstance(x, Mapping)]
+    if isinstance(node, list):
+        return [x for x in node if isinstance(x, Mapping)]
+    return []
+
+
+def _sum_checks(checks: Iterable[Mapping[str, Any]]) -> int:
+    total = 0
+    for check in list(checks)[:6]:
+        score = check.get("score")
+        if isinstance(score, (int, float)) and not isinstance(score, bool):
+            total += int(score)
+    return total
+
+
+def _payload_utility(payload: Optional[Mapping[str, Any]]) -> Optional[float]:
+    if not isinstance(payload, Mapping):
+        return None
+
+    total = 0
+    for cat in _SCORE_CAT_KEYS:
+        total += _sum_checks(_checks_for_cat(payload, cat))
+
+    return max(0.0, min(1.0, float(total) / 60.0))
+
+
+def _as_percent(value: Optional[float]) -> Optional[float]:
+    return None if value is None else float(value) * 100.0
+
+
+def _forecast_payload(
+    ui_doc: Mapping[str, Any],
+    symbol: str,
+    horizon: int,
+) -> Optional[Mapping[str, Any]]:
+    data = ui_doc.get("data")
+    if not isinstance(data, Mapping):
+        return None
+
+    forecast_doc = data.get("forecast_scores")
+    if not isinstance(forecast_doc, Mapping):
+        return None
+
+    scores = forecast_doc.get("scores")
+    if not isinstance(scores, Mapping):
+        return None
+
+    by_symbol = scores.get(symbol)
+    if not isinstance(by_symbol, Mapping):
+        return None
+
+    payload = by_symbol.get(str(horizon), by_symbol.get(horizon))
+    return payload if isinstance(payload, Mapping) else None
+
+
+def _forecast_score(payload: Optional[Mapping[str, Any]]) -> Optional[float]:
+    if not isinstance(payload, Mapping):
+        return None
+
+    for key in ("forecast_score", "score", "utility", "blend", "blended", "current"):
+        score = _as_float(payload.get(key))
+        if score is None:
+            continue
+
+        if abs(score) > 1.000001:
+            score = score / 100.0
+        return max(0.0, min(1.0, score))
+
+    return None
+
+
+def _forecast_utility(
+    payload: Optional[Mapping[str, Any]],
+    current_utility: Optional[float],
+) -> Optional[float]:
+    score = _first_not_none(_forecast_score(payload), _payload_utility(payload))
+    if score is None:
+        return None
+
+    if current_utility is None:
+        return float(score)
+
+    anchored = float(current_utility) + (float(score) - 0.50)
+    return max(0.0, min(1.0, anchored))
+
+
+def _blend_utility(
+    current_utility: Optional[float],
+    h1_utility: Optional[float],
+    h5_utility: Optional[float],
+) -> Optional[float]:
+    pieces = []
+    for weight, value in (
+        (0.50, current_utility),
+        (0.25, h1_utility),
+        (0.25, h5_utility),
+    ):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            pieces.append((weight, max(0.0, min(1.0, float(value)))))
+
+    if not pieces:
+        return None
+
+    return sum(weight * value for weight, value in pieces) / sum(
+        weight for weight, _value in pieces
+    )
+
+
+def _structure_summary(payload: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+    if not isinstance(payload, Mapping):
+        return {}
+
+    summary = payload.get("structure_summary")
+    return summary if isinstance(summary, Mapping) else {}
+
+
+def _compact_state_text_from_structure(structure: Mapping[str, Any]) -> Optional[str]:
+    tags = structure.get("state_tags")
+    if isinstance(tags, list):
+        mapping = {
+            "near_damage_zone": "DMG",
+            "damage_zone": "DMG",
+            "overhead_heavy": "OH",
+            "breakout_ready": "BRK",
+            "reclaim_ready": "RCL",
+        }
+        out: List[str] = []
+        for tag in tags:
+            text = str(tag).strip()
+            if not text:
+                continue
+            compact = mapping.get(text, text.upper())
+            if compact not in out:
+                out.append(compact)
+        if out:
+            return ",".join(out)
+
+    return _as_text(
+        _first_not_none(
+            structure.get("state_text"),
+            structure.get("state"),
+        )
+    )
+
+
 def _position_rows(ui_doc: Mapping[str, Any]) -> List[Mapping[str, Any]]:
     data = ui_doc.get("data")
     if not isinstance(data, Mapping):
@@ -132,6 +313,19 @@ def collect_held_position_snapshots(
                 else _first_value(sector, names)
             )
 
+        current_payload = sector if _looks_like_score_payload(sector) else None
+        current_utility = _payload_utility(current_payload)
+
+        h1_payload = _forecast_payload(ui_doc, symbol, 1)
+        h5_payload = _forecast_payload(ui_doc, symbol, 5)
+        h1_utility = _forecast_utility(h1_payload, current_utility)
+        h5_utility = _forecast_utility(h5_payload, current_utility)
+        blend_utility = _blend_utility(current_utility, h1_utility, h5_utility)
+
+        h1_structure = _structure_summary(h1_payload)
+        h5_structure = _structure_summary(h5_payload)
+        structure = h1_structure or h5_structure
+
         source = {
             "schema": ui_doc.get("schema"),
             "asof": ui_doc.get("asof"),
@@ -144,16 +338,49 @@ def collect_held_position_snapshots(
             HeldPositionSnapshot(
                 symbol=symbol,
                 ts_utc=snapshot_ts,
-                current_score=_as_float(pick("current_score", "current", "C", "score")),
-                blend_score=_as_float(pick("blend_score", "Blend", "blend")),
-                h1_score=_as_float(pick("h1_score", "H1", "h1")),
-                h5_score=_as_float(pick("h5_score", "H5", "h5")),
-                state=_as_text(pick("state", "State")),
-                stop_price=_as_float(pick("stop_price", "Stop", "stop")),
-                buy_price=_as_float(pick("buy_price", "Buy", "buy")),
-                sup_atr=_as_float(pick("sup_atr", "SupATR", "support_atr")),
-                res_atr=_as_float(pick("res_atr", "ResATR", "resistance_atr")),
-                last_price=_as_float(pick("last_price", "Last", "price", "mark")),
+                current_score=_first_not_none(
+                    _as_float(pick("current_score", "current", "C", "score")),
+                    _as_percent(current_utility),
+                ),
+                blend_score=_first_not_none(
+                    _as_float(pick("blend_score", "Blend", "blend")),
+                    _as_percent(blend_utility),
+                ),
+                h1_score=_first_not_none(
+                    _as_float(pick("h1_score", "H1", "h1")),
+                    _as_percent(h1_utility),
+                ),
+                h5_score=_first_not_none(
+                    _as_float(pick("h5_score", "H5", "h5")),
+                    _as_percent(h5_utility),
+                ),
+                state=_first_not_none(
+                    _as_text(pick("state", "State")),
+                    _compact_state_text_from_structure(structure),
+                ),
+                stop_price=_first_not_none(
+                    _as_float(pick("stop_price", "Stop", "stop")),
+                    _as_float(structure.get("tactical_stop_candidate")),
+                ),
+                buy_price=_first_not_none(
+                    _as_float(pick("buy_price", "Buy", "buy")),
+                    _as_float(structure.get("stop_buy_candidate")),
+                ),
+                sup_atr=_first_not_none(
+                    _as_float(pick("sup_atr", "SupATR", "support_atr")),
+                    _as_float(structure.get("support_cushion_atr")),
+                    _as_float(structure.get("support_atr")),
+                    _as_float(structure.get("sup_atr")),
+                ),
+                res_atr=_first_not_none(
+                    _as_float(pick("res_atr", "ResATR", "resistance_atr")),
+                    _as_float(structure.get("overhead_resistance_atr")),
+                    _as_float(structure.get("resistance_atr")),
+                    _as_float(structure.get("res_atr")),
+                ),
+                last_price=_as_float(
+                    pick("last_price", "Last", "price", "mark", "mark_price")
+                ),
                 source=source,
             )
         )
