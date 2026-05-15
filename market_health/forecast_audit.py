@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Any, Mapping
+from pathlib import Path
+from typing import Any, Iterable, Mapping
 
 from market_health.glyph_spec import (
     CATEGORY_KEYS,
@@ -204,3 +206,65 @@ def build_symbol_audit_row(
         checksum=checksum,
         is_held=is_held,
     )
+
+
+def category_audit_cell_to_dict(cell: CategoryAuditCell) -> dict[str, Any]:
+    return {
+        "category": cell.category,
+        "token": cell.token,
+        "display_token": cell.display_token,
+        "valid": cell.valid,
+        "totals": list(cell.totals) if cell.totals is not None else None,
+        "fingerprint": cell.fingerprint,
+        "patterns": list(cell.patterns),
+        "error": cell.error,
+    }
+
+
+def symbol_audit_row_to_dict(row: SymbolAuditRow) -> dict[str, Any]:
+    return {
+        "symbol": row.symbol,
+        "asof": row.asof,
+        "is_held": row.is_held,
+        "checksum": row.checksum,
+        "valid": row.all_valid,
+        "glyph_spec_version": row.glyph_spec_version,
+        "cells": {
+            category: category_audit_cell_to_dict(cell)
+            for category, cell in row.cells.items()
+        },
+        "display_cells": row.display_cells,
+        "canonical_tokens": row.canonical_tokens,
+    }
+
+
+def forecast_audit_document(
+    rows: Iterable[SymbolAuditRow],
+    *,
+    asof: str,
+) -> dict[str, Any]:
+    row_list = list(rows)
+    return {
+        "schema": "forecast_audit.v1",
+        "glyph_spec_version": GLYPH_SPEC_VERSION,
+        "asof": str(asof),
+        "columns": ["Sym", "A", "B", "C", "D", "E", "ck"],
+        "row_count": len(row_list),
+        "rows": [symbol_audit_row_to_dict(row) for row in row_list],
+    }
+
+
+def write_forecast_audit_json(
+    path: str | Path,
+    rows: Iterable[SymbolAuditRow],
+    *,
+    asof: str,
+) -> Path:
+    out_path = Path(path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    doc = forecast_audit_document(rows, asof=asof)
+    out_path.write_text(
+        json.dumps(doc, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return out_path

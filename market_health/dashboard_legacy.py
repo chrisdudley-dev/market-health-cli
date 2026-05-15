@@ -3670,7 +3670,10 @@ def main() -> int:
             return t
 
         try:
-            from market_health.forecast_audit import build_symbol_audit_row
+            from market_health.forecast_audit import (
+                build_symbol_audit_row,
+                write_forecast_audit_json,
+            )
             from market_health.glyph_audit_panel import render_glyph_audit_overview
 
             audit_asof = str(
@@ -3712,6 +3715,10 @@ def main() -> int:
                 )
 
             if audit_rows:
+                audit_path = (
+                    Path.home() / ".cache" / "jerboa" / "forecast_audit.v1.json"
+                )
+                write_forecast_audit_json(audit_path, audit_rows, asof=audit_asof)
                 sys.stdout.write(render_glyph_audit_overview(audit_rows) + "\n\n")
         except Exception:
             pass
