@@ -3680,6 +3680,53 @@ def main() -> int:
             t.stylize(_style(val, denom))
             return t
 
+        try:
+            from market_health.forecast_audit import build_symbol_audit_row
+            from market_health.glyph_audit_panel import render_glyph_audit_overview
+
+            audit_asof = str(
+                forecast_doc.get("asof")
+                or forecast_doc.get("generated_at")
+                or forecast_doc.get("computed_at")
+                or ""
+            )
+            audit_rows = []
+            held_set = {str(sym).upper() for sym in held_syms}
+
+            for sym in overview_order:
+                row = by2.get(sym)
+                if not isinstance(row, dict):
+                    continue
+
+                by_h = (
+                    forecast_scores.get(sym)
+                    if isinstance(forecast_scores, dict)
+                    else None
+                )
+                if not isinstance(by_h, dict):
+                    continue
+
+                h1_payload = by_h.get(1) or by_h.get("1")
+                h5_payload = by_h.get(5) or by_h.get("5")
+                if not isinstance(h1_payload, dict) or not isinstance(h5_payload, dict):
+                    continue
+
+                audit_rows.append(
+                    build_symbol_audit_row(
+                        symbol=sym,
+                        asof=audit_asof,
+                        current_payload=row,
+                        h1_payload=h1_payload,
+                        h5_payload=h5_payload,
+                        is_held=sym in held_set,
+                    )
+                )
+
+            if audit_rows:
+                sys.stdout.write(render_glyph_audit_overview(audit_rows) + "\n\n")
+        except Exception:
+            pass
+
         console2 = Console()
         t = Table(
             title="Overview (A–E totals per universe)",
