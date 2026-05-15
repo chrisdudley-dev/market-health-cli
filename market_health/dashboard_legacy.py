@@ -3537,11 +3537,6 @@ def main() -> int:
     # 2) Pi Grid
     # OVERVIEW_AE_FROM_COMPUTE_SCORES_V2
     try:
-        from rich.console import Console
-        from rich.table import Table
-        from rich.text import Text
-        from rich import box
-
         inputs = rec_doc.get("inputs") if isinstance(rec_doc, dict) else None
         period = (
             str(inputs.get("period"))
@@ -3649,26 +3644,6 @@ def main() -> int:
                     row["d1"] = float(h1_score) - current_utility
                     row["d5"] = float(h5_score) - current_utility
 
-        def _style(val, denom):
-            if denom == 12:
-                if val >= 8:
-                    return "bold green"
-                if val >= 4:
-                    return "bold yellow"
-                return "bold red"
-            if denom == 60:
-                if val >= 40:
-                    return "bold green"
-                if val >= 20:
-                    return "bold yellow"
-                return "bold red"
-            return "bold"
-
-        def _cell(val, denom):
-            t = Text(f"{val}/{denom}")
-            t.stylize(_style(val, denom))
-            return t
-
         try:
             from market_health.forecast_audit import (
                 build_symbol_audit_row,
@@ -3723,39 +3698,6 @@ def main() -> int:
         except Exception:
             pass
 
-        console2 = Console()
-        t = Table(
-            title="Overview (A–E totals per universe)",
-            box=box.HEAVY_HEAD,
-            header_style="bold cyan",
-        )
-        t.add_column("Sym", style="bold cyan", no_wrap=True)
-        for k in ("A", "B", "C", "D", "E"):
-            t.add_column(k, justify="right")
-        t.add_column("Total", justify="right")
-
-        for sym in overview_order:
-            r = by2.get(sym)
-            if not r:
-                continue
-            a = _cat_sum(r, "A")
-            b = _cat_sum(r, "B")
-            c0 = _cat_sum(r, "C")
-            d = _cat_sum(r, "D")
-            e = _cat_sum(r, "E")
-            total = a + b + c0 + d + e
-            t.add_row(
-                sym,
-                _cell(a, 12),
-                _cell(b, 12),
-                _cell(c0, 12),
-                _cell(d, 12),
-                _cell(e, 12),
-                _cell(total, 60),
-            )
-
-        console2.print(t)
-        console2.print()
     except Exception:
         pass
     # --- end OVERVIEW_AE_FROM_SNAPSHOT_V2 ---
