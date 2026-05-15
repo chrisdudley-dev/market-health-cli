@@ -448,18 +448,7 @@ def _forecast_score_to_current_utility(forecast_score, current_utility):
         return None
     if abs(fs) > 1.000001:
         fs = fs / 100.0
-    fs = max(0.0, min(1.0, fs))
-
-    try:
-        cur = float(current_utility)
-    except Exception:
-        return fs
-    if abs(cur) > 1.000001:
-        cur = cur / 100.0
-    cur = max(0.0, min(1.0, cur))
-
-    anchored = cur + (fs - 0.50)
-    return max(0.0, min(1.0, anchored))
+    return max(0.0, min(1.0, fs))
 
 
 def _blend_from_components(c_val, h1_val, h5_val):
