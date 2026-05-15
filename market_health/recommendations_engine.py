@@ -127,44 +127,16 @@ def _forecast_payload_for(
     return raw if isinstance(raw, dict) else None
 
 
-def _forecast_utility(payload: Any, current_utility: Any = None) -> float | None:
+def _forecast_utility(payload: Any, *, current_utility: float) -> Optional[float]:
     if not isinstance(payload, dict):
         return None
-
-    score = None
-    for key in ("forecast_score", "score", "utility", "blend", "blended", "current"):
-        val = payload.get(key)
-        if isinstance(val, (int, float)):
-            score = float(val)
-            break
-        if isinstance(val, str):
-            txt = val.strip().replace("%", "")
-            if not txt:
-                continue
-            try:
-                score = float(txt)
-                break
-            except Exception:
-                continue
-
-    if score is None:
+    score = payload.get("forecast_score")
+    if isinstance(score, bool) or not isinstance(score, (int, float)):
         return None
-
+    score = float(score)
     if abs(score) > 1.000001:
         score = score / 100.0
-    score = max(0.0, min(1.0, score))
-
-    # Forecast is neutral at 0.50. Anchor horizon utility around current C.
-    if not isinstance(current_utility, (int, float)):
-        return score
-
-    cur = float(current_utility)
-    if abs(cur) > 1.000001:
-        cur = cur / 100.0
-    cur = max(0.0, min(1.0, cur))
-
-    anchored = cur + (score - 0.50)
-    return max(0.0, min(1.0, anchored))
+    return max(0.0, min(1.0, score))
 
 
 def _blend_utility_diagnostic(

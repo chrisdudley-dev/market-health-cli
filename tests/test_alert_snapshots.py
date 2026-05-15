@@ -234,9 +234,9 @@ def test_collect_derives_scores_from_nested_ui_contract_payloads() -> None:
     snap = snapshots[0]
     assert snap.symbol == "SPY"
     assert round(snap.current_score or 0, 2) == 56.67
-    assert round(snap.h1_score or 0, 2) == 68.33
-    assert round(snap.h5_score or 0, 2) == 61.67
-    assert round(snap.blend_score or 0, 2) == 60.83
+    assert round(snap.h1_score or 0, 2) == 61.67
+    assert round(snap.h5_score or 0, 2) == 55.0
+    assert round(snap.blend_score or 0, 2) == 57.5
     assert snap.state == "DMG,OH,BRK"
     assert snap.sup_atr == 0.25
     assert snap.res_atr == 0.75

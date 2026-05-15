@@ -182,11 +182,7 @@ def _forecast_utility(
     if score is None:
         return None
 
-    if current_utility is None:
-        return float(score)
-
-    anchored = float(current_utility) + (float(score) - 0.50)
-    return max(0.0, min(1.0, anchored))
+    return max(0.0, min(1.0, float(score)))
 
 
 def _blend_utility(
