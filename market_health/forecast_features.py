@@ -375,7 +375,15 @@ def rolling_correlation(
 ) -> List[Optional[float]]:
     if window <= 1:
         raise ValueError("window must be >= 2")
-    _require_same_length(x, y)
+
+    # Live vendor data can occasionally return one symbol with a missing or
+    # extra bar versus SPY. Correlation is a risk feature, not a hard dashboard
+    # dependency, so align on trailing overlap instead of crashing.
+    if len(x) != len(y):
+        n0 = min(len(x), len(y))
+        x = list(x)[-n0:]
+        y = list(y)[-n0:]
+
     xx = [None if v is None else float(v) for v in x]
     yy = [None if v is None else float(v) for v in y]
     n = len(xx)
