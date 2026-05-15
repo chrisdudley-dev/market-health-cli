@@ -1,7 +1,12 @@
+import json
+
 from market_health.forecast_audit import (
     build_category_audit_cell,
     build_symbol_audit_row,
     category_patterns_from_payloads,
+    forecast_audit_document,
+    symbol_audit_row_to_dict,
+    write_forecast_audit_json,
 )
 
 
@@ -161,3 +166,78 @@ def test_invalid_cell_makes_symbol_row_invalid_but_still_checksumed() -> None:
     assert row.cells["C"].display_token == "BAD"
     assert row.cells["C"].error == "category C check 1 score must be 0, 1, or 2"
     assert len(row.checksum) == 4
+
+
+def test_symbol_audit_row_serializes_for_export() -> None:
+    current = _payload_from_patterns("synth", 0)
+    h1 = _payload_from_patterns("synth", 1)
+    h5 = _payload_from_patterns("synth", 2)
+
+    row = build_symbol_audit_row(
+        symbol="synth",
+        asof="2026-05-15T14:30:00Z",
+        current_payload=current,
+        h1_payload=h1,
+        h5_payload=h5,
+        is_held=True,
+    )
+
+    exported = symbol_audit_row_to_dict(row)
+
+    assert exported["symbol"] == "SYNTH"
+    assert exported["is_held"] is True
+    assert exported["valid"] is True
+    assert exported["cells"]["A"]["token"] == "A=699:+1+++c"
+    assert exported["cells"]["A"]["display_token"] == "699:+1+++c"
+    assert exported["cells"]["A"]["totals"] == [6, 9, 9]
+    assert exported["display_cells"]["A"] == "699:+1+++c"
+    assert exported["canonical_tokens"]["A"] == "A=699:+1+++c"
+
+
+def test_forecast_audit_document_has_stable_v1_shape() -> None:
+    current = _payload_from_patterns("synth", 0)
+    h1 = _payload_from_patterns("synth", 1)
+    h5 = _payload_from_patterns("synth", 2)
+
+    row = build_symbol_audit_row(
+        symbol="synth",
+        asof="2026-05-15T14:30:00Z",
+        current_payload=current,
+        h1_payload=h1,
+        h5_payload=h5,
+    )
+
+    doc = forecast_audit_document([row], asof="2026-05-15T14:30:00Z")
+
+    assert doc["schema"] == "forecast_audit.v1"
+    assert doc["glyph_spec_version"] == "GlyphSpec v1"
+    assert doc["asof"] == "2026-05-15T14:30:00Z"
+    assert doc["columns"] == ["Sym", "A", "B", "C", "D", "E", "ck"]
+    assert doc["row_count"] == 1
+    assert doc["rows"][0]["symbol"] == "SYNTH"
+
+
+def test_write_forecast_audit_json_round_trips(tmp_path) -> None:
+    current = _payload_from_patterns("synth", 0)
+    h1 = _payload_from_patterns("synth", 1)
+    h5 = _payload_from_patterns("synth", 2)
+
+    row = build_symbol_audit_row(
+        symbol="synth",
+        asof="2026-05-15T14:30:00Z",
+        current_payload=current,
+        h1_payload=h1,
+        h5_payload=h5,
+    )
+
+    out = write_forecast_audit_json(
+        tmp_path / "forecast_audit.v1.json",
+        [row],
+        asof="2026-05-15T14:30:00Z",
+    )
+
+    loaded = json.loads(out.read_text(encoding="utf-8"))
+
+    assert loaded["schema"] == "forecast_audit.v1"
+    assert loaded["row_count"] == 1
+    assert loaded["rows"][0]["cells"]["A"]["token"] == "A=699:+1+++c"
