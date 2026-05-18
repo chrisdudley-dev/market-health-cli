@@ -58,6 +58,16 @@ def _run_status(db: Path, run_id: int) -> str:
     return row[0]
 
 
+def _run_details(db: Path, run_id: int) -> dict:
+    conn = sqlite3.connect(str(db))
+    row = conn.execute(
+        "SELECT details_json FROM runs WHERE id = ?", (run_id,)
+    ).fetchone()
+    conn.close()
+    assert row is not None
+    return json.loads(row[0] or "{}")
+
+
 def test_runner_first_run_writes_snapshots_without_inventory_storm(
     tmp_path: Path,
 ) -> None:
@@ -140,7 +150,7 @@ def test_runner_records_forecast_divergence_alert_and_suppresses_duplicate(
     assert rows[0][1] == "held_forecast_divergence"
 
 
-def test_runner_refresh_failure_returns_exit_code_2(tmp_path: Path) -> None:
+def test_runner_refresh_failure_without_ui_returns_exit_code_2(tmp_path: Path) -> None:
     db = tmp_path / "alerts.sqlite"
     ui = tmp_path / "missing.json"
 
@@ -156,6 +166,31 @@ def test_runner_refresh_failure_returns_exit_code_2(tmp_path: Path) -> None:
     assert result.status == "failed"
     assert _run_status(db, result.run_id) == "failed"
     assert count_rows(db, "system_events") == 1
+
+
+def test_runner_refresh_failure_with_existing_ui_uses_last_known_good_artifact(
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / "alerts.sqlite"
+    ui = tmp_path / "market_health.ui.v1.json"
+    _write_ui(ui, state="clean")
+
+    result = run_once_alert_service(
+        AlertRunnerConfig(
+            db_path=db, ui_path=ui, telegram_mode="disabled", no_refresh=False
+        ),
+        refresh_fn=lambda: 7,
+        now_utc="2026-05-01T15:00:00Z",
+    )
+
+    assert result.exit_code == 0
+    assert result.status == "success"
+    assert _run_status(db, result.run_id) == "success"
+    assert result.snapshots_written == 1
+    assert count_rows(db, "system_events") == 1
+    details = _run_details(db, result.run_id)
+    assert details["refresh_exit_code"] == 7
+    assert details["using_last_known_good_ui"] is True
 
 
 def test_runner_uses_injected_telegram_sender_in_test_mode(tmp_path: Path) -> None:
