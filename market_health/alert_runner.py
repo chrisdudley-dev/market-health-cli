@@ -230,6 +230,9 @@ def run_once_alert_service(
 
     try:
         refresh_code = _run_refresh(config, refresh_fn)
+        refresh_details = {}
+        ui_doc = None
+
         if refresh_code != 0:
             message = f"refresh failed with exit code {refresh_code}"
             add_system_event(
@@ -241,22 +244,35 @@ def run_once_alert_service(
                 ts_utc=now_utc,
                 payload={"exit_code": refresh_code},
             )
-            finish_run(
-                db_path=config.db_path,
-                run_id=run_id,
-                status="failed",
-                finished_at_utc=now_utc,
-                details={"refresh_exit_code": refresh_code},
-                error_text=message,
-            )
-            return AlertRunResult(
-                exit_code=2, run_id=run_id, status="failed", error_text=message
-            )
+
+            try:
+                ui_doc = load_ui_doc(config.ui_path)
+            except Exception:
+                finish_run(
+                    db_path=config.db_path,
+                    run_id=run_id,
+                    status="failed",
+                    finished_at_utc=now_utc,
+                    details={
+                        "refresh_exit_code": refresh_code,
+                        "using_last_known_good_ui": False,
+                    },
+                    error_text=message,
+                )
+                return AlertRunResult(
+                    exit_code=2, run_id=run_id, status="failed", error_text=message
+                )
+
+            refresh_details = {
+                "refresh_exit_code": refresh_code,
+                "using_last_known_good_ui": True,
+            }
 
         previous = _read_previous_snapshots(
             db_path=config.db_path, before_run_id=run_id
         )
-        ui_doc = load_ui_doc(config.ui_path)
+        if ui_doc is None:
+            ui_doc = load_ui_doc(config.ui_path)
         current_snapshots = collect_held_position_snapshots(ui_doc, ts_utc=now_utc)
 
         row_ids = write_held_position_snapshots(
@@ -294,17 +310,20 @@ def run_once_alert_service(
                 **kwargs,
             )
 
+        details = {
+            "snapshots_written": len(row_ids),
+            "candidates": len(candidates),
+            "allowed": len(allowed),
+            "suppressed": len(suppressed),
+        }
+        details.update(refresh_details)
+
         finish_run(
             db_path=config.db_path,
             run_id=run_id,
             status="success",
             finished_at_utc=now_utc,
-            details={
-                "snapshots_written": len(row_ids),
-                "candidates": len(candidates),
-                "allowed": len(allowed),
-                "suppressed": len(suppressed),
-            },
+            details=details,
         )
         return AlertRunResult(
             exit_code=0,
