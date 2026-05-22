@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import date
 from pathlib import Path
 
 from market_health.calibration.defaults import (
@@ -9,6 +10,16 @@ from market_health.calibration.defaults import (
     default_output_root,
 )
 from market_health.calibration.engine_metadata import capture_engine_metadata
+from market_health.calibration.price_cache import read_historical_price_cache_csv
+from market_health.calibration.range_failure_accounting import (
+    run_range_replay_with_failure_accounting,
+)
+from market_health.calibration.range_progress import (
+    range_progress_path,
+    read_range_progress,
+    write_range_progress,
+)
+from market_health.calibration.range_request import build_range_replay_request
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,6 +28,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Validate replay scaffold defaults.")
     doctor.add_argument("--out", type=Path, default=default_output_root())
+
+    range_replay = subparsers.add_parser(
+        "range-replay",
+        help="Run fixture-backed range replay over a historical price cache.",
+    )
+    range_replay.add_argument("--price-cache", type=Path, required=True)
+    range_replay.add_argument("--start-date", type=_parse_date, required=True)
+    range_replay.add_argument("--end-date", type=_parse_date, required=True)
+    range_replay.add_argument("--symbols", nargs="+", required=True)
+    range_replay.add_argument("--lookback-rows", type=int, default=20)
+    range_replay.add_argument("--out", type=Path, default=default_output_root())
+    range_replay.add_argument("--run-id", default="range-replay")
+    range_replay.add_argument("--resume", action="store_true")
+    range_replay.add_argument("--fail-fast", action="store_true")
 
     return parser
 
@@ -35,7 +60,61 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
+    if args.command == "range-replay":
+        payload = _run_range_replay_command(args)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
     raise AssertionError(f"unhandled command: {args.command}")
+
+
+def _run_range_replay_command(args: argparse.Namespace) -> dict[str, object]:
+    output_root = args.out.expanduser()
+    assert_not_live_runtime_path(output_root)
+
+    price_cache_path = args.price_cache.expanduser()
+    price_cache = read_historical_price_cache_csv(
+        price_cache_path,
+        symbols=args.symbols,
+    )
+    request = build_range_replay_request(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        symbols=args.symbols,
+        lookback_rows=args.lookback_rows,
+        output_root=output_root,
+    )
+
+    progress = None
+    progress_path = range_progress_path(output_root)
+    if args.resume and progress_path.exists():
+        progress = read_range_progress(output_root)
+
+    result = run_range_replay_with_failure_accounting(
+        request=request,
+        price_rows=price_cache.rows,
+        run_id=args.run_id,
+        progress=progress,
+        fail_fast=args.fail_fast,
+    )
+    written_progress_path = write_range_progress(output_root, result.progress)
+
+    return {
+        "status": "ok" if result.failed_date_count == 0 else "completed_with_failures",
+        "command": "range-replay",
+        "price_cache_path": str(price_cache_path),
+        "progress_path": str(written_progress_path),
+        "result": result.to_record(),
+    }
+
+
+def _parse_date(value: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            f"expected YYYY-MM-DD date, got: {value}"
+        ) from exc
 
 
 if __name__ == "__main__":
