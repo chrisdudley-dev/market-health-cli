@@ -19,7 +19,11 @@ LIVE_RUNTIME_PATH_MARKERS = (
 def default_output_root() -> Path:
     """Return the default isolated calibration output root."""
     xdg_cache_home = os.environ.get("XDG_CACHE_HOME")
-    base = Path(xdg_cache_home).expanduser() if xdg_cache_home else Path.home() / ".cache"
+    base = (
+        Path(xdg_cache_home).expanduser()
+        if xdg_cache_home
+        else Path.home() / ".cache"
+    )
     return base / DEFAULT_RELATIVE_OUTPUT_ROOT
 
 
