@@ -12,6 +12,9 @@ LIVE_RUNTIME_PATH_MARKERS = (
     "/.cache/jerboa/candidate",
     "/.cache/jerboa/swap",
     "/.cache/jerboa/dashboard",
+    "/.cache/jerboa/broker",
+    "/.cache/jerboa/runtime",
+    "/.cache/jerboa/alerts",
     "/.config/jerboa",
 )
 
