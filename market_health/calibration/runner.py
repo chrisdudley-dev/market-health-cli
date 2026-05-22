@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from typing import Iterable
 
 from market_health.calibration.defaults import assert_not_live_runtime_path
 from market_health.calibration.engine_metadata import capture_engine_metadata
@@ -18,6 +19,14 @@ from market_health.calibration.status import (
     new_replay_status,
     write_status,
 )
+
+from market_health.calibration.market_data import (
+    build_market_data_diagnostics,
+    market_data_diagnostics_path,
+    write_market_data_diagnostics,
+)
+from market_health.calibration.price_cache import HistoricalPriceRow
+from market_health.calibration.warmup_window import resolve_replay_warmup_window
 
 
 @dataclass(frozen=True)
@@ -107,3 +116,61 @@ def run_fixture_replay(
         sqlite_path=sqlite_path,
         engine_metadata=engine_metadata,
     )
+
+
+def run_fixture_market_data_replay(
+    output_root: Path,
+    replay_dates: Iterable[date],
+    symbols: Iterable[str],
+    price_rows: Iterable[HistoricalPriceRow],
+    *,
+    lookback_rows: int,
+    run_id: str = "fixture-market-data-run",
+) -> ReplayRunResult:
+    """Run fixture replay from historical market-data availability."""
+    replay_date_tuple = tuple(replay_dates)
+    requested_symbols = _normalize_market_data_symbols(symbols)
+    price_row_tuple = tuple(price_rows)
+
+    replay_symbols: set[str] = set()
+    diagnostics_paths: list[Path] = []
+
+    for replay_date in replay_date_tuple:
+        window = resolve_replay_warmup_window(
+            price_row_tuple,
+            replay_date=replay_date,
+            lookback_rows=lookback_rows,
+            symbols=requested_symbols,
+        )
+        diagnostics = build_market_data_diagnostics(window)
+        for symbol in diagnostics.symbols:
+            if symbol.has_replay_date_row:
+                replay_symbols.add(symbol.symbol)
+
+        diagnostics_path = market_data_diagnostics_path(
+            output_root,
+            replay_date,
+        )
+        write_market_data_diagnostics(diagnostics_path, diagnostics)
+        diagnostics_paths.append(diagnostics_path)
+
+    result = run_fixture_replay(
+        output_root=output_root,
+        replay_dates=replay_date_tuple,
+        symbols=tuple(sorted(replay_symbols)),
+        run_id=run_id,
+    )
+
+    return result
+
+
+def _normalize_market_data_symbols(symbols: Iterable[str]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for symbol in symbols:
+        value = symbol.strip().upper()
+        if not value or value in seen:
+            continue
+        normalized.append(value)
+        seen.add(value)
+    return tuple(normalized)
