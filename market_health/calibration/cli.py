@@ -5,6 +5,16 @@ import json
 from datetime import date
 from pathlib import Path
 
+from market_health.calibration.authoritative_dataset_artifacts import (
+    write_authoritative_dataset_artifacts,
+)
+from market_health.calibration.authoritative_dataset_builder import (
+    build_authoritative_replay_dataset_rows,
+)
+from market_health.calibration.check_output import (
+    CheckReplayRow,
+    build_fixture_check_replay_rows,
+)
 from market_health.calibration.defaults import (
     assert_not_live_runtime_path,
     default_output_root,
@@ -20,6 +30,7 @@ from market_health.calibration.range_progress import (
     write_range_progress,
 )
 from market_health.calibration.range_request import build_range_replay_request
+from market_health.calibration.range_runner import RangeReplayResult, run_range_replay
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,6 +54,23 @@ def build_parser() -> argparse.ArgumentParser:
     range_replay.add_argument("--resume", action="store_true")
     range_replay.add_argument("--fail-fast", action="store_true")
 
+    authoritative_dataset = subparsers.add_parser(
+        "authoritative-dataset",
+        help="Build the authoritative replay dataset from a historical price cache.",
+    )
+    authoritative_dataset.add_argument("--price-cache", type=Path, required=True)
+    authoritative_dataset.add_argument("--start-date", type=_parse_date, required=True)
+    authoritative_dataset.add_argument("--end-date", type=_parse_date, required=True)
+    authoritative_dataset.add_argument("--symbols", nargs="+", required=True)
+    authoritative_dataset.add_argument("--lookback-rows", type=int, default=20)
+    authoritative_dataset.add_argument(
+        "--out", type=Path, default=default_output_root()
+    )
+    authoritative_dataset.add_argument(
+        "--dataset-run-id",
+        default="authoritative-replay-dataset",
+    )
+
     return parser
 
 
@@ -62,6 +90,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "range-replay":
         payload = _run_range_replay_command(args)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "authoritative-dataset":
+        payload = _run_authoritative_dataset_command(args)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
@@ -106,6 +139,70 @@ def _run_range_replay_command(args: argparse.Namespace) -> dict[str, object]:
         "progress_path": str(written_progress_path),
         "result": result.to_record(),
     }
+
+
+def _run_authoritative_dataset_command(args: argparse.Namespace) -> dict[str, object]:
+    output_root = args.out.expanduser()
+    assert_not_live_runtime_path(output_root)
+
+    price_cache_path = args.price_cache.expanduser()
+    price_cache = read_historical_price_cache_csv(
+        price_cache_path,
+        symbols=args.symbols,
+    )
+    range_request = build_range_replay_request(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        symbols=args.symbols,
+        lookback_rows=args.lookback_rows,
+        output_root=output_root,
+    )
+    range_result = run_range_replay(
+        request=range_request,
+        price_rows=price_cache.rows,
+    )
+    check_rows = _build_authoritative_dataset_check_rows(range_result)
+    dataset_rows = build_authoritative_replay_dataset_rows(
+        range_result=range_result,
+        check_rows=check_rows,
+        price_rows=price_cache.rows,
+        dataset_run_id=args.dataset_run_id,
+    )
+    artifacts = write_authoritative_dataset_artifacts(
+        output_root=output_root,
+        rows=dataset_rows,
+        dataset_run_id=args.dataset_run_id,
+    )
+
+    return {
+        "status": "ok",
+        "command": "authoritative-dataset",
+        "price_cache_path": str(price_cache_path),
+        "dataset_run_id": args.dataset_run_id,
+        "row_count": artifacts.row_count,
+        "artifacts": artifacts.to_record(),
+    }
+
+
+def _build_authoritative_dataset_check_rows(
+    range_result: RangeReplayResult,
+) -> tuple[CheckReplayRow, ...]:
+    rows: list[CheckReplayRow] = []
+    for result in range_result.results:
+        eligible_symbols = result.asof_input_record.get("eligible_symbols")
+        if isinstance(eligible_symbols, list | tuple):
+            symbols = tuple(str(symbol) for symbol in eligible_symbols)
+        else:
+            symbols = tuple(row.symbol for row in result.rows)
+
+        rows.extend(
+            build_fixture_check_replay_rows(
+                replay_date=result.replay_date,
+                symbols=symbols,
+            )
+        )
+
+    return tuple(rows)
 
 
 def _parse_date(value: str) -> date:
