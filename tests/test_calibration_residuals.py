@@ -4,7 +4,10 @@ import unittest
 from datetime import date
 
 from market_health.calibration.residuals import (
+    RESIDUAL_ATTRIBUTION_COLUMNS,
+    RESIDUAL_ATTRIBUTION_SCHEMA_VERSION,
     RESIDUAL_SCHEMA_VERSION,
+    ResidualAttributionRow,
     build_residual_observation,
     forecast_score_for_horizon,
     residual_direction,
@@ -148,6 +151,106 @@ class CalibrationResidualsTest(unittest.TestCase):
         self.assertEqual(summary.count, 2)
         self.assertEqual(summary.mean_residual, 0.5)
         self.assertEqual(summary.hot_count, 2)
+
+
+class ResidualAttributionRowTest(unittest.TestCase):
+    def test_record_has_stable_shape(self) -> None:
+        residual_row = residual_attribution_row()
+
+        record = residual_row.to_record()
+
+        self.assertEqual(tuple(record.keys()), RESIDUAL_ATTRIBUTION_COLUMNS)
+        self.assertEqual(record["schema_version"], RESIDUAL_ATTRIBUTION_SCHEMA_VERSION)
+        self.assertEqual(record["replay_date"], "2026-05-20")
+        self.assertEqual(record["symbol"], "SPY")
+        self.assertEqual(record["horizon"], "H1")
+        self.assertEqual(record["target_date"], "2026-05-21")
+        self.assertEqual(record["forecast_score"], 8.5)
+        self.assertEqual(record["realized_current_score"], 8.0)
+        self.assertEqual(record["residual"], 0.5)
+        self.assertEqual(record["residual_direction"], "hot")
+        self.assertEqual(record["category_slot"], "B4")
+        self.assertEqual(record["dataset_run_id"], "dataset-test")
+        self.assertEqual(record["residual_attribution_run_id"], "m52-test")
+
+    def test_normalizes_symbol_horizon_and_category(self) -> None:
+        residual_row = residual_attribution_row(
+            symbol=" spy ",
+            horizon=" h5 ",
+            category=" b ",
+            slot=5,
+            forecast_score=7.0,
+            realized_current_score=7.5,
+            residual=-0.5,
+            residual_direction="cold",
+        )
+
+        self.assertEqual(residual_row.symbol, "SPY")
+        self.assertEqual(residual_row.horizon, "H5")
+        self.assertEqual(residual_row.category, "B")
+        self.assertEqual(residual_row.category_slot, "B5")
+
+    def test_rejects_invalid_horizon(self) -> None:
+        with self.assertRaisesRegex(ValueError, "horizon"):
+            residual_attribution_row(horizon="C")
+
+    def test_rejects_direction_that_does_not_match_residual_sign(self) -> None:
+        with self.assertRaisesRegex(ValueError, "direction"):
+            residual_attribution_row(
+                residual=0.5,
+                residual_direction="cold",
+            )
+
+    def test_rejects_residual_that_does_not_match_scores(self) -> None:
+        with self.assertRaisesRegex(ValueError, "forecast_score minus"):
+            residual_attribution_row(
+                forecast_score=8.5,
+                realized_current_score=8.0,
+                residual=0.25,
+                residual_direction="hot",
+            )
+
+    def test_rejects_invalid_schema_version(self) -> None:
+        with self.assertRaisesRegex(ValueError, "schema version"):
+            residual_attribution_row(schema_version="bad.version")
+
+
+def residual_attribution_row(
+    *,
+    symbol: str = "SPY",
+    horizon: str = "H1",
+    category: str = "B",
+    slot: int = 4,
+    forecast_score: float = 8.5,
+    realized_current_score: float = 8.0,
+    residual: float = 0.5,
+    residual_direction: str = "hot",
+    schema_version: str = RESIDUAL_ATTRIBUTION_SCHEMA_VERSION,
+) -> ResidualAttributionRow:
+    return ResidualAttributionRow(
+        replay_date=date(2026, 5, 20),
+        symbol=symbol,
+        horizon=horizon,
+        target_date=date(2026, 5, 21),
+        forecast_score=forecast_score,
+        realized_current_score=realized_current_score,
+        residual=residual,
+        residual_direction=residual_direction,
+        realized_return=0.03,
+        category=category,
+        slot=slot,
+        glyph="+",
+        named_check="trend_confirmed",
+        check_score=4.1,
+        replayability_class="replayable",
+        measurement_status="measured",
+        source_module="fixture.module",
+        function_name="check_b4",
+        audit_token="single-date-asof:2026-05-20:SPY:1:100.0000",
+        dataset_run_id="dataset-test",
+        residual_attribution_run_id="m52-test",
+        schema_version=schema_version,
+    )
 
 
 if __name__ == "__main__":
