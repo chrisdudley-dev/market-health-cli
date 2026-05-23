@@ -23,6 +23,10 @@ RESIDUAL_COLD = "cold"
 RESIDUAL_NEUTRAL = "neutral"
 RESIDUAL_DIRECTIONS = (RESIDUAL_HOT, RESIDUAL_COLD, RESIDUAL_NEUTRAL)
 
+RESIDUAL_ATTRIBUTION_SUMMARY_SCHEMA_VERSION = (
+    "calibration_residual_attribution_summary.v1"
+)
+
 RESIDUAL_ATTRIBUTION_COLUMNS = (
     "schema_version",
     "replay_date",
@@ -47,6 +51,27 @@ RESIDUAL_ATTRIBUTION_COLUMNS = (
     "audit_token",
     "dataset_run_id",
     "authoritative_dataset_schema_version",
+    "residual_attribution_run_id",
+)
+
+RESIDUAL_ATTRIBUTION_SUMMARY_COLUMNS = (
+    "schema_version",
+    "group_name",
+    "group_value",
+    "horizon",
+    "category",
+    "slot",
+    "category_slot",
+    "glyph",
+    "named_check",
+    "replayability_class",
+    "measurement_status",
+    "observation_count",
+    "mean_residual",
+    "mean_abs_residual",
+    "hot_count",
+    "cold_count",
+    "neutral_count",
     "residual_attribution_run_id",
 )
 
@@ -206,6 +231,79 @@ class ResidualAttributionRow:
 
 
 @dataclass(frozen=True)
+class ResidualAttributionSummaryRow:
+    group_name: str
+    group_value: str
+    observation_count: int
+    mean_residual: float
+    mean_abs_residual: float
+    hot_count: int
+    cold_count: int
+    neutral_count: int
+    residual_attribution_run_id: str
+    horizon: str | None = None
+    category: str | None = None
+    slot: int | None = None
+    category_slot: str | None = None
+    glyph: str | None = None
+    named_check: str | None = None
+    replayability_class: str | None = None
+    measurement_status: str | None = None
+    schema_version: str = RESIDUAL_ATTRIBUTION_SUMMARY_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != RESIDUAL_ATTRIBUTION_SUMMARY_SCHEMA_VERSION:
+            raise ValueError(
+                "unsupported residual attribution summary schema version: "
+                f"{self.schema_version}"
+            )
+        if not self.group_name.strip():
+            raise ValueError("residual summary group_name is required")
+        if not self.group_value.strip():
+            raise ValueError("residual summary group_value is required")
+        if self.observation_count <= 0:
+            raise ValueError("residual summary observation_count must be positive")
+        if (
+            self.hot_count + self.cold_count + self.neutral_count
+            != self.observation_count
+        ):
+            raise ValueError(
+                "residual summary direction counts must equal observation_count"
+            )
+        if not self.residual_attribution_run_id.strip():
+            raise ValueError("residual summary residual_attribution_run_id is required")
+
+        if self.horizon is not None and self.horizon not in VALID_HORIZONS:
+            raise ValueError(f"unsupported residual summary horizon: {self.horizon}")
+        if self.category is not None and self.category not in {"A", "B", "C", "D", "E"}:
+            raise ValueError(f"unsupported residual summary category: {self.category}")
+        if self.slot is not None and not 1 <= self.slot <= 6:
+            raise ValueError(f"unsupported residual summary slot: {self.slot}")
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "group_name": self.group_name,
+            "group_value": self.group_value,
+            "horizon": self.horizon,
+            "category": self.category,
+            "slot": self.slot,
+            "category_slot": self.category_slot,
+            "glyph": self.glyph,
+            "named_check": self.named_check,
+            "replayability_class": self.replayability_class,
+            "measurement_status": self.measurement_status,
+            "observation_count": self.observation_count,
+            "mean_residual": self.mean_residual,
+            "mean_abs_residual": self.mean_abs_residual,
+            "hot_count": self.hot_count,
+            "cold_count": self.cold_count,
+            "neutral_count": self.neutral_count,
+            "residual_attribution_run_id": self.residual_attribution_run_id,
+        }
+
+
+@dataclass(frozen=True)
 class ResidualSummary:
     schema_version: str
     group: dict[str, str | None]
@@ -348,6 +446,85 @@ def _authoritative_residual_sort_key(
         target_date,
         row.named_check,
     )
+
+
+DEFAULT_RESIDUAL_ATTRIBUTION_SUMMARY_GROUPS = (
+    ("horizon",),
+    ("horizon", "category"),
+    ("horizon", "category_slot"),
+    ("horizon", "category_slot", "glyph"),
+    ("horizon", "named_check"),
+    ("horizon", "replayability_class"),
+    ("horizon", "measurement_status"),
+)
+
+
+def summarize_residual_attribution_rows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    groupings: Sequence[Sequence[str]] = DEFAULT_RESIDUAL_ATTRIBUTION_SUMMARY_GROUPS,
+) -> tuple[ResidualAttributionSummaryRow, ...]:
+    source_rows = tuple(rows)
+    summaries: list[ResidualAttributionSummaryRow] = []
+
+    for grouping in groupings:
+        buckets: dict[tuple[object, ...], list[ResidualAttributionRow]] = defaultdict(
+            list
+        )
+        for row in source_rows:
+            key = tuple(_residual_group_value(row, field) for field in grouping)
+            buckets[key].append(row)
+
+        for key, bucket in sorted(buckets.items(), key=lambda item: item[0]):
+            summaries.append(
+                _build_residual_attribution_summary_row(grouping, key, bucket)
+            )
+
+    return tuple(summaries)
+
+
+def _build_residual_attribution_summary_row(
+    grouping: Sequence[str],
+    key: tuple[object, ...],
+    bucket: Sequence[ResidualAttributionRow],
+) -> ResidualAttributionSummaryRow:
+    residuals = [row.residual for row in bucket]
+    count = len(bucket)
+    first = bucket[0]
+    group_values = dict(zip(grouping, key, strict=True))
+
+    return ResidualAttributionSummaryRow(
+        group_name="+".join(grouping),
+        group_value="|".join(str(value) for value in key),
+        horizon=_summary_field_value(group_values, "horizon"),
+        category=_summary_field_value(group_values, "category"),
+        slot=_summary_field_value(group_values, "slot"),
+        category_slot=_summary_field_value(group_values, "category_slot"),
+        glyph=_summary_field_value(group_values, "glyph"),
+        named_check=_summary_field_value(group_values, "named_check"),
+        replayability_class=_summary_field_value(group_values, "replayability_class"),
+        measurement_status=_summary_field_value(group_values, "measurement_status"),
+        observation_count=count,
+        mean_residual=round(sum(residuals) / count, 8),
+        mean_abs_residual=round(sum(abs(value) for value in residuals) / count, 8),
+        hot_count=sum(row.residual_direction == RESIDUAL_HOT for row in bucket),
+        cold_count=sum(row.residual_direction == RESIDUAL_COLD for row in bucket),
+        neutral_count=sum(row.residual_direction == RESIDUAL_NEUTRAL for row in bucket),
+        residual_attribution_run_id=first.residual_attribution_run_id,
+    )
+
+
+def _residual_group_value(row: ResidualAttributionRow, field: str) -> object:
+    if field == "category_slot":
+        return row.category_slot
+    return getattr(row, field)
+
+
+def _summary_field_value(
+    group_values: dict[str, object],
+    field: str,
+) -> object | None:
+    return group_values.get(field)
 
 
 def summarize_residuals(
