@@ -31,6 +31,13 @@ from market_health.calibration.range_progress import (
 )
 from market_health.calibration.range_request import build_range_replay_request
 from market_health.calibration.range_runner import RangeReplayResult, run_range_replay
+from market_health.calibration.residual_attribution_artifacts import (
+    write_residual_attribution_artifacts,
+)
+from market_health.calibration.residuals import (
+    build_residual_attribution_rows,
+    summarize_residual_attribution_rows,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -71,6 +78,25 @@ def build_parser() -> argparse.ArgumentParser:
         default="authoritative-replay-dataset",
     )
 
+    residual_attribution = subparsers.add_parser(
+        "residual-attribution",
+        help="Build residual attribution observations and summaries.",
+    )
+    residual_attribution.add_argument("--price-cache", type=Path, required=True)
+    residual_attribution.add_argument("--start-date", type=_parse_date, required=True)
+    residual_attribution.add_argument("--end-date", type=_parse_date, required=True)
+    residual_attribution.add_argument("--symbols", nargs="+", required=True)
+    residual_attribution.add_argument("--lookback-rows", type=int, default=20)
+    residual_attribution.add_argument("--out", type=Path, default=default_output_root())
+    residual_attribution.add_argument(
+        "--dataset-run-id",
+        default="authoritative-replay-dataset",
+    )
+    residual_attribution.add_argument(
+        "--residual-attribution-run-id",
+        default="residual-attribution",
+    )
+
     return parser
 
 
@@ -95,6 +121,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "authoritative-dataset":
         payload = _run_authoritative_dataset_command(args)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "residual-attribution":
+        payload = _run_residual_attribution_command(args)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
@@ -180,6 +211,58 @@ def _run_authoritative_dataset_command(args: argparse.Namespace) -> dict[str, ob
         "price_cache_path": str(price_cache_path),
         "dataset_run_id": args.dataset_run_id,
         "row_count": artifacts.row_count,
+        "artifacts": artifacts.to_record(),
+    }
+
+
+def _run_residual_attribution_command(args: argparse.Namespace) -> dict[str, object]:
+    output_root = args.out.expanduser()
+    assert_not_live_runtime_path(output_root)
+
+    price_cache_path = args.price_cache.expanduser()
+    price_cache = read_historical_price_cache_csv(
+        price_cache_path,
+        symbols=args.symbols,
+    )
+    range_request = build_range_replay_request(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        symbols=args.symbols,
+        lookback_rows=args.lookback_rows,
+        output_root=output_root,
+    )
+    range_result = run_range_replay(
+        request=range_request,
+        price_rows=price_cache.rows,
+    )
+    check_rows = _build_authoritative_dataset_check_rows(range_result)
+    dataset_rows = build_authoritative_replay_dataset_rows(
+        range_result=range_result,
+        check_rows=check_rows,
+        price_rows=price_cache.rows,
+        dataset_run_id=args.dataset_run_id,
+    )
+    residual_rows = build_residual_attribution_rows(
+        dataset_rows,
+        residual_attribution_run_id=args.residual_attribution_run_id,
+    )
+    summaries = summarize_residual_attribution_rows(residual_rows)
+    artifacts = write_residual_attribution_artifacts(
+        output_root,
+        rows=residual_rows,
+        summaries=summaries,
+        residual_attribution_run_id=args.residual_attribution_run_id,
+    )
+
+    return {
+        "status": "ok",
+        "command": "residual-attribution",
+        "price_cache_path": str(price_cache_path),
+        "dataset_run_id": args.dataset_run_id,
+        "residual_attribution_run_id": args.residual_attribution_run_id,
+        "dataset_row_count": len(dataset_rows),
+        "observation_count": artifacts.observation_count,
+        "summary_count": artifacts.summary_count,
         "artifacts": artifacts.to_record(),
     }
 
