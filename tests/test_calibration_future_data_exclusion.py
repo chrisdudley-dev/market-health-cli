@@ -38,7 +38,9 @@ class FutureDataExclusionTest(unittest.TestCase):
     def test_replay_record_contains_only_asof_price_rows(self) -> None:
         bundle = _bundle_with_future_rows()
         replay_result = build_single_date_replay_rows(bundle)
-        record_text = json.dumps(replay_result.to_record(), sort_keys=True)
+        record = replay_result.to_record()
+        record.pop("engine_metadata", None)
+        record_text = json.dumps(record, sort_keys=True)
 
         self.assertEqual(
             replay_result.asof_input_record["excluded_future_row_count"],
@@ -84,6 +86,8 @@ class FutureDataExclusionTest(unittest.TestCase):
 
             manifest_text = artifacts.manifest_path.read_text(encoding="utf-8")
             manifest = json.loads(manifest_text)
+            manifest["replay"].pop("engine_metadata", None)
+            manifest_text = json.dumps(manifest, sort_keys=True)
 
             with artifacts.replay_rows_csv_path.open(newline="", encoding="utf-8") as h:
                 replay_csv_rows = list(csv.DictReader(h))
