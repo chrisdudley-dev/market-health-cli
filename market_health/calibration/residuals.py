@@ -7,6 +7,8 @@ from datetime import date
 
 from market_health.calibration.authoritative_dataset import (
     AUTHORITATIVE_REPLAY_DATASET_SCHEMA_VERSION,
+    REALIZED_OUTCOME_AVAILABLE,
+    AuthoritativeReplayDatasetRow,
 )
 from market_health.calibration.check_inventory import REPLAYABILITY_CLASSES
 from market_health.calibration.check_output import MEASUREMENT_STATUSES
@@ -264,6 +266,87 @@ def build_residual_observation(
         slot=slot,
         glyph=glyph,
         named_check=named_check,
+    )
+
+
+def forecast_score_for_authoritative_row(
+    row: AuthoritativeReplayDatasetRow,
+) -> float:
+    horizon = row.horizon.upper()
+    if horizon == "H1":
+        return row.h1_score
+    if horizon == "H5":
+        return row.h5_score
+    raise ValueError(f"unsupported residual attribution horizon: {row.horizon}")
+
+
+def build_residual_attribution_rows(
+    authoritative_rows: Iterable[AuthoritativeReplayDatasetRow],
+    *,
+    residual_attribution_run_id: str = "residual-attribution",
+) -> tuple[ResidualAttributionRow, ...]:
+    residual_rows: list[ResidualAttributionRow] = []
+
+    for row in sorted(authoritative_rows, key=_authoritative_residual_sort_key):
+        if row.realized_outcome_status != REALIZED_OUTCOME_AVAILABLE:
+            continue
+
+        if row.target_date is None:
+            raise ValueError("available residual attribution row requires target_date")
+        if row.realized_current_score is None:
+            raise ValueError(
+                "available residual attribution row requires realized_current_score"
+            )
+        if row.realized_return is None:
+            raise ValueError(
+                "available residual attribution row requires realized_return"
+            )
+
+        forecast_score = forecast_score_for_authoritative_row(row)
+        residual = round(forecast_score - row.realized_current_score, 8)
+
+        residual_rows.append(
+            ResidualAttributionRow(
+                replay_date=row.replay_date,
+                symbol=row.symbol,
+                horizon=row.horizon,
+                target_date=row.target_date,
+                forecast_score=forecast_score,
+                realized_current_score=row.realized_current_score,
+                residual=residual,
+                residual_direction=residual_direction(residual),
+                realized_return=row.realized_return,
+                category=row.category,
+                slot=row.slot,
+                glyph=row.glyph,
+                named_check=row.named_check,
+                check_score=row.check_score,
+                replayability_class=row.replayability_class,
+                measurement_status=row.measurement_status,
+                source_module=row.source_module,
+                function_name=row.function_name,
+                audit_token=row.audit_token,
+                dataset_run_id=row.dataset_run_id,
+                authoritative_dataset_schema_version=row.schema_version,
+                residual_attribution_run_id=residual_attribution_run_id,
+            )
+        )
+
+    return tuple(residual_rows)
+
+
+def _authoritative_residual_sort_key(
+    row: AuthoritativeReplayDatasetRow,
+) -> tuple[str, str, str, int, str, str, str]:
+    target_date = "" if row.target_date is None else row.target_date.isoformat()
+    return (
+        row.replay_date.isoformat(),
+        row.symbol,
+        row.category,
+        row.slot,
+        row.horizon,
+        target_date,
+        row.named_check,
     )
 
 

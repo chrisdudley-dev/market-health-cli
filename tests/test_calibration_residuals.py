@@ -3,11 +3,18 @@ from __future__ import annotations
 import unittest
 from datetime import date
 
+from market_health.calibration.authoritative_dataset import (
+    REALIZED_OUTCOME_AVAILABLE,
+    REALIZED_OUTCOME_MISSING,
+    REALIZED_OUTCOME_NOT_APPLICABLE,
+    AuthoritativeReplayDatasetRow,
+)
 from market_health.calibration.residuals import (
     RESIDUAL_ATTRIBUTION_COLUMNS,
     RESIDUAL_ATTRIBUTION_SCHEMA_VERSION,
     RESIDUAL_SCHEMA_VERSION,
     ResidualAttributionRow,
+    build_residual_attribution_rows,
     build_residual_observation,
     forecast_score_for_horizon,
     residual_direction,
@@ -250,6 +257,160 @@ def residual_attribution_row(
         dataset_run_id="dataset-test",
         residual_attribution_run_id="m52-test",
         schema_version=schema_version,
+    )
+
+
+class ResidualAttributionBuilderTest(unittest.TestCase):
+    def test_builds_rows_from_available_authoritative_rows(self) -> None:
+        rows = build_residual_attribution_rows(
+            [
+                authoritative_dataset_row(
+                    horizon="H1",
+                    h1_score=8.5,
+                    realized_current_score=8.0,
+                    realized_return=0.03,
+                )
+            ],
+            residual_attribution_run_id="m52-builder-test",
+        )
+
+        self.assertEqual(len(rows), 1)
+        residual_row = rows[0]
+        self.assertEqual(residual_row.symbol, "SPY")
+        self.assertEqual(residual_row.horizon, "H1")
+        self.assertEqual(residual_row.forecast_score, 8.5)
+        self.assertEqual(residual_row.realized_current_score, 8.0)
+        self.assertEqual(residual_row.residual, 0.5)
+        self.assertEqual(residual_row.residual_direction, "hot")
+        self.assertEqual(residual_row.realized_return, 0.03)
+        self.assertEqual(residual_row.category_slot, "B4")
+        self.assertEqual(residual_row.dataset_run_id, "dataset-test")
+        self.assertEqual(residual_row.residual_attribution_run_id, "m52-builder-test")
+
+    def test_uses_h5_score_for_h5_rows(self) -> None:
+        rows = build_residual_attribution_rows(
+            [
+                authoritative_dataset_row(
+                    horizon="H5",
+                    h5_score=6.5,
+                    realized_current_score=7.0,
+                    realized_return=0.05,
+                )
+            ]
+        )
+
+        self.assertEqual(rows[0].forecast_score, 6.5)
+        self.assertEqual(rows[0].residual, -0.5)
+        self.assertEqual(rows[0].residual_direction, "cold")
+
+    def test_excludes_missing_and_not_applicable_outcomes(self) -> None:
+        rows = build_residual_attribution_rows(
+            [
+                authoritative_dataset_row(
+                    horizon="H1",
+                    realized_outcome_status=REALIZED_OUTCOME_MISSING,
+                    target_date=date(2026, 5, 21),
+                    realized_current_score=None,
+                    realized_return=None,
+                ),
+                authoritative_dataset_row(
+                    horizon="C",
+                    realized_outcome_status=REALIZED_OUTCOME_NOT_APPLICABLE,
+                    target_date=None,
+                    realized_current_score=None,
+                    realized_return=None,
+                ),
+                authoritative_dataset_row(
+                    horizon="H5",
+                    realized_outcome_status=REALIZED_OUTCOME_AVAILABLE,
+                    target_date=date(2026, 5, 27),
+                    h5_score=7.5,
+                    realized_current_score=7.5,
+                    realized_return=0.01,
+                ),
+            ]
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].horizon, "H5")
+        self.assertEqual(rows[0].residual_direction, "neutral")
+
+    def test_rows_are_sorted_deterministically(self) -> None:
+        rows = build_residual_attribution_rows(
+            [
+                authoritative_dataset_row(
+                    symbol="QQQ",
+                    category="C",
+                    slot=2,
+                    horizon="H1",
+                ),
+                authoritative_dataset_row(
+                    symbol="SPY",
+                    category="B",
+                    slot=4,
+                    horizon="H5",
+                    target_date=date(2026, 5, 27),
+                ),
+                authoritative_dataset_row(
+                    symbol="SPY",
+                    category="A",
+                    slot=1,
+                    horizon="H1",
+                ),
+            ]
+        )
+
+        self.assertEqual(
+            [(row.symbol, row.category, row.slot, row.horizon) for row in rows],
+            [
+                ("QQQ", "C", 2, "H1"),
+                ("SPY", "A", 1, "H1"),
+                ("SPY", "B", 4, "H5"),
+            ],
+        )
+
+
+def authoritative_dataset_row(
+    *,
+    replay_date: date = date(2026, 5, 20),
+    symbol: str = "SPY",
+    current_score: float = 8.0,
+    h1_score: float = 8.5,
+    h5_score: float = 7.5,
+    blend_score: float = 8.0,
+    state: str = "GREEN",
+    horizon: str = "H1",
+    target_date: date | None = date(2026, 5, 21),
+    realized_current_score: float | None = 8.0,
+    realized_return: float | None = 0.03,
+    realized_outcome_status: str = REALIZED_OUTCOME_AVAILABLE,
+    category: str = "B",
+    slot: int = 4,
+) -> AuthoritativeReplayDatasetRow:
+    return AuthoritativeReplayDatasetRow(
+        replay_date=replay_date,
+        symbol=symbol,
+        current_score=current_score,
+        h1_score=h1_score,
+        h5_score=h5_score,
+        blend_score=blend_score,
+        state=state,
+        horizon=horizon,
+        target_date=target_date,
+        realized_current_score=realized_current_score,
+        realized_return=realized_return,
+        realized_outcome_status=realized_outcome_status,
+        category=category,
+        slot=slot,
+        glyph="+",
+        named_check="trend_confirmed",
+        check_score=4.1,
+        replayability_class="replayable",
+        measurement_status="measured",
+        source_module="fixture.module",
+        function_name="check_b4",
+        audit_token="single-date-asof:2026-05-20:SPY:1:100.0000",
+        dataset_run_id="dataset-test",
     )
 
 
