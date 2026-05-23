@@ -12,10 +12,14 @@ from market_health.calibration.authoritative_dataset import (
 from market_health.calibration.residuals import (
     RESIDUAL_ATTRIBUTION_COLUMNS,
     RESIDUAL_ATTRIBUTION_SCHEMA_VERSION,
+    RESIDUAL_ATTRIBUTION_SUMMARY_COLUMNS,
+    RESIDUAL_ATTRIBUTION_SUMMARY_SCHEMA_VERSION,
     RESIDUAL_SCHEMA_VERSION,
     ResidualAttributionRow,
+    ResidualAttributionSummaryRow,
     build_residual_attribution_rows,
     build_residual_observation,
+    summarize_residual_attribution_rows,
     forecast_score_for_horizon,
     residual_direction,
     summarize_residuals,
@@ -233,6 +237,11 @@ def residual_attribution_row(
     residual: float = 0.5,
     residual_direction: str = "hot",
     schema_version: str = RESIDUAL_ATTRIBUTION_SCHEMA_VERSION,
+    glyph: str = "+",
+    named_check: str = "trend_confirmed",
+    replayability_class: str = "replayable",
+    measurement_status: str = "measured",
+    residual_attribution_run_id: str = "m52-test",
 ) -> ResidualAttributionRow:
     return ResidualAttributionRow(
         replay_date=date(2026, 5, 20),
@@ -246,16 +255,16 @@ def residual_attribution_row(
         realized_return=0.03,
         category=category,
         slot=slot,
-        glyph="+",
-        named_check="trend_confirmed",
+        glyph=glyph,
+        named_check=named_check,
         check_score=4.1,
-        replayability_class="replayable",
-        measurement_status="measured",
+        replayability_class=replayability_class,
+        measurement_status=measurement_status,
         source_module="fixture.module",
         function_name="check_b4",
         audit_token="single-date-asof:2026-05-20:SPY:1:100.0000",
         dataset_run_id="dataset-test",
-        residual_attribution_run_id="m52-test",
+        residual_attribution_run_id=residual_attribution_run_id,
         schema_version=schema_version,
     )
 
@@ -386,6 +395,10 @@ def authoritative_dataset_row(
     realized_outcome_status: str = REALIZED_OUTCOME_AVAILABLE,
     category: str = "B",
     slot: int = 4,
+    glyph: str = "+",
+    named_check: str = "trend_confirmed",
+    replayability_class: str = "replayable",
+    measurement_status: str = "measured",
 ) -> AuthoritativeReplayDatasetRow:
     return AuthoritativeReplayDatasetRow(
         replay_date=replay_date,
@@ -402,16 +415,232 @@ def authoritative_dataset_row(
         realized_outcome_status=realized_outcome_status,
         category=category,
         slot=slot,
-        glyph="+",
-        named_check="trend_confirmed",
+        glyph=glyph,
+        named_check=named_check,
         check_score=4.1,
-        replayability_class="replayable",
-        measurement_status="measured",
+        replayability_class=replayability_class,
+        measurement_status=measurement_status,
         source_module="fixture.module",
         function_name="check_b4",
         audit_token="single-date-asof:2026-05-20:SPY:1:100.0000",
         dataset_run_id="dataset-test",
     )
+
+
+class ResidualAttributionSummaryRowTest(unittest.TestCase):
+    def test_record_has_stable_shape(self) -> None:
+        summary = ResidualAttributionSummaryRow(
+            group_name="horizon+category_slot",
+            group_value="H1|B4",
+            horizon="H1",
+            category_slot="B4",
+            observation_count=2,
+            mean_residual=0.125,
+            mean_abs_residual=0.375,
+            hot_count=1,
+            cold_count=1,
+            neutral_count=0,
+            residual_attribution_run_id="m52-test",
+        )
+
+        record = summary.to_record()
+
+        self.assertEqual(tuple(record.keys()), RESIDUAL_ATTRIBUTION_SUMMARY_COLUMNS)
+        self.assertEqual(
+            record["schema_version"],
+            RESIDUAL_ATTRIBUTION_SUMMARY_SCHEMA_VERSION,
+        )
+        self.assertEqual(record["group_name"], "horizon+category_slot")
+        self.assertEqual(record["group_value"], "H1|B4")
+        self.assertEqual(record["observation_count"], 2)
+        self.assertEqual(record["mean_residual"], 0.125)
+        self.assertEqual(record["mean_abs_residual"], 0.375)
+
+    def test_rejects_direction_count_mismatch(self) -> None:
+        with self.assertRaisesRegex(ValueError, "direction counts"):
+            ResidualAttributionSummaryRow(
+                group_name="horizon",
+                group_value="H1",
+                horizon="H1",
+                observation_count=2,
+                mean_residual=0.0,
+                mean_abs_residual=0.5,
+                hot_count=1,
+                cold_count=0,
+                neutral_count=0,
+                residual_attribution_run_id="m52-test",
+            )
+
+    def test_rejects_invalid_schema_version(self) -> None:
+        with self.assertRaisesRegex(ValueError, "schema version"):
+            ResidualAttributionSummaryRow(
+                group_name="horizon",
+                group_value="H1",
+                horizon="H1",
+                observation_count=1,
+                mean_residual=0.0,
+                mean_abs_residual=0.0,
+                hot_count=0,
+                cold_count=0,
+                neutral_count=1,
+                residual_attribution_run_id="m52-test",
+                schema_version="bad.version",
+            )
+
+
+class ResidualAttributionSummaryBuilderTest(unittest.TestCase):
+    def test_summarizes_by_horizon(self) -> None:
+        rows = [
+            residual_attribution_row(
+                symbol="SPY",
+                horizon="H1",
+                forecast_score=8.5,
+                realized_current_score=8.0,
+                residual=0.5,
+                residual_direction="hot",
+            ),
+            residual_attribution_row(
+                symbol="QQQ",
+                horizon="H1",
+                forecast_score=7.25,
+                realized_current_score=7.5,
+                residual=-0.25,
+                residual_direction="cold",
+            ),
+            residual_attribution_row(
+                symbol="IWM",
+                horizon="H5",
+                forecast_score=6.0,
+                realized_current_score=6.0,
+                residual=0.0,
+                residual_direction="neutral",
+            ),
+        ]
+
+        summaries = summarize_residual_attribution_rows(
+            rows,
+            groupings=(("horizon",),),
+        )
+
+        self.assertEqual(len(summaries), 2)
+        h1 = next(item for item in summaries if item.group_value == "H1")
+        h5 = next(item for item in summaries if item.group_value == "H5")
+
+        self.assertEqual(h1.group_name, "horizon")
+        self.assertEqual(h1.horizon, "H1")
+        self.assertEqual(h1.observation_count, 2)
+        self.assertEqual(h1.mean_residual, 0.125)
+        self.assertEqual(h1.mean_abs_residual, 0.375)
+        self.assertEqual(h1.hot_count, 1)
+        self.assertEqual(h1.cold_count, 1)
+        self.assertEqual(h1.neutral_count, 0)
+
+        self.assertEqual(h5.observation_count, 1)
+        self.assertEqual(h5.neutral_count, 1)
+
+    def test_summarizes_by_category_slot_glyph_and_named_check(self) -> None:
+        rows = [
+            residual_attribution_row(
+                symbol="SPY",
+                category="B",
+                slot=4,
+                glyph="+",
+                named_check="trend_confirmed",
+            ),
+            residual_attribution_row(
+                symbol="QQQ",
+                category="B",
+                slot=4,
+                glyph="+",
+                named_check="trend_confirmed",
+            ),
+            residual_attribution_row(
+                symbol="IWM",
+                category="C",
+                slot=2,
+                glyph="-",
+                named_check="pressure_warning",
+                forecast_score=7.0,
+                realized_current_score=7.5,
+                residual=-0.5,
+                residual_direction="cold",
+            ),
+        ]
+
+        summaries = summarize_residual_attribution_rows(
+            rows,
+            groupings=(
+                ("horizon", "category_slot", "glyph"),
+                ("horizon", "named_check"),
+            ),
+        )
+
+        category_slot = next(
+            item for item in summaries if item.group_value == "H1|B4|+"
+        )
+        named_check = next(
+            item for item in summaries if item.group_value == "H1|trend_confirmed"
+        )
+
+        self.assertEqual(category_slot.group_name, "horizon+category_slot+glyph")
+        self.assertEqual(category_slot.horizon, "H1")
+        self.assertEqual(category_slot.category_slot, "B4")
+        self.assertEqual(category_slot.glyph, "+")
+        self.assertEqual(category_slot.observation_count, 2)
+
+        self.assertEqual(named_check.group_name, "horizon+named_check")
+        self.assertEqual(named_check.named_check, "trend_confirmed")
+        self.assertEqual(named_check.observation_count, 2)
+
+    def test_summarizes_replayability_and_measurement_status(self) -> None:
+        rows = [
+            residual_attribution_row(
+                replayability_class="replayable",
+                measurement_status="measured",
+            ),
+            residual_attribution_row(
+                symbol="QQQ",
+                replayability_class="replayable",
+                measurement_status="fallback_neutral",
+                forecast_score=7.0,
+                realized_current_score=7.5,
+                residual=-0.5,
+                residual_direction="cold",
+            ),
+        ]
+
+        summaries = summarize_residual_attribution_rows(
+            rows,
+            groupings=(
+                ("horizon", "replayability_class"),
+                ("horizon", "measurement_status"),
+            ),
+        )
+
+        replayable = next(
+            item for item in summaries if item.group_value == "H1|replayable"
+        )
+        fallback_neutral = next(
+            item for item in summaries if item.group_value == "H1|fallback_neutral"
+        )
+
+        self.assertEqual(replayable.replayability_class, "replayable")
+        self.assertEqual(replayable.observation_count, 2)
+        self.assertEqual(fallback_neutral.measurement_status, "fallback_neutral")
+        self.assertEqual(fallback_neutral.observation_count, 1)
+
+    def test_summary_rows_are_sorted_deterministically(self) -> None:
+        rows = [
+            residual_attribution_row(symbol="SPY", horizon="H5"),
+            residual_attribution_row(symbol="QQQ", horizon="H1"),
+        ]
+
+        summaries = summarize_residual_attribution_rows(
+            rows,
+            groupings=(("horizon",),),
+        )
+
+        self.assertEqual([item.group_value for item in summaries], ["H1", "H5"])
 
 
 if __name__ == "__main__":
