@@ -318,13 +318,90 @@ def _build_glyph_review_row(
     )
 
 
+def build_named_check_calibration_review_rows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    min_observation_count: int = DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    window_label: str = "full",
+    window_start_date: date | None = None,
+    window_end_date: date | None = None,
+) -> tuple[CalibrationNamedCheckReviewRow, ...]:
+    buckets: dict[tuple[str, str], list[ResidualAttributionRow]] = defaultdict(list)
+
+    for row in rows:
+        buckets[(row.horizon, row.named_check)].append(row)
+
+    return tuple(
+        _build_named_check_review_row(
+            key,
+            bucket,
+            min_observation_count=min_observation_count,
+            window_label=window_label,
+            window_start_date=window_start_date,
+            window_end_date=window_end_date,
+        )
+        for key, bucket in sorted(buckets.items(), key=lambda item: item[0])
+    )
+
+
+def _build_named_check_review_row(
+    key: tuple[str, str],
+    bucket: Sequence[ResidualAttributionRow],
+    *,
+    min_observation_count: int,
+    window_label: str,
+    window_start_date: date | None,
+    window_end_date: date | None,
+) -> CalibrationNamedCheckReviewRow:
+    horizon, named_check = key
+    residuals = [row.residual for row in bucket]
+    count = len(residuals)
+    mean_residual = round(sum(residuals) / count, 8)
+
+    category = _single_value_or_none(row.category for row in bucket)
+    slot = _single_value_or_none(row.slot for row in bucket)
+    glyph = _single_value_or_none(row.glyph for row in bucket)
+
+    return CalibrationNamedCheckReviewRow(
+        horizon=horizon,
+        named_check=named_check,
+        category=category,
+        slot=slot,
+        glyph=glyph,
+        observation_count=count,
+        min_observation_count=min_observation_count,
+        mean_residual=mean_residual,
+        median_residual=round(float(median(residuals)), 8),
+        mean_abs_residual=round(sum(abs(value) for value in residuals) / count, 8),
+        hot_count=sum(row.residual_direction == RESIDUAL_HOT for row in bucket),
+        cold_count=sum(row.residual_direction == RESIDUAL_COLD for row in bucket),
+        neutral_count=sum(row.residual_direction == RESIDUAL_NEUTRAL for row in bucket),
+        review_classification=calibration_review_classification(
+            observation_count=count,
+            min_observation_count=min_observation_count,
+            mean_residual=mean_residual,
+        ),
+        residual_attribution_run_id=_single_residual_attribution_run_id(bucket),
+        window_label=window_label,
+        window_start_date=window_start_date,
+        window_end_date=window_end_date,
+    )
+
+
+def _single_value_or_none(values: Iterable[object]) -> object | None:
+    unique_values = sorted(set(values), key=lambda value: str(value))
+    if len(unique_values) == 1:
+        return unique_values[0]
+    return None
+
+
 def _single_residual_attribution_run_id(
     rows: Sequence[ResidualAttributionRow],
 ) -> str:
     run_ids = sorted({row.residual_attribution_run_id for row in rows})
     if len(run_ids) != 1:
         raise ValueError(
-            "calibration review glyph rows require exactly one "
+            "calibration review rows require exactly one "
             "residual_attribution_run_id per group"
         )
     return run_ids[0]
