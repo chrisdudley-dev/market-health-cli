@@ -15,7 +15,13 @@ from market_health.calibration.calibration_adjustment_export import (
     CALIBRATION_DRY_RUN_COMPARISON_ROWS_TABLE,
     CALIBRATION_DRY_RUN_SIMULATION_ROWS_TABLE,
 )
+from market_health.calibration.check_output import (
+    ReviewedCheckScoreCalibrationAdjustment,
+)
 from market_health.calibration.cli import build_parser, main
+from market_health.calibration.reviewed_adjustment_io import (
+    write_reviewed_check_score_adjustments_json,
+)
 from market_health.calibration.price_cache import HISTORICAL_PRICE_CACHE_COLUMNS
 
 
@@ -32,7 +38,14 @@ class CalibrationDryRunCliTest(unittest.TestCase):
             tmp_path = Path(tmp)
             price_cache_path = tmp_path / "prices.csv"
             output_root = tmp_path / "calibration"
+            reviewed_adjustments_path = (
+                tmp_path / "reviewed_check_score_adjustments.json"
+            )
             _write_price_cache(price_cache_path)
+            write_reviewed_check_score_adjustments_json(
+                reviewed_adjustments_path,
+                (_reviewed_adjustment(),),
+            )
 
             stdout = io.StringIO()
             with redirect_stdout(stdout):
@@ -67,6 +80,8 @@ class CalibrationDryRunCliTest(unittest.TestCase):
                         "1",
                         "--window-days",
                         "1",
+                        "--reviewed-check-score-adjustments",
+                        str(reviewed_adjustments_path),
                     ]
                 )
 
@@ -78,6 +93,9 @@ class CalibrationDryRunCliTest(unittest.TestCase):
             sqlite_path = Path(artifacts["sqlite_path"])
             validation_summary_path = Path(artifacts["validation_summary_path"])
             manifest_path = Path(artifacts["manifest_path"])
+            reviewed_adjustments_output_path = Path(
+                artifacts["reviewed_check_score_adjustments_path"]
+            )
 
             with candidates_csv_path.open(newline="", encoding="utf-8") as handle:
                 candidate_rows = list(csv.DictReader(handle))
@@ -101,6 +119,9 @@ class CalibrationDryRunCliTest(unittest.TestCase):
                 validation_summary_path.read_text(encoding="utf-8")
             )
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            reviewed_adjustments_output = json.loads(
+                reviewed_adjustments_output_path.read_text(encoding="utf-8")
+            )
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(payload["status"], "ok")
@@ -114,6 +135,11 @@ class CalibrationDryRunCliTest(unittest.TestCase):
         self.assertGreater(payload["candidate_count"], 0)
         self.assertGreater(payload["simulation_row_count"], 0)
         self.assertGreater(payload["comparison_row_count"], 0)
+        self.assertEqual(payload["reviewed_check_score_adjustment_count"], 1)
+        self.assertEqual(
+            Path(payload["reviewed_check_score_adjustments_path"]),
+            reviewed_adjustments_path,
+        )
 
         self.assertEqual(len(candidate_rows), payload["candidate_count"])
         self.assertEqual(len(simulation_rows), payload["simulation_row_count"])
@@ -131,6 +157,12 @@ class CalibrationDryRunCliTest(unittest.TestCase):
         self.assertEqual(manifest["candidate_count"], payload["candidate_count"])
         self.assertEqual(
             manifest["simulation_row_count"], payload["simulation_row_count"]
+        )
+        self.assertEqual(manifest["reviewed_check_score_adjustment_count"], 1)
+        self.assertEqual(reviewed_adjustments_output["row_count"], 1)
+        self.assertEqual(
+            reviewed_adjustments_output["rows"][0]["category_slot"],
+            "B3",
         )
 
     def test_calibration_dry_run_rejects_bad_date(self) -> None:
@@ -154,6 +186,19 @@ class CalibrationDryRunCliTest(unittest.TestCase):
                 )
 
         self.assertEqual(raised.exception.code, 2)
+
+
+def _reviewed_adjustment() -> ReviewedCheckScoreCalibrationAdjustment:
+    return ReviewedCheckScoreCalibrationAdjustment(
+        horizon="H5",
+        category="B",
+        slot=3,
+        score_delta=-0.25,
+        calibration_review_run_id="review-test",
+        dry_run_simulation_run_id="dry-run-test",
+        approved_by="m55-review",
+        rationale="Dry-run evidence supported a reviewed B3 H5 adjustment.",
+    )
 
 
 def _write_price_cache(path: Path) -> None:
