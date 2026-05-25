@@ -22,6 +22,10 @@ from market_health.calibration.calibration_adjustments import (
     CalibrationDryRunComparisonRow,
     CalibrationDryRunSimulationRow,
 )
+from market_health.calibration.check_output import (
+    REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION,
+    ReviewedCheckScoreCalibrationAdjustment,
+)
 from market_health.calibration.defaults import assert_not_live_runtime_path
 
 CALIBRATION_DRY_RUN_ARTIFACT_SCHEMA_VERSION = "calibration_dry_run_artifacts.v1"
@@ -35,6 +39,9 @@ CALIBRATION_DRY_RUN_COMPARISON_ROWS_CSV_FILENAME = "dry_run_comparison_rows.csv"
 CALIBRATION_DRY_RUN_SQLITE_FILENAME = "calibration_dry_run.sqlite"
 CALIBRATION_DRY_RUN_VALIDATION_SUMMARY_FILENAME = "validation_summary.json"
 CALIBRATION_DRY_RUN_MANIFEST_FILENAME = "manifest.json"
+CALIBRATION_REVIEWED_CHECK_SCORE_ADJUSTMENTS_FILENAME = (
+    "reviewed_check_score_adjustments.json"
+)
 
 
 @dataclass(frozen=True)
@@ -43,6 +50,7 @@ class CalibrationDryRunValidationSummary:
     simulation_row_count: int
     comparison_row_count: int
     unique_applied_candidate_count: int
+    reviewed_check_score_adjustment_count: int
     symbols: tuple[str, ...]
     horizons: tuple[str, ...]
     category_slots: tuple[str, ...]
@@ -54,6 +62,8 @@ class CalibrationDryRunValidationSummary:
     candidate_schema_versions: tuple[str, ...]
     simulation_schema_versions: tuple[str, ...]
     comparison_schema_versions: tuple[str, ...]
+    reviewed_check_score_adjustment_category_slots: tuple[str, ...]
+    reviewed_check_score_adjustment_schema_versions: tuple[str, ...]
     schema_version: str = CALIBRATION_DRY_RUN_VALIDATION_SUMMARY_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -67,6 +77,7 @@ class CalibrationDryRunValidationSummary:
             "simulation_row_count",
             "comparison_row_count",
             "unique_applied_candidate_count",
+            "reviewed_check_score_adjustment_count",
         ):
             if getattr(self, field_name) < 0:
                 raise ValueError(f"calibration dry-run {field_name} cannot be negative")
@@ -82,6 +93,9 @@ class CalibrationDryRunValidationSummary:
             "simulation_row_count": self.simulation_row_count,
             "comparison_row_count": self.comparison_row_count,
             "unique_applied_candidate_count": self.unique_applied_candidate_count,
+            "reviewed_check_score_adjustment_count": (
+                self.reviewed_check_score_adjustment_count
+            ),
             "symbols": list(self.symbols),
             "symbol_count": self.symbol_count,
             "horizons": list(self.horizons),
@@ -94,6 +108,12 @@ class CalibrationDryRunValidationSummary:
             "candidate_schema_versions": list(self.candidate_schema_versions),
             "simulation_schema_versions": list(self.simulation_schema_versions),
             "comparison_schema_versions": list(self.comparison_schema_versions),
+            "reviewed_check_score_adjustment_category_slots": list(
+                self.reviewed_check_score_adjustment_category_slots
+            ),
+            "reviewed_check_score_adjustment_schema_versions": list(
+                self.reviewed_check_score_adjustment_schema_versions
+            ),
         }
 
 
@@ -106,6 +126,7 @@ class CalibrationDryRunArtifacts:
     comparison_rows_csv_path: Path
     sqlite_path: Path
     validation_summary_path: Path
+    reviewed_check_score_adjustments_path: Path
     validation_summary: CalibrationDryRunValidationSummary
     candidates_table_name: str = CALIBRATION_ADJUSTMENT_CANDIDATES_TABLE
     simulation_rows_table_name: str = CALIBRATION_DRY_RUN_SIMULATION_ROWS_TABLE
@@ -131,6 +152,10 @@ class CalibrationDryRunArtifacts:
     def comparison_row_count(self) -> int:
         return self.validation_summary.comparison_row_count
 
+    @property
+    def reviewed_check_score_adjustment_count(self) -> int:
+        return self.validation_summary.reviewed_check_score_adjustment_count
+
     def to_record(self) -> dict[str, object]:
         return {
             "schema_version": self.schema_version,
@@ -141,12 +166,18 @@ class CalibrationDryRunArtifacts:
             "comparison_rows_csv_path": str(self.comparison_rows_csv_path),
             "sqlite_path": str(self.sqlite_path),
             "validation_summary_path": str(self.validation_summary_path),
+            "reviewed_check_score_adjustments_path": str(
+                self.reviewed_check_score_adjustments_path
+            ),
             "candidates_table_name": self.candidates_table_name,
             "simulation_rows_table_name": self.simulation_rows_table_name,
             "comparison_rows_table_name": self.comparison_rows_table_name,
             "candidate_count": self.candidate_count,
             "simulation_row_count": self.simulation_row_count,
             "comparison_row_count": self.comparison_row_count,
+            "reviewed_check_score_adjustment_count": (
+                self.reviewed_check_score_adjustment_count
+            ),
             "validation_summary": self.validation_summary.to_record(),
         }
 
@@ -168,6 +199,9 @@ def write_calibration_dry_run_artifacts(
     candidates: tuple[CalibrationAdjustmentCandidateRow, ...],
     simulation_rows: tuple[CalibrationDryRunSimulationRow, ...],
     comparison_rows: tuple[CalibrationDryRunComparisonRow, ...],
+    reviewed_check_score_adjustments: tuple[
+        ReviewedCheckScoreCalibrationAdjustment, ...
+    ] = (),
     dry_run_simulation_run_id: str = "calibration-dry-run",
 ) -> CalibrationDryRunArtifacts:
     output_dir = calibration_dry_run_output_dir(
@@ -189,6 +223,9 @@ def write_calibration_dry_run_artifacts(
         output_dir / CALIBRATION_DRY_RUN_VALIDATION_SUMMARY_FILENAME
     )
     manifest_path = output_dir / CALIBRATION_DRY_RUN_MANIFEST_FILENAME
+    reviewed_check_score_adjustments_path = (
+        output_dir / CALIBRATION_REVIEWED_CHECK_SCORE_ADJUSTMENTS_FILENAME
+    )
 
     write_calibration_adjustment_candidates_csv(candidates_csv_path, candidates)
     write_calibration_dry_run_simulation_rows_csv(
@@ -206,10 +243,16 @@ def write_calibration_dry_run_artifacts(
         comparison_rows=comparison_rows,
     )
 
+    write_reviewed_check_score_adjustments_json(
+        reviewed_check_score_adjustments_path,
+        reviewed_check_score_adjustments,
+    )
+
     validation_summary = build_calibration_dry_run_validation_summary(
         candidates,
         simulation_rows,
         comparison_rows,
+        reviewed_check_score_adjustments=reviewed_check_score_adjustments,
     )
     artifacts = CalibrationDryRunArtifacts(
         output_dir=output_dir,
@@ -219,6 +262,7 @@ def write_calibration_dry_run_artifacts(
         comparison_rows_csv_path=comparison_rows_csv_path,
         sqlite_path=sqlite_path,
         validation_summary_path=validation_summary_path,
+        reviewed_check_score_adjustments_path=reviewed_check_score_adjustments_path,
         validation_summary=validation_summary,
     )
 
@@ -235,6 +279,9 @@ def build_calibration_dry_run_validation_summary(
     candidates: tuple[CalibrationAdjustmentCandidateRow, ...],
     simulation_rows: tuple[CalibrationDryRunSimulationRow, ...],
     comparison_rows: tuple[CalibrationDryRunComparisonRow, ...],
+    reviewed_check_score_adjustments: tuple[
+        ReviewedCheckScoreCalibrationAdjustment, ...
+    ] = (),
 ) -> CalibrationDryRunValidationSummary:
     candidate_scope_counts = Counter(row.candidate_scope for row in candidates)
     comparison_group_counts = Counter(row.group_name for row in comparison_rows)
@@ -251,6 +298,7 @@ def build_calibration_dry_run_validation_summary(
         simulation_row_count=len(simulation_rows),
         comparison_row_count=len(comparison_rows),
         unique_applied_candidate_count=len(applied_candidate_ids),
+        reviewed_check_score_adjustment_count=len(reviewed_check_score_adjustments),
         symbols=tuple(sorted({row.symbol for row in simulation_rows})),
         horizons=tuple(sorted({row.horizon for row in simulation_rows})),
         category_slots=tuple(sorted({row.category_slot for row in simulation_rows})),
@@ -277,7 +325,36 @@ def build_calibration_dry_run_validation_summary(
             sorted({row.schema_version for row in comparison_rows})
             or [CALIBRATION_DRY_RUN_COMPARISON_SCHEMA_VERSION]
         ),
+        reviewed_check_score_adjustment_category_slots=tuple(
+            sorted({row.category_slot for row in reviewed_check_score_adjustments})
+        ),
+        reviewed_check_score_adjustment_schema_versions=tuple(
+            sorted({row.schema_version for row in reviewed_check_score_adjustments})
+            or [REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION]
+        ),
     )
+
+
+def write_reviewed_check_score_adjustments_json(
+    path: Path,
+    reviewed_check_score_adjustments: tuple[
+        ReviewedCheckScoreCalibrationAdjustment, ...
+    ],
+) -> Path:
+    _write_json(
+        path,
+        {
+            "schema_version": (
+                REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION
+            ),
+            "row_count": len(reviewed_check_score_adjustments),
+            "rows": [
+                adjustment.to_record()
+                for adjustment in reviewed_check_score_adjustments
+            ],
+        },
+    )
+    return path
 
 
 def write_calibration_dry_run_validation_summary_json(

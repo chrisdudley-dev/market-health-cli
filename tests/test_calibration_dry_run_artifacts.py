@@ -14,6 +14,7 @@ from market_health.calibration.calibration_adjustment_artifacts import (
     CALIBRATION_DRY_RUN_SIMULATION_ROWS_CSV_FILENAME,
     CALIBRATION_DRY_RUN_SQLITE_FILENAME,
     CALIBRATION_DRY_RUN_VALIDATION_SUMMARY_FILENAME,
+    CALIBRATION_REVIEWED_CHECK_SCORE_ADJUSTMENTS_FILENAME,
     build_calibration_dry_run_validation_summary,
     calibration_dry_run_output_dir,
     write_calibration_dry_run_artifacts,
@@ -25,6 +26,9 @@ from market_health.calibration.calibration_adjustment_export import (
 )
 from market_health.calibration.calibration_adjustments import (
     build_calibration_dry_run_comparison_rows,
+)
+from market_health.calibration.check_output import (
+    ReviewedCheckScoreCalibrationAdjustment,
 )
 from tests.test_calibration_adjustments import glyph_candidate, named_check_candidate
 from tests.test_calibration_dry_run_simulation import (
@@ -48,6 +52,7 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
         self.assertEqual(record["simulation_row_count"], 2)
         self.assertEqual(record["comparison_row_count"], 1)
         self.assertEqual(record["unique_applied_candidate_count"], 2)
+        self.assertEqual(record["reviewed_check_score_adjustment_count"], 0)
         self.assertEqual(record["symbols"], ["QQQ", "SPY"])
         self.assertEqual(record["symbol_count"], 2)
         self.assertEqual(record["horizons"], ["H1"])
@@ -60,6 +65,7 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
         self.assertEqual(record["residual_attribution_run_ids"], ["residual-test"])
         self.assertEqual(record["calibration_review_run_ids"], ["review-test"])
         self.assertEqual(record["dry_run_simulation_run_ids"], ["dry-run-test"])
+        self.assertEqual(record["reviewed_check_score_adjustment_category_slots"], [])
 
     def test_output_dir_is_stable(self) -> None:
         self.assertEqual(
@@ -75,11 +81,13 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
         candidates, simulation_rows, comparison_rows = dry_run_tables()
 
         with tempfile.TemporaryDirectory() as tmpdir:
+            reviewed_adjustments = (reviewed_adjustment(),)
             artifacts = write_calibration_dry_run_artifacts(
                 Path(tmpdir),
                 candidates=candidates,
                 simulation_rows=simulation_rows,
                 comparison_rows=comparison_rows,
+                reviewed_check_score_adjustments=reviewed_adjustments,
                 dry_run_simulation_run_id="dry-run-test",
             )
 
@@ -105,6 +113,7 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
             self.assertEqual(
                 artifacts.validation_summary_path.name,
                 CALIBRATION_DRY_RUN_VALIDATION_SUMMARY_FILENAME,
+                CALIBRATION_REVIEWED_CHECK_SCORE_ADJUSTMENTS_FILENAME,
             )
             self.assertEqual(
                 artifacts.manifest_path.name,
@@ -133,6 +142,11 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
             manifest_payload = json.loads(
                 artifacts.manifest_path.read_text(encoding="utf-8")
             )
+            reviewed_payload = json.loads(
+                artifacts.reviewed_check_score_adjustments_path.read_text(
+                    encoding="utf-8"
+                )
+            )
 
             with sqlite3.connect(artifacts.sqlite_path) as connection:
                 candidate_count = connection.execute(
@@ -154,6 +168,22 @@ class CalibrationDryRunArtifactsTest(unittest.TestCase):
         self.assertEqual(validation_payload["candidate_count"], 2)
         self.assertEqual(manifest_payload["candidate_count"], 2)
         self.assertEqual(manifest_payload["simulation_row_count"], 2)
+        self.assertEqual(manifest_payload["reviewed_check_score_adjustment_count"], 1)
+        self.assertEqual(reviewed_payload["row_count"], 1)
+        self.assertEqual(reviewed_payload["rows"][0]["category_slot"], "B3")
+
+
+def reviewed_adjustment() -> ReviewedCheckScoreCalibrationAdjustment:
+    return ReviewedCheckScoreCalibrationAdjustment(
+        horizon="H5",
+        category="B",
+        slot=3,
+        score_delta=-0.25,
+        calibration_review_run_id="review-test",
+        dry_run_simulation_run_id="dry-run-test",
+        approved_by="m55-review",
+        rationale="Dry-run evidence showed B3 H5 running hot.",
+    )
 
 
 def dry_run_tables():
