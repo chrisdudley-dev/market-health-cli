@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import date
+from statistics import median
 
 from market_health.calibration.residuals import (
     RESIDUAL_COLD,
     RESIDUAL_HOT,
+    RESIDUAL_NEUTRAL,
     VALID_HORIZONS,
+    ResidualAttributionRow,
 )
 
 CALIBRATION_GLYPH_REVIEW_ROW_SCHEMA_VERSION = "calibration_glyph_review_row.v1"
@@ -18,6 +23,7 @@ REVIEW_HOT = RESIDUAL_HOT
 REVIEW_COLD = RESIDUAL_COLD
 REVIEW_INCONCLUSIVE = "inconclusive"
 REVIEW_CLASSIFICATIONS = (REVIEW_HOT, REVIEW_COLD, REVIEW_INCONCLUSIVE)
+DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT = 3
 
 CALIBRATION_GLYPH_REVIEW_COLUMNS = (
     "schema_version",
@@ -228,6 +234,100 @@ class CalibrationNamedCheckReviewRow:
             "review_classification": self.review_classification,
             "residual_attribution_run_id": self.residual_attribution_run_id,
         }
+
+
+def build_glyph_calibration_review_rows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    min_observation_count: int = DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    window_label: str = "full",
+    window_start_date: date | None = None,
+    window_end_date: date | None = None,
+) -> tuple[CalibrationGlyphReviewRow, ...]:
+    buckets: dict[tuple[str, str, int, str], list[ResidualAttributionRow]] = (
+        defaultdict(list)
+    )
+
+    for row in rows:
+        buckets[(row.horizon, row.category, row.slot, row.glyph)].append(row)
+
+    return tuple(
+        _build_glyph_review_row(
+            key,
+            bucket,
+            min_observation_count=min_observation_count,
+            window_label=window_label,
+            window_start_date=window_start_date,
+            window_end_date=window_end_date,
+        )
+        for key, bucket in sorted(buckets.items(), key=lambda item: item[0])
+    )
+
+
+def calibration_review_classification(
+    *,
+    observation_count: int,
+    min_observation_count: int,
+    mean_residual: float,
+) -> str:
+    if observation_count < min_observation_count:
+        return REVIEW_INCONCLUSIVE
+    if mean_residual > 0:
+        return REVIEW_HOT
+    if mean_residual < 0:
+        return REVIEW_COLD
+    return REVIEW_INCONCLUSIVE
+
+
+def _build_glyph_review_row(
+    key: tuple[str, str, int, str],
+    bucket: Sequence[ResidualAttributionRow],
+    *,
+    min_observation_count: int,
+    window_label: str,
+    window_start_date: date | None,
+    window_end_date: date | None,
+) -> CalibrationGlyphReviewRow:
+    horizon, category, slot, glyph = key
+    residuals = [row.residual for row in bucket]
+    count = len(residuals)
+    mean_residual = round(sum(residuals) / count, 8)
+
+    return CalibrationGlyphReviewRow(
+        horizon=horizon,
+        category=category,
+        slot=slot,
+        glyph=glyph,
+        observation_count=count,
+        min_observation_count=min_observation_count,
+        mean_residual=mean_residual,
+        median_residual=round(float(median(residuals)), 8),
+        mean_abs_residual=round(sum(abs(value) for value in residuals) / count, 8),
+        hot_count=sum(row.residual_direction == RESIDUAL_HOT for row in bucket),
+        cold_count=sum(row.residual_direction == RESIDUAL_COLD for row in bucket),
+        neutral_count=sum(row.residual_direction == RESIDUAL_NEUTRAL for row in bucket),
+        review_classification=calibration_review_classification(
+            observation_count=count,
+            min_observation_count=min_observation_count,
+            mean_residual=mean_residual,
+        ),
+        residual_attribution_run_id=_single_residual_attribution_run_id(bucket),
+        window_label=window_label,
+        window_start_date=window_start_date,
+        window_end_date=window_end_date,
+    )
+
+
+def _single_residual_attribution_run_id(
+    rows: Sequence[ResidualAttributionRow],
+) -> str:
+    run_ids = sorted({row.residual_attribution_run_id for row in rows})
+    if len(run_ids) != 1:
+        raise ValueError(
+            "calibration review glyph rows require exactly one "
+            "residual_attribution_run_id per group"
+        )
+    return run_ids[0]
 
 
 def _normalize_horizon(value: str) -> str:
