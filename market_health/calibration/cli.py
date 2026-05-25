@@ -57,6 +57,9 @@ from market_health.calibration.residuals import (
     build_residual_attribution_rows,
     summarize_residual_attribution_rows,
 )
+from market_health.calibration.reviewed_adjustment_io import (
+    read_reviewed_check_score_adjustments_json,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -204,6 +207,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=list(DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS),
     )
     calibration_dry_run.add_argument("--no-full-window", action="store_true")
+    calibration_dry_run.add_argument(
+        "--reviewed-check-score-adjustments",
+        type=Path,
+        default=None,
+        help=(
+            "Optional reviewed_check_score_adjustments.json file to apply "
+            "during explicit calibration dry-run replay."
+        ),
+    )
 
     return parser
 
@@ -456,6 +468,18 @@ def _run_calibration_dry_run_command(args: argparse.Namespace) -> dict[str, obje
     assert_not_live_runtime_path(output_root)
 
     price_cache_path = args.price_cache.expanduser()
+    reviewed_check_score_adjustments_path = (
+        args.reviewed_check_score_adjustments.expanduser()
+        if args.reviewed_check_score_adjustments is not None
+        else None
+    )
+    reviewed_check_score_adjustments = (
+        read_reviewed_check_score_adjustments_json(
+            reviewed_check_score_adjustments_path
+        )
+        if reviewed_check_score_adjustments_path is not None
+        else ()
+    )
     price_cache = read_historical_price_cache_csv(
         price_cache_path,
         symbols=args.symbols,
@@ -471,7 +495,10 @@ def _run_calibration_dry_run_command(args: argparse.Namespace) -> dict[str, obje
         request=range_request,
         price_rows=price_cache.rows,
     )
-    check_rows = _build_authoritative_dataset_check_rows(range_result)
+    check_rows = _build_authoritative_dataset_check_rows(
+        range_result,
+        reviewed_check_score_adjustments=reviewed_check_score_adjustments,
+    )
     dataset_rows = build_authoritative_replay_dataset_rows(
         range_result=range_result,
         check_rows=check_rows,
@@ -514,6 +541,7 @@ def _run_calibration_dry_run_command(args: argparse.Namespace) -> dict[str, obje
         candidates=candidates,
         simulation_rows=simulation_rows,
         comparison_rows=comparison_rows,
+        reviewed_check_score_adjustments=reviewed_check_score_adjustments,
         dry_run_simulation_run_id=args.dry_run_simulation_run_id,
     )
 
@@ -530,12 +558,22 @@ def _run_calibration_dry_run_command(args: argparse.Namespace) -> dict[str, obje
         "candidate_count": artifacts.candidate_count,
         "simulation_row_count": artifacts.simulation_row_count,
         "comparison_row_count": artifacts.comparison_row_count,
+        "reviewed_check_score_adjustment_count": (
+            artifacts.reviewed_check_score_adjustment_count
+        ),
+        "reviewed_check_score_adjustments_path": (
+            str(reviewed_check_score_adjustments_path)
+            if reviewed_check_score_adjustments_path is not None
+            else None
+        ),
         "artifacts": artifacts.to_record(),
     }
 
 
 def _build_authoritative_dataset_check_rows(
     range_result: RangeReplayResult,
+    *,
+    reviewed_check_score_adjustments: tuple = (),
 ) -> tuple[CheckReplayRow, ...]:
     rows: list[CheckReplayRow] = []
     for result in range_result.results:
@@ -549,6 +587,7 @@ def _build_authoritative_dataset_check_rows(
             build_fixture_check_replay_rows(
                 replay_date=result.replay_date,
                 symbols=symbols,
+                reviewed_calibration_adjustments=reviewed_check_score_adjustments,
             )
         )
 
