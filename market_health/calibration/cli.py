@@ -21,6 +21,15 @@ from market_health.calibration.calibration_review import (
 from market_health.calibration.calibration_review_artifacts import (
     write_calibration_review_artifacts,
 )
+from market_health.calibration.calibration_adjustment_artifacts import (
+    write_calibration_dry_run_artifacts,
+)
+from market_health.calibration.calibration_adjustments import (
+    DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT,
+    apply_calibration_adjustment_candidates_dry_run,
+    build_calibration_adjustment_candidates_from_review_tables,
+    build_calibration_dry_run_comparison_rows,
+)
 from market_health.calibration.check_output import (
     CheckReplayRow,
     build_fixture_check_replay_rows,
@@ -147,6 +156,55 @@ def build_parser() -> argparse.ArgumentParser:
     )
     calibration_review.add_argument("--no-full-window", action="store_true")
 
+    calibration_dry_run = subparsers.add_parser(
+        "calibration-dry-run",
+        help="Build dry-run calibration adjustment candidates and simulation artifacts.",
+    )
+    calibration_dry_run.add_argument("--price-cache", type=Path, required=True)
+    calibration_dry_run.add_argument("--start-date", type=_parse_date, required=True)
+    calibration_dry_run.add_argument("--end-date", type=_parse_date, required=True)
+    calibration_dry_run.add_argument("--symbols", nargs="+", required=True)
+    calibration_dry_run.add_argument("--lookback-rows", type=int, default=20)
+    calibration_dry_run.add_argument("--out", type=Path, default=default_output_root())
+    calibration_dry_run.add_argument(
+        "--dataset-run-id",
+        default="authoritative-replay-dataset",
+    )
+    calibration_dry_run.add_argument(
+        "--residual-attribution-run-id",
+        default="residual-attribution",
+    )
+    calibration_dry_run.add_argument(
+        "--calibration-review-run-id",
+        default="calibration-review",
+    )
+    calibration_dry_run.add_argument(
+        "--dry-run-simulation-run-id",
+        default="calibration-dry-run",
+    )
+    calibration_dry_run.add_argument(
+        "--review-min-observation-count",
+        type=int,
+        default=DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    )
+    calibration_dry_run.add_argument(
+        "--adjustment-min-observation-count",
+        type=int,
+        default=DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT,
+    )
+    calibration_dry_run.add_argument(
+        "--max-examples-per-group",
+        type=int,
+        default=DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+    )
+    calibration_dry_run.add_argument(
+        "--window-days",
+        nargs="*",
+        type=int,
+        default=list(DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS),
+    )
+    calibration_dry_run.add_argument("--no-full-window", action="store_true")
+
     return parser
 
 
@@ -181,6 +239,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "calibration-review":
         payload = _run_calibration_review_command(args)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "calibration-dry-run":
+        payload = _run_calibration_dry_run_command(args)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
@@ -384,6 +447,89 @@ def _run_calibration_review_command(args: argparse.Namespace) -> dict[str, objec
         "named_check_review_row_count": artifacts.named_check_review_row_count,
         "glyph_example_row_count": artifacts.glyph_example_row_count,
         "named_check_example_row_count": artifacts.named_check_example_row_count,
+        "artifacts": artifacts.to_record(),
+    }
+
+
+def _run_calibration_dry_run_command(args: argparse.Namespace) -> dict[str, object]:
+    output_root = args.out.expanduser()
+    assert_not_live_runtime_path(output_root)
+
+    price_cache_path = args.price_cache.expanduser()
+    price_cache = read_historical_price_cache_csv(
+        price_cache_path,
+        symbols=args.symbols,
+    )
+    range_request = build_range_replay_request(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        symbols=args.symbols,
+        lookback_rows=args.lookback_rows,
+        output_root=output_root,
+    )
+    range_result = run_range_replay(
+        request=range_request,
+        price_rows=price_cache.rows,
+    )
+    check_rows = _build_authoritative_dataset_check_rows(range_result)
+    dataset_rows = build_authoritative_replay_dataset_rows(
+        range_result=range_result,
+        check_rows=check_rows,
+        price_rows=price_cache.rows,
+        dataset_run_id=args.dataset_run_id,
+    )
+    residual_rows = build_residual_attribution_rows(
+        dataset_rows,
+        residual_attribution_run_id=args.residual_attribution_run_id,
+    )
+    windows = build_trailing_calibration_review_windows(
+        residual_rows,
+        day_counts=args.window_days,
+        include_full_window=not args.no_full_window,
+    )
+    windowed_tables = build_windowed_calibration_review_tables(
+        residual_rows,
+        windows=windows,
+        min_observation_count=args.review_min_observation_count,
+        max_examples_per_group=args.max_examples_per_group,
+    )
+    candidates = build_calibration_adjustment_candidates_from_review_tables(
+        glyph_review_rows=tuple(
+            row for table in windowed_tables for row in table.glyph_review_rows
+        ),
+        named_check_review_rows=tuple(
+            row for table in windowed_tables for row in table.named_check_review_rows
+        ),
+        calibration_review_run_id=args.calibration_review_run_id,
+        min_observation_count=args.adjustment_min_observation_count,
+    )
+    simulation_rows = apply_calibration_adjustment_candidates_dry_run(
+        residual_rows,
+        candidates,
+        dry_run_simulation_run_id=args.dry_run_simulation_run_id,
+    )
+    comparison_rows = build_calibration_dry_run_comparison_rows(simulation_rows)
+    artifacts = write_calibration_dry_run_artifacts(
+        output_root,
+        candidates=candidates,
+        simulation_rows=simulation_rows,
+        comparison_rows=comparison_rows,
+        dry_run_simulation_run_id=args.dry_run_simulation_run_id,
+    )
+
+    return {
+        "status": "ok",
+        "command": "calibration-dry-run",
+        "price_cache_path": str(price_cache_path),
+        "dataset_run_id": args.dataset_run_id,
+        "residual_attribution_run_id": args.residual_attribution_run_id,
+        "calibration_review_run_id": args.calibration_review_run_id,
+        "dry_run_simulation_run_id": args.dry_run_simulation_run_id,
+        "dataset_row_count": len(dataset_rows),
+        "residual_observation_count": len(residual_rows),
+        "candidate_count": artifacts.candidate_count,
+        "simulation_row_count": artifacts.simulation_row_count,
+        "comparison_row_count": artifacts.comparison_row_count,
         "artifacts": artifacts.to_record(),
     }
 
