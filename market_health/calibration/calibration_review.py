@@ -70,6 +70,36 @@ CALIBRATION_NAMED_CHECK_REVIEW_COLUMNS = (
     "residual_attribution_run_id",
 )
 
+CALIBRATION_REVIEW_EXAMPLE_ROW_SCHEMA_VERSION = "calibration_review_example_row.v1"
+REVIEW_TABLE_GLYPH = "glyph"
+REVIEW_TABLE_NAMED_CHECK = "named_check"
+REVIEW_TABLES = (REVIEW_TABLE_GLYPH, REVIEW_TABLE_NAMED_CHECK)
+DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP = 3
+
+CALIBRATION_REVIEW_EXAMPLE_COLUMNS = (
+    "schema_version",
+    "review_table",
+    "window_label",
+    "window_start_date",
+    "window_end_date",
+    "horizon",
+    "category",
+    "slot",
+    "category_slot",
+    "glyph",
+    "named_check",
+    "example_rank",
+    "replay_date",
+    "target_date",
+    "symbol",
+    "forecast_score",
+    "realized_current_score",
+    "residual",
+    "residual_direction",
+    "audit_token",
+    "residual_attribution_run_id",
+)
+
 
 @dataclass(frozen=True)
 class CalibrationGlyphReviewRow:
@@ -236,6 +266,99 @@ class CalibrationNamedCheckReviewRow:
         }
 
 
+@dataclass(frozen=True)
+class CalibrationReviewExampleRow:
+    review_table: str
+    horizon: str
+    category: str
+    slot: int
+    glyph: str
+    named_check: str
+    example_rank: int
+    replay_date: date
+    target_date: date
+    symbol: str
+    forecast_score: float
+    realized_current_score: float
+    residual: float
+    residual_direction: str
+    audit_token: str
+    residual_attribution_run_id: str
+    window_label: str = "full"
+    window_start_date: date | None = None
+    window_end_date: date | None = None
+    schema_version: str = CALIBRATION_REVIEW_EXAMPLE_ROW_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != CALIBRATION_REVIEW_EXAMPLE_ROW_SCHEMA_VERSION:
+            raise ValueError(
+                "unsupported calibration review example row schema version: "
+                f"{self.schema_version}"
+            )
+        if self.review_table not in REVIEW_TABLES:
+            raise ValueError(
+                f"unsupported calibration review example table: {self.review_table}"
+            )
+
+        horizon = _normalize_horizon(self.horizon)
+        category = _normalize_category(self.category)
+        _validate_slot(self.slot)
+        _validate_required_text(self.glyph, "glyph")
+        _validate_required_text(self.named_check, "named_check")
+        _validate_required_text(self.symbol, "symbol")
+        _validate_required_text(self.audit_token, "audit_token")
+        _validate_required_text(
+            self.residual_attribution_run_id,
+            "residual_attribution_run_id",
+        )
+        _validate_required_text(self.window_label, "window_label")
+        _validate_window_bounds(self.window_start_date, self.window_end_date)
+        if self.example_rank <= 0:
+            raise ValueError("calibration review example_rank must be positive")
+        if self.residual_direction not in (
+            RESIDUAL_HOT,
+            RESIDUAL_COLD,
+            RESIDUAL_NEUTRAL,
+        ):
+            raise ValueError(
+                "unsupported calibration review example residual direction: "
+                f"{self.residual_direction}"
+            )
+
+        object.__setattr__(self, "horizon", horizon)
+        object.__setattr__(self, "category", category)
+        object.__setattr__(self, "symbol", self.symbol.strip().upper())
+
+    @property
+    def category_slot(self) -> str:
+        return f"{self.category}{self.slot}"
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "review_table": self.review_table,
+            "window_label": self.window_label,
+            "window_start_date": _optional_date(self.window_start_date),
+            "window_end_date": _optional_date(self.window_end_date),
+            "horizon": self.horizon,
+            "category": self.category,
+            "slot": self.slot,
+            "category_slot": self.category_slot,
+            "glyph": self.glyph,
+            "named_check": self.named_check,
+            "example_rank": self.example_rank,
+            "replay_date": self.replay_date.isoformat(),
+            "target_date": self.target_date.isoformat(),
+            "symbol": self.symbol,
+            "forecast_score": self.forecast_score,
+            "realized_current_score": self.realized_current_score,
+            "residual": self.residual,
+            "residual_direction": self.residual_direction,
+            "audit_token": self.audit_token,
+            "residual_attribution_run_id": self.residual_attribution_run_id,
+        }
+
+
 def build_glyph_calibration_review_rows(
     rows: Iterable[ResidualAttributionRow],
     *,
@@ -393,6 +516,113 @@ def _single_value_or_none(values: Iterable[object]) -> object | None:
     if len(unique_values) == 1:
         return unique_values[0]
     return None
+
+
+def build_glyph_calibration_review_example_rows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    max_examples_per_group: int = DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+    window_label: str = "full",
+    window_start_date: date | None = None,
+    window_end_date: date | None = None,
+) -> tuple[CalibrationReviewExampleRow, ...]:
+    buckets: dict[tuple[str, str, int, str], list[ResidualAttributionRow]] = (
+        defaultdict(list)
+    )
+
+    for row in rows:
+        buckets[(row.horizon, row.category, row.slot, row.glyph)].append(row)
+
+    return _build_calibration_review_example_rows(
+        buckets=sorted(buckets.items(), key=lambda item: item[0]),
+        review_table=REVIEW_TABLE_GLYPH,
+        max_examples_per_group=max_examples_per_group,
+        window_label=window_label,
+        window_start_date=window_start_date,
+        window_end_date=window_end_date,
+    )
+
+
+def build_named_check_calibration_review_example_rows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    max_examples_per_group: int = DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+    window_label: str = "full",
+    window_start_date: date | None = None,
+    window_end_date: date | None = None,
+) -> tuple[CalibrationReviewExampleRow, ...]:
+    buckets: dict[tuple[str, str], list[ResidualAttributionRow]] = defaultdict(list)
+
+    for row in rows:
+        buckets[(row.horizon, row.named_check)].append(row)
+
+    return _build_calibration_review_example_rows(
+        buckets=sorted(buckets.items(), key=lambda item: item[0]),
+        review_table=REVIEW_TABLE_NAMED_CHECK,
+        max_examples_per_group=max_examples_per_group,
+        window_label=window_label,
+        window_start_date=window_start_date,
+        window_end_date=window_end_date,
+    )
+
+
+def _build_calibration_review_example_rows(
+    *,
+    buckets: Sequence[tuple[object, list[ResidualAttributionRow]]],
+    review_table: str,
+    max_examples_per_group: int,
+    window_label: str,
+    window_start_date: date | None,
+    window_end_date: date | None,
+) -> tuple[CalibrationReviewExampleRow, ...]:
+    if max_examples_per_group <= 0:
+        raise ValueError("max_examples_per_group must be positive")
+
+    example_rows: list[CalibrationReviewExampleRow] = []
+    for _, bucket in buckets:
+        for rank, row in enumerate(
+            sorted(bucket, key=_example_sort_key)[:max_examples_per_group],
+            start=1,
+        ):
+            example_rows.append(
+                CalibrationReviewExampleRow(
+                    review_table=review_table,
+                    horizon=row.horizon,
+                    category=row.category,
+                    slot=row.slot,
+                    glyph=row.glyph,
+                    named_check=row.named_check,
+                    example_rank=rank,
+                    replay_date=row.replay_date,
+                    target_date=row.target_date,
+                    symbol=row.symbol,
+                    forecast_score=row.forecast_score,
+                    realized_current_score=row.realized_current_score,
+                    residual=row.residual,
+                    residual_direction=row.residual_direction,
+                    audit_token=row.audit_token,
+                    residual_attribution_run_id=row.residual_attribution_run_id,
+                    window_label=window_label,
+                    window_start_date=window_start_date,
+                    window_end_date=window_end_date,
+                )
+            )
+
+    return tuple(example_rows)
+
+
+def _example_sort_key(row: ResidualAttributionRow) -> tuple[object, ...]:
+    return (
+        -abs(row.residual),
+        row.replay_date.isoformat(),
+        row.target_date.isoformat(),
+        row.symbol,
+        row.category,
+        row.slot,
+        row.glyph,
+        row.named_check,
+        row.audit_token,
+    )
 
 
 def _single_residual_attribution_run_id(
