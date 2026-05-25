@@ -10,9 +10,14 @@ from market_health.calibration.calibration_review import (
     CalibrationGlyphReviewRow,
     CalibrationNamedCheckReviewRow,
 )
-from market_health.calibration.residuals import VALID_HORIZONS
+from market_health.calibration.residuals import (
+    VALID_HORIZONS,
+    ResidualAttributionRow,
+    residual_direction,
+)
 
 CALIBRATION_ADJUSTMENT_CANDIDATE_SCHEMA_VERSION = "calibration_adjustment_candidate.v1"
+CALIBRATION_DRY_RUN_SIMULATION_SCHEMA_VERSION = "calibration_dry_run_simulation.v1"
 
 CALIBRATION_ADJUSTMENT_SCOPE_GLYPH = "glyph"
 CALIBRATION_ADJUSTMENT_SCOPE_NAMED_CHECK = "named_check"
@@ -64,6 +69,35 @@ CALIBRATION_ADJUSTMENT_CANDIDATE_COLUMNS = (
     "mean_abs_residual",
     "residual_attribution_run_id",
     "calibration_review_run_id",
+    "dry_run_only",
+)
+
+
+CALIBRATION_DRY_RUN_SIMULATION_COLUMNS = (
+    "schema_version",
+    "replay_date",
+    "symbol",
+    "horizon",
+    "target_date",
+    "category",
+    "slot",
+    "category_slot",
+    "glyph",
+    "named_check",
+    "baseline_forecast_score",
+    "simulated_forecast_score",
+    "realized_current_score",
+    "baseline_residual",
+    "simulated_residual",
+    "baseline_residual_direction",
+    "simulated_residual_direction",
+    "applied_score_delta",
+    "applied_candidate_count",
+    "applied_candidate_ids",
+    "residual_attribution_run_id",
+    "calibration_review_run_id",
+    "dry_run_simulation_run_id",
+    "source_residual_schema_version",
     "dry_run_only",
 )
 
@@ -241,6 +275,290 @@ class CalibrationAdjustmentCandidateRow:
             "calibration_review_run_id": self.calibration_review_run_id,
             "dry_run_only": self.dry_run_only,
         }
+
+
+@dataclass(frozen=True)
+class CalibrationDryRunSimulationRow:
+    replay_date: date
+    symbol: str
+    horizon: str
+    target_date: date
+    category: str
+    slot: int
+    glyph: str
+    named_check: str
+    baseline_forecast_score: float
+    simulated_forecast_score: float
+    realized_current_score: float
+    baseline_residual: float
+    simulated_residual: float
+    baseline_residual_direction: str
+    simulated_residual_direction: str
+    applied_score_delta: float
+    applied_candidate_ids: tuple[str, ...]
+    residual_attribution_run_id: str
+    calibration_review_run_id: str
+    dry_run_simulation_run_id: str
+    source_residual_schema_version: str
+    dry_run_only: bool = True
+    schema_version: str = CALIBRATION_DRY_RUN_SIMULATION_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != CALIBRATION_DRY_RUN_SIMULATION_SCHEMA_VERSION:
+            raise ValueError(
+                "unsupported calibration dry-run simulation schema version: "
+                f"{self.schema_version}"
+            )
+
+        symbol = _normalize_required_text(self.symbol, "symbol").upper()
+        horizon = _normalize_horizon(self.horizon)
+        category = _normalize_category(self.category)
+        _validate_slot(self.slot)
+        _normalize_required_text(self.glyph, "glyph")
+        _normalize_required_text(self.named_check, "named_check")
+        _normalize_required_text(
+            self.residual_attribution_run_id,
+            "residual_attribution_run_id",
+        )
+        _normalize_required_text(
+            self.calibration_review_run_id,
+            "calibration_review_run_id",
+        )
+        _normalize_required_text(
+            self.dry_run_simulation_run_id,
+            "dry_run_simulation_run_id",
+        )
+        _normalize_required_text(
+            self.source_residual_schema_version,
+            "source_residual_schema_version",
+        )
+
+        if not self.dry_run_only:
+            raise ValueError("calibration dry-run simulation rows must be dry-run only")
+        if not self.applied_candidate_ids:
+            raise ValueError(
+                "calibration dry-run simulation rows require applied_candidate_ids"
+            )
+        if len(set(self.applied_candidate_ids)) != len(self.applied_candidate_ids):
+            raise ValueError(
+                "calibration dry-run simulation applied_candidate_ids must be unique"
+            )
+        if tuple(sorted(self.applied_candidate_ids)) != self.applied_candidate_ids:
+            raise ValueError(
+                "calibration dry-run simulation applied_candidate_ids must be sorted"
+            )
+        if round(
+            self.baseline_residual,
+            8,
+        ) != round(self.baseline_forecast_score - self.realized_current_score, 8):
+            raise ValueError(
+                "baseline_residual must equal baseline_forecast_score minus "
+                "realized_current_score"
+            )
+        if round(
+            self.simulated_residual,
+            8,
+        ) != round(self.simulated_forecast_score - self.realized_current_score, 8):
+            raise ValueError(
+                "simulated_residual must equal simulated_forecast_score minus "
+                "realized_current_score"
+            )
+        if self.baseline_residual_direction != residual_direction(
+            self.baseline_residual
+        ):
+            raise ValueError(
+                "baseline_residual_direction does not match baseline residual sign"
+            )
+        if self.simulated_residual_direction != residual_direction(
+            self.simulated_residual
+        ):
+            raise ValueError(
+                "simulated_residual_direction does not match simulated residual sign"
+            )
+        if round(
+            self.applied_score_delta,
+            8,
+        ) != round(self.simulated_forecast_score - self.baseline_forecast_score, 8):
+            raise ValueError(
+                "applied_score_delta must equal simulated forecast minus baseline "
+                "forecast"
+            )
+
+        object.__setattr__(self, "symbol", symbol)
+        object.__setattr__(self, "horizon", horizon)
+        object.__setattr__(self, "category", category)
+
+    @property
+    def category_slot(self) -> str:
+        return f"{self.category}{self.slot}"
+
+    @property
+    def applied_candidate_count(self) -> int:
+        return len(self.applied_candidate_ids)
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "replay_date": self.replay_date.isoformat(),
+            "symbol": self.symbol,
+            "horizon": self.horizon,
+            "target_date": self.target_date.isoformat(),
+            "category": self.category,
+            "slot": self.slot,
+            "category_slot": self.category_slot,
+            "glyph": self.glyph,
+            "named_check": self.named_check,
+            "baseline_forecast_score": self.baseline_forecast_score,
+            "simulated_forecast_score": self.simulated_forecast_score,
+            "realized_current_score": self.realized_current_score,
+            "baseline_residual": self.baseline_residual,
+            "simulated_residual": self.simulated_residual,
+            "baseline_residual_direction": self.baseline_residual_direction,
+            "simulated_residual_direction": self.simulated_residual_direction,
+            "applied_score_delta": self.applied_score_delta,
+            "applied_candidate_count": self.applied_candidate_count,
+            "applied_candidate_ids": "|".join(self.applied_candidate_ids),
+            "residual_attribution_run_id": self.residual_attribution_run_id,
+            "calibration_review_run_id": self.calibration_review_run_id,
+            "dry_run_simulation_run_id": self.dry_run_simulation_run_id,
+            "source_residual_schema_version": self.source_residual_schema_version,
+            "dry_run_only": self.dry_run_only,
+        }
+
+
+def apply_calibration_adjustment_candidates_dry_run(
+    rows: Iterable[ResidualAttributionRow],
+    candidates: Iterable[CalibrationAdjustmentCandidateRow],
+    *,
+    dry_run_simulation_run_id: str = "calibration-dry-run",
+) -> tuple[CalibrationDryRunSimulationRow, ...]:
+    _normalize_required_text(
+        dry_run_simulation_run_id,
+        "dry_run_simulation_run_id",
+    )
+    source_rows = tuple(rows)
+    candidate_rows = tuple(sorted(candidates, key=_candidate_sort_key))
+
+    _validate_candidate_set_for_simulation(candidate_rows)
+
+    simulation_rows: list[CalibrationDryRunSimulationRow] = []
+    for row in sorted(source_rows, key=_residual_row_sort_key):
+        matched_candidates = tuple(
+            candidate
+            for candidate in candidate_rows
+            if _candidate_matches_residual_row(candidate, row)
+        )
+        if not matched_candidates:
+            continue
+
+        applied_score_delta = round(
+            sum(candidate.score_delta for candidate in matched_candidates),
+            8,
+        )
+        simulated_forecast_score = _clamp_score(
+            round(row.forecast_score + applied_score_delta, 8)
+        )
+        applied_score_delta = round(simulated_forecast_score - row.forecast_score, 8)
+        simulated_residual = round(
+            simulated_forecast_score - row.realized_current_score,
+            8,
+        )
+
+        simulation_rows.append(
+            CalibrationDryRunSimulationRow(
+                replay_date=row.replay_date,
+                symbol=row.symbol,
+                horizon=row.horizon,
+                target_date=row.target_date,
+                category=row.category,
+                slot=row.slot,
+                glyph=row.glyph,
+                named_check=row.named_check,
+                baseline_forecast_score=row.forecast_score,
+                simulated_forecast_score=simulated_forecast_score,
+                realized_current_score=row.realized_current_score,
+                baseline_residual=row.residual,
+                simulated_residual=simulated_residual,
+                baseline_residual_direction=row.residual_direction,
+                simulated_residual_direction=residual_direction(simulated_residual),
+                applied_score_delta=applied_score_delta,
+                applied_candidate_ids=tuple(
+                    candidate.candidate_id for candidate in matched_candidates
+                ),
+                residual_attribution_run_id=row.residual_attribution_run_id,
+                calibration_review_run_id=_single_calibration_review_run_id(
+                    matched_candidates
+                ),
+                dry_run_simulation_run_id=dry_run_simulation_run_id,
+                source_residual_schema_version=row.schema_version,
+            )
+        )
+
+    return tuple(simulation_rows)
+
+
+def _validate_candidate_set_for_simulation(
+    candidates: tuple[CalibrationAdjustmentCandidateRow, ...],
+) -> None:
+    candidate_ids = [candidate.candidate_id for candidate in candidates]
+    if len(set(candidate_ids)) != len(candidate_ids):
+        raise ValueError("calibration dry-run candidate IDs must be unique")
+    for candidate in candidates:
+        if not candidate.dry_run_only:
+            raise ValueError("calibration dry-run candidates must be dry-run only")
+
+
+def _candidate_matches_residual_row(
+    candidate: CalibrationAdjustmentCandidateRow,
+    row: ResidualAttributionRow,
+) -> bool:
+    if candidate.horizon != row.horizon:
+        return False
+
+    if candidate.candidate_scope == CALIBRATION_ADJUSTMENT_SCOPE_GLYPH:
+        return (
+            candidate.category == row.category
+            and candidate.slot == row.slot
+            and candidate.glyph == row.glyph
+        )
+
+    if candidate.named_check != row.named_check:
+        return False
+    if candidate.category is not None and candidate.category != row.category:
+        return False
+    if candidate.slot is not None and candidate.slot != row.slot:
+        return False
+    if candidate.glyph is not None and candidate.glyph != row.glyph:
+        return False
+    return True
+
+
+def _single_calibration_review_run_id(
+    candidates: tuple[CalibrationAdjustmentCandidateRow, ...],
+) -> str:
+    run_ids = sorted({candidate.calibration_review_run_id for candidate in candidates})
+    if len(run_ids) != 1:
+        raise ValueError(
+            "matched calibration dry-run candidates must share one "
+            "calibration_review_run_id"
+        )
+    return run_ids[0]
+
+
+def _clamp_score(value: float) -> float:
+    return round(max(0.0, min(10.0, value)), 8)
+
+
+def _residual_row_sort_key(row: ResidualAttributionRow) -> tuple[object, ...]:
+    return (
+        row.replay_date.isoformat(),
+        row.symbol,
+        row.horizon,
+        row.category,
+        row.slot,
+        row.glyph,
+        row.named_check,
+    )
 
 
 def build_calibration_adjustment_candidates_from_review_tables(
