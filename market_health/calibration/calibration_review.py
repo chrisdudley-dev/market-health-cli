@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from statistics import median
 
 from market_health.calibration.residuals import (
@@ -75,6 +75,7 @@ REVIEW_TABLE_GLYPH = "glyph"
 REVIEW_TABLE_NAMED_CHECK = "named_check"
 REVIEW_TABLES = (REVIEW_TABLE_GLYPH, REVIEW_TABLE_NAMED_CHECK)
 DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP = 3
+DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS = (30, 90)
 
 CALIBRATION_REVIEW_EXAMPLE_COLUMNS = (
     "schema_version",
@@ -97,6 +98,22 @@ CALIBRATION_REVIEW_EXAMPLE_COLUMNS = (
     "residual",
     "residual_direction",
     "audit_token",
+    "residual_attribution_run_id",
+)
+
+CALIBRATION_REVIEW_WINDOW_SUMMARY_SCHEMA_VERSION = (
+    "calibration_review_window_summary.v1"
+)
+CALIBRATION_REVIEW_WINDOW_SUMMARY_COLUMNS = (
+    "schema_version",
+    "window_label",
+    "window_start_date",
+    "window_end_date",
+    "residual_observation_count",
+    "glyph_review_row_count",
+    "named_check_review_row_count",
+    "glyph_example_row_count",
+    "named_check_example_row_count",
     "residual_attribution_run_id",
 )
 
@@ -355,6 +372,59 @@ class CalibrationReviewExampleRow:
             "residual": self.residual,
             "residual_direction": self.residual_direction,
             "audit_token": self.audit_token,
+            "residual_attribution_run_id": self.residual_attribution_run_id,
+        }
+
+
+@dataclass(frozen=True)
+class CalibrationReviewWindow:
+    label: str
+    start_date: date | None = None
+    end_date: date | None = None
+
+    def __post_init__(self) -> None:
+        _validate_required_text(self.label, "window_label")
+        _validate_window_bounds(self.start_date, self.end_date)
+
+
+@dataclass(frozen=True)
+class CalibrationReviewWindowedTables:
+    window: CalibrationReviewWindow
+    residual_observation_count: int
+    residual_attribution_run_id: str | None
+    glyph_review_rows: tuple[CalibrationGlyphReviewRow, ...]
+    named_check_review_rows: tuple[CalibrationNamedCheckReviewRow, ...]
+    glyph_example_rows: tuple[CalibrationReviewExampleRow, ...]
+    named_check_example_rows: tuple[CalibrationReviewExampleRow, ...]
+    schema_version: str = CALIBRATION_REVIEW_WINDOW_SUMMARY_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != CALIBRATION_REVIEW_WINDOW_SUMMARY_SCHEMA_VERSION:
+            raise ValueError(
+                "unsupported calibration review window summary schema version: "
+                f"{self.schema_version}"
+            )
+        if self.residual_observation_count < 0:
+            raise ValueError(
+                "calibration review residual_observation_count cannot be negative"
+            )
+        if self.residual_attribution_run_id is not None:
+            _validate_required_text(
+                self.residual_attribution_run_id,
+                "residual_attribution_run_id",
+            )
+
+    def to_summary_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "window_label": self.window.label,
+            "window_start_date": _optional_date(self.window.start_date),
+            "window_end_date": _optional_date(self.window.end_date),
+            "residual_observation_count": self.residual_observation_count,
+            "glyph_review_row_count": len(self.glyph_review_rows),
+            "named_check_review_row_count": len(self.named_check_review_rows),
+            "glyph_example_row_count": len(self.glyph_example_rows),
+            "named_check_example_row_count": len(self.named_check_example_rows),
             "residual_attribution_run_id": self.residual_attribution_run_id,
         }
 
@@ -623,6 +693,155 @@ def _example_sort_key(row: ResidualAttributionRow) -> tuple[object, ...]:
         row.named_check,
         row.audit_token,
     )
+
+
+def build_windowed_calibration_review_tables(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    windows: Iterable[CalibrationReviewWindow] | None = None,
+    min_observation_count: int = DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    max_examples_per_group: int = DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+) -> tuple[CalibrationReviewWindowedTables, ...]:
+    residual_rows = tuple(rows)
+    review_windows = (
+        tuple(windows) if windows is not None else (CalibrationReviewWindow("full"),)
+    )
+    if not review_windows:
+        raise ValueError("at least one calibration review window is required")
+
+    window_labels = [window.label for window in review_windows]
+    if len(set(window_labels)) != len(window_labels):
+        raise ValueError("calibration review window labels must be unique")
+
+    return tuple(
+        _build_windowed_calibration_review_table(
+            residual_rows,
+            window=window,
+            min_observation_count=min_observation_count,
+            max_examples_per_group=max_examples_per_group,
+        )
+        for window in review_windows
+    )
+
+
+def build_trailing_calibration_review_windows(
+    rows: Iterable[ResidualAttributionRow],
+    *,
+    day_counts: Iterable[int] = DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS,
+    include_full_window: bool = True,
+    as_of_date: date | None = None,
+) -> tuple[CalibrationReviewWindow, ...]:
+    residual_rows = tuple(rows)
+    windows: list[CalibrationReviewWindow] = []
+
+    if include_full_window:
+        windows.append(CalibrationReviewWindow("full"))
+
+    day_count_values = tuple(day_counts)
+    if any(day_count <= 0 for day_count in day_count_values):
+        raise ValueError("calibration review trailing day counts must be positive")
+    if len(set(day_count_values)) != len(day_count_values):
+        raise ValueError("calibration review trailing day counts must be unique")
+    if not day_count_values:
+        return tuple(windows)
+
+    if as_of_date is None:
+        if not residual_rows:
+            return tuple(windows)
+        as_of_date = max(row.replay_date for row in residual_rows)
+
+    for day_count in sorted(day_count_values):
+        windows.append(
+            CalibrationReviewWindow(
+                label=f"{day_count}d",
+                start_date=as_of_date - timedelta(days=day_count - 1),
+                end_date=as_of_date,
+            )
+        )
+
+    return tuple(windows)
+
+
+def residual_rows_for_calibration_review_window(
+    rows: Iterable[ResidualAttributionRow],
+    window: CalibrationReviewWindow,
+) -> tuple[ResidualAttributionRow, ...]:
+    return tuple(
+        row
+        for row in rows
+        if _date_in_review_window(
+            row.replay_date,
+            start_date=window.start_date,
+            end_date=window.end_date,
+        )
+    )
+
+
+def _build_windowed_calibration_review_table(
+    rows: tuple[ResidualAttributionRow, ...],
+    *,
+    window: CalibrationReviewWindow,
+    min_observation_count: int,
+    max_examples_per_group: int,
+) -> CalibrationReviewWindowedTables:
+    window_rows = residual_rows_for_calibration_review_window(rows, window)
+
+    return CalibrationReviewWindowedTables(
+        window=window,
+        residual_observation_count=len(window_rows),
+        residual_attribution_run_id=_single_optional_residual_attribution_run_id(
+            window_rows
+        ),
+        glyph_review_rows=build_glyph_calibration_review_rows(
+            window_rows,
+            min_observation_count=min_observation_count,
+            window_label=window.label,
+            window_start_date=window.start_date,
+            window_end_date=window.end_date,
+        ),
+        named_check_review_rows=build_named_check_calibration_review_rows(
+            window_rows,
+            min_observation_count=min_observation_count,
+            window_label=window.label,
+            window_start_date=window.start_date,
+            window_end_date=window.end_date,
+        ),
+        glyph_example_rows=build_glyph_calibration_review_example_rows(
+            window_rows,
+            max_examples_per_group=max_examples_per_group,
+            window_label=window.label,
+            window_start_date=window.start_date,
+            window_end_date=window.end_date,
+        ),
+        named_check_example_rows=build_named_check_calibration_review_example_rows(
+            window_rows,
+            max_examples_per_group=max_examples_per_group,
+            window_label=window.label,
+            window_start_date=window.start_date,
+            window_end_date=window.end_date,
+        ),
+    )
+
+
+def _date_in_review_window(
+    value: date,
+    *,
+    start_date: date | None,
+    end_date: date | None,
+) -> bool:
+    if start_date is not None and value < start_date:
+        return False
+    if end_date is not None and value > end_date:
+        return False
+    return True
+
+
+def _single_optional_residual_attribution_run_id(
+    rows: Sequence[ResidualAttributionRow],
+) -> str | None:
+    if not rows:
+        return None
+    return _single_residual_attribution_run_id(rows)
 
 
 def _single_residual_attribution_run_id(
