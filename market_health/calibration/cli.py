@@ -11,6 +11,16 @@ from market_health.calibration.authoritative_dataset_artifacts import (
 from market_health.calibration.authoritative_dataset_builder import (
     build_authoritative_replay_dataset_rows,
 )
+from market_health.calibration.calibration_review import (
+    DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+    DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS,
+    build_trailing_calibration_review_windows,
+    build_windowed_calibration_review_tables,
+)
+from market_health.calibration.calibration_review_artifacts import (
+    write_calibration_review_artifacts,
+)
 from market_health.calibration.check_output import (
     CheckReplayRow,
     build_fixture_check_replay_rows,
@@ -97,6 +107,46 @@ def build_parser() -> argparse.ArgumentParser:
         default="residual-attribution",
     )
 
+    calibration_review = subparsers.add_parser(
+        "calibration-review",
+        help="Build calibration review tables from residual attribution observations.",
+    )
+    calibration_review.add_argument("--price-cache", type=Path, required=True)
+    calibration_review.add_argument("--start-date", type=_parse_date, required=True)
+    calibration_review.add_argument("--end-date", type=_parse_date, required=True)
+    calibration_review.add_argument("--symbols", nargs="+", required=True)
+    calibration_review.add_argument("--lookback-rows", type=int, default=20)
+    calibration_review.add_argument("--out", type=Path, default=default_output_root())
+    calibration_review.add_argument(
+        "--dataset-run-id",
+        default="authoritative-replay-dataset",
+    )
+    calibration_review.add_argument(
+        "--residual-attribution-run-id",
+        default="residual-attribution",
+    )
+    calibration_review.add_argument(
+        "--calibration-review-run-id",
+        default="calibration-review",
+    )
+    calibration_review.add_argument(
+        "--min-observation-count",
+        type=int,
+        default=DEFAULT_CALIBRATION_REVIEW_MIN_OBSERVATION_COUNT,
+    )
+    calibration_review.add_argument(
+        "--max-examples-per-group",
+        type=int,
+        default=DEFAULT_CALIBRATION_REVIEW_EXAMPLES_PER_GROUP,
+    )
+    calibration_review.add_argument(
+        "--window-days",
+        nargs="*",
+        type=int,
+        default=list(DEFAULT_CALIBRATION_REVIEW_WINDOW_DAY_COUNTS),
+    )
+    calibration_review.add_argument("--no-full-window", action="store_true")
+
     return parser
 
 
@@ -126,6 +176,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "residual-attribution":
         payload = _run_residual_attribution_command(args)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "calibration-review":
+        payload = _run_calibration_review_command(args)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
 
@@ -263,6 +318,72 @@ def _run_residual_attribution_command(args: argparse.Namespace) -> dict[str, obj
         "dataset_row_count": len(dataset_rows),
         "observation_count": artifacts.observation_count,
         "summary_count": artifacts.summary_count,
+        "artifacts": artifacts.to_record(),
+    }
+
+
+def _run_calibration_review_command(args: argparse.Namespace) -> dict[str, object]:
+    output_root = args.out.expanduser()
+    assert_not_live_runtime_path(output_root)
+
+    price_cache_path = args.price_cache.expanduser()
+    price_cache = read_historical_price_cache_csv(
+        price_cache_path,
+        symbols=args.symbols,
+    )
+    range_request = build_range_replay_request(
+        start_date=args.start_date,
+        end_date=args.end_date,
+        symbols=args.symbols,
+        lookback_rows=args.lookback_rows,
+        output_root=output_root,
+    )
+    range_result = run_range_replay(
+        request=range_request,
+        price_rows=price_cache.rows,
+    )
+    check_rows = _build_authoritative_dataset_check_rows(range_result)
+    dataset_rows = build_authoritative_replay_dataset_rows(
+        range_result=range_result,
+        check_rows=check_rows,
+        price_rows=price_cache.rows,
+        dataset_run_id=args.dataset_run_id,
+    )
+    residual_rows = build_residual_attribution_rows(
+        dataset_rows,
+        residual_attribution_run_id=args.residual_attribution_run_id,
+    )
+    windows = build_trailing_calibration_review_windows(
+        residual_rows,
+        day_counts=args.window_days,
+        include_full_window=not args.no_full_window,
+    )
+    windowed_tables = build_windowed_calibration_review_tables(
+        residual_rows,
+        windows=windows,
+        min_observation_count=args.min_observation_count,
+        max_examples_per_group=args.max_examples_per_group,
+    )
+    artifacts = write_calibration_review_artifacts(
+        output_root,
+        windowed_tables=windowed_tables,
+        calibration_review_run_id=args.calibration_review_run_id,
+    )
+
+    return {
+        "status": "ok",
+        "command": "calibration-review",
+        "price_cache_path": str(price_cache_path),
+        "dataset_run_id": args.dataset_run_id,
+        "residual_attribution_run_id": args.residual_attribution_run_id,
+        "calibration_review_run_id": args.calibration_review_run_id,
+        "dataset_row_count": len(dataset_rows),
+        "residual_observation_count": len(residual_rows),
+        "window_count": artifacts.window_count,
+        "glyph_review_row_count": artifacts.glyph_review_row_count,
+        "named_check_review_row_count": artifacts.named_check_review_row_count,
+        "glyph_example_row_count": artifacts.glyph_example_row_count,
+        "named_check_example_row_count": artifacts.named_check_example_row_count,
         "artifacts": artifacts.to_record(),
     }
 
