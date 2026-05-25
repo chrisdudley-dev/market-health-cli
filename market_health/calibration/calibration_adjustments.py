@@ -11,6 +11,9 @@ from market_health.calibration.calibration_review import (
     CalibrationNamedCheckReviewRow,
 )
 from market_health.calibration.residuals import (
+    RESIDUAL_COLD,
+    RESIDUAL_HOT,
+    RESIDUAL_NEUTRAL,
     VALID_HORIZONS,
     ResidualAttributionRow,
     residual_direction,
@@ -18,6 +21,7 @@ from market_health.calibration.residuals import (
 
 CALIBRATION_ADJUSTMENT_CANDIDATE_SCHEMA_VERSION = "calibration_adjustment_candidate.v1"
 CALIBRATION_DRY_RUN_SIMULATION_SCHEMA_VERSION = "calibration_dry_run_simulation.v1"
+CALIBRATION_DRY_RUN_COMPARISON_SCHEMA_VERSION = "calibration_dry_run_comparison.v1"
 
 CALIBRATION_ADJUSTMENT_SCOPE_GLYPH = "glyph"
 CALIBRATION_ADJUSTMENT_SCOPE_NAMED_CHECK = "named_check"
@@ -98,6 +102,55 @@ CALIBRATION_DRY_RUN_SIMULATION_COLUMNS = (
     "calibration_review_run_id",
     "dry_run_simulation_run_id",
     "source_residual_schema_version",
+    "dry_run_only",
+)
+
+
+CALIBRATION_DRY_RUN_COMPARISON_GROUP_OVERALL = "overall"
+CALIBRATION_DRY_RUN_COMPARISON_GROUP_HORIZON = "horizon"
+CALIBRATION_DRY_RUN_COMPARISON_GROUP_CATEGORY_SLOT = "category_slot"
+CALIBRATION_DRY_RUN_COMPARISON_GROUP_GLYPH = "glyph"
+CALIBRATION_DRY_RUN_COMPARISON_GROUP_NAMED_CHECK = "named_check"
+CALIBRATION_DRY_RUN_COMPARISON_GROUPS = (
+    CALIBRATION_DRY_RUN_COMPARISON_GROUP_OVERALL,
+    CALIBRATION_DRY_RUN_COMPARISON_GROUP_HORIZON,
+    CALIBRATION_DRY_RUN_COMPARISON_GROUP_CATEGORY_SLOT,
+    CALIBRATION_DRY_RUN_COMPARISON_GROUP_GLYPH,
+    CALIBRATION_DRY_RUN_COMPARISON_GROUP_NAMED_CHECK,
+)
+DEFAULT_CALIBRATION_DRY_RUN_COMPARISON_GROUPINGS = CALIBRATION_DRY_RUN_COMPARISON_GROUPS
+
+CALIBRATION_DRY_RUN_COMPARISON_COLUMNS = (
+    "schema_version",
+    "group_name",
+    "group_value",
+    "horizon",
+    "category",
+    "slot",
+    "category_slot",
+    "glyph",
+    "named_check",
+    "observation_count",
+    "baseline_mean_residual",
+    "simulated_mean_residual",
+    "baseline_mean_abs_residual",
+    "simulated_mean_abs_residual",
+    "mean_abs_residual_delta",
+    "mean_abs_residual_improvement",
+    "improved_count",
+    "worsened_count",
+    "unchanged_count",
+    "baseline_hot_count",
+    "baseline_cold_count",
+    "baseline_neutral_count",
+    "simulated_hot_count",
+    "simulated_cold_count",
+    "simulated_neutral_count",
+    "unique_applied_candidate_count",
+    "applied_candidate_ids",
+    "residual_attribution_run_id",
+    "calibration_review_run_id",
+    "dry_run_simulation_run_id",
     "dry_run_only",
 )
 
@@ -424,6 +477,447 @@ class CalibrationDryRunSimulationRow:
             "source_residual_schema_version": self.source_residual_schema_version,
             "dry_run_only": self.dry_run_only,
         }
+
+
+@dataclass(frozen=True)
+class CalibrationDryRunComparisonRow:
+    group_name: str
+    group_value: str
+    observation_count: int
+    baseline_mean_residual: float
+    simulated_mean_residual: float
+    baseline_mean_abs_residual: float
+    simulated_mean_abs_residual: float
+    improved_count: int
+    worsened_count: int
+    unchanged_count: int
+    baseline_hot_count: int
+    baseline_cold_count: int
+    baseline_neutral_count: int
+    simulated_hot_count: int
+    simulated_cold_count: int
+    simulated_neutral_count: int
+    unique_applied_candidate_count: int
+    applied_candidate_ids: tuple[str, ...]
+    residual_attribution_run_id: str
+    calibration_review_run_id: str
+    dry_run_simulation_run_id: str
+    horizon: str | None = None
+    category: str | None = None
+    slot: int | None = None
+    glyph: str | None = None
+    named_check: str | None = None
+    dry_run_only: bool = True
+    schema_version: str = CALIBRATION_DRY_RUN_COMPARISON_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if self.schema_version != CALIBRATION_DRY_RUN_COMPARISON_SCHEMA_VERSION:
+            raise ValueError(
+                "unsupported calibration dry-run comparison schema version: "
+                f"{self.schema_version}"
+            )
+
+        group_name = _normalize_required_text(self.group_name, "group_name")
+        group_value = _normalize_required_text(self.group_value, "group_value")
+        if group_name not in CALIBRATION_DRY_RUN_COMPARISON_GROUPS:
+            raise ValueError(
+                f"unsupported calibration dry-run comparison group: {group_name}"
+            )
+
+        horizon = None if self.horizon is None else _normalize_horizon(self.horizon)
+        category = None if self.category is None else _normalize_category(self.category)
+        if self.slot is not None:
+            _validate_slot(self.slot)
+        if (category is None) != (self.slot is None):
+            raise ValueError(
+                "calibration dry-run comparison category and slot must be set together"
+            )
+
+        glyph = (
+            None
+            if self.glyph is None
+            else _normalize_required_text(self.glyph, "glyph")
+        )
+        named_check = (
+            None
+            if self.named_check is None
+            else _normalize_required_text(self.named_check, "named_check")
+        )
+
+        _validate_comparison_group_context(
+            group_name=group_name,
+            horizon=horizon,
+            category=category,
+            slot=self.slot,
+            glyph=glyph,
+            named_check=named_check,
+        )
+        _validate_comparison_counts(self)
+        _validate_comparison_candidate_ids(
+            unique_applied_candidate_count=self.unique_applied_candidate_count,
+            applied_candidate_ids=self.applied_candidate_ids,
+        )
+        _normalize_required_text(
+            self.residual_attribution_run_id,
+            "residual_attribution_run_id",
+        )
+        _normalize_required_text(
+            self.calibration_review_run_id,
+            "calibration_review_run_id",
+        )
+        _normalize_required_text(
+            self.dry_run_simulation_run_id,
+            "dry_run_simulation_run_id",
+        )
+        if not self.dry_run_only:
+            raise ValueError("calibration dry-run comparison rows must be dry-run only")
+
+        object.__setattr__(self, "group_name", group_name)
+        object.__setattr__(self, "group_value", group_value)
+        object.__setattr__(self, "horizon", horizon)
+        object.__setattr__(self, "category", category)
+        object.__setattr__(self, "glyph", glyph)
+        object.__setattr__(self, "named_check", named_check)
+
+    @property
+    def category_slot(self) -> str | None:
+        if self.category is None or self.slot is None:
+            return None
+        return f"{self.category}{self.slot}"
+
+    @property
+    def mean_abs_residual_delta(self) -> float:
+        return round(
+            self.simulated_mean_abs_residual - self.baseline_mean_abs_residual,
+            8,
+        )
+
+    @property
+    def mean_abs_residual_improvement(self) -> float:
+        return round(
+            self.baseline_mean_abs_residual - self.simulated_mean_abs_residual,
+            8,
+        )
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "group_name": self.group_name,
+            "group_value": self.group_value,
+            "horizon": self.horizon,
+            "category": self.category,
+            "slot": self.slot,
+            "category_slot": self.category_slot,
+            "glyph": self.glyph,
+            "named_check": self.named_check,
+            "observation_count": self.observation_count,
+            "baseline_mean_residual": self.baseline_mean_residual,
+            "simulated_mean_residual": self.simulated_mean_residual,
+            "baseline_mean_abs_residual": self.baseline_mean_abs_residual,
+            "simulated_mean_abs_residual": self.simulated_mean_abs_residual,
+            "mean_abs_residual_delta": self.mean_abs_residual_delta,
+            "mean_abs_residual_improvement": self.mean_abs_residual_improvement,
+            "improved_count": self.improved_count,
+            "worsened_count": self.worsened_count,
+            "unchanged_count": self.unchanged_count,
+            "baseline_hot_count": self.baseline_hot_count,
+            "baseline_cold_count": self.baseline_cold_count,
+            "baseline_neutral_count": self.baseline_neutral_count,
+            "simulated_hot_count": self.simulated_hot_count,
+            "simulated_cold_count": self.simulated_cold_count,
+            "simulated_neutral_count": self.simulated_neutral_count,
+            "unique_applied_candidate_count": self.unique_applied_candidate_count,
+            "applied_candidate_ids": "|".join(self.applied_candidate_ids),
+            "residual_attribution_run_id": self.residual_attribution_run_id,
+            "calibration_review_run_id": self.calibration_review_run_id,
+            "dry_run_simulation_run_id": self.dry_run_simulation_run_id,
+            "dry_run_only": self.dry_run_only,
+        }
+
+
+def build_calibration_dry_run_comparison_rows(
+    rows: Iterable[CalibrationDryRunSimulationRow],
+    *,
+    groupings: Iterable[str] = DEFAULT_CALIBRATION_DRY_RUN_COMPARISON_GROUPINGS,
+) -> tuple[CalibrationDryRunComparisonRow, ...]:
+    simulation_rows = tuple(rows)
+    comparison_groupings = tuple(groupings)
+    _validate_comparison_groupings(comparison_groupings)
+    if not simulation_rows:
+        return ()
+
+    comparison_rows: list[CalibrationDryRunComparisonRow] = []
+    for grouping in comparison_groupings:
+        buckets: dict[tuple[object, ...], list[CalibrationDryRunSimulationRow]] = {}
+        for row in simulation_rows:
+            buckets.setdefault(_comparison_group_key(row, grouping), []).append(row)
+
+        for _, bucket in sorted(buckets.items(), key=lambda item: item[0]):
+            comparison_rows.append(_build_comparison_row(grouping, bucket))
+
+    return tuple(sorted(comparison_rows, key=_comparison_row_sort_key))
+
+
+def _build_comparison_row(
+    group_name: str,
+    rows: list[CalibrationDryRunSimulationRow],
+) -> CalibrationDryRunComparisonRow:
+    context = _comparison_group_context(group_name, rows[0])
+    baseline_residuals = [row.baseline_residual for row in rows]
+    simulated_residuals = [row.simulated_residual for row in rows]
+    applied_candidate_ids = tuple(
+        sorted(
+            {candidate_id for row in rows for candidate_id in row.applied_candidate_ids}
+        )
+    )
+
+    return CalibrationDryRunComparisonRow(
+        group_name=group_name,
+        group_value=context["group_value"],
+        horizon=context["horizon"],
+        category=context["category"],
+        slot=context["slot"],
+        glyph=context["glyph"],
+        named_check=context["named_check"],
+        observation_count=len(rows),
+        baseline_mean_residual=_mean(baseline_residuals),
+        simulated_mean_residual=_mean(simulated_residuals),
+        baseline_mean_abs_residual=_mean_abs(baseline_residuals),
+        simulated_mean_abs_residual=_mean_abs(simulated_residuals),
+        improved_count=sum(_comparison_outcome(row) == "improved" for row in rows),
+        worsened_count=sum(_comparison_outcome(row) == "worsened" for row in rows),
+        unchanged_count=sum(_comparison_outcome(row) == "unchanged" for row in rows),
+        baseline_hot_count=sum(
+            row.baseline_residual_direction == RESIDUAL_HOT for row in rows
+        ),
+        baseline_cold_count=sum(
+            row.baseline_residual_direction == RESIDUAL_COLD for row in rows
+        ),
+        baseline_neutral_count=sum(
+            row.baseline_residual_direction == RESIDUAL_NEUTRAL for row in rows
+        ),
+        simulated_hot_count=sum(
+            row.simulated_residual_direction == RESIDUAL_HOT for row in rows
+        ),
+        simulated_cold_count=sum(
+            row.simulated_residual_direction == RESIDUAL_COLD for row in rows
+        ),
+        simulated_neutral_count=sum(
+            row.simulated_residual_direction == RESIDUAL_NEUTRAL for row in rows
+        ),
+        unique_applied_candidate_count=len(applied_candidate_ids),
+        applied_candidate_ids=applied_candidate_ids,
+        residual_attribution_run_id=_single_simulation_value(
+            rows,
+            "residual_attribution_run_id",
+        ),
+        calibration_review_run_id=_single_simulation_value(
+            rows,
+            "calibration_review_run_id",
+        ),
+        dry_run_simulation_run_id=_single_simulation_value(
+            rows,
+            "dry_run_simulation_run_id",
+        ),
+    )
+
+
+def _validate_comparison_groupings(groupings: tuple[str, ...]) -> None:
+    if not groupings:
+        raise ValueError(
+            "at least one calibration dry-run comparison grouping is required"
+        )
+    if len(set(groupings)) != len(groupings):
+        raise ValueError("calibration dry-run comparison groupings must be unique")
+    unsupported = sorted(set(groupings) - set(CALIBRATION_DRY_RUN_COMPARISON_GROUPS))
+    if unsupported:
+        raise ValueError(
+            f"unsupported calibration dry-run comparison grouping: {unsupported[0]}"
+        )
+
+
+def _comparison_group_key(
+    row: CalibrationDryRunSimulationRow,
+    group_name: str,
+) -> tuple[object, ...]:
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_OVERALL:
+        return ("all",)
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_HORIZON:
+        return (row.horizon,)
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_CATEGORY_SLOT:
+        return (row.horizon, row.category, row.slot)
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_GLYPH:
+        return (row.horizon, row.category, row.slot, row.glyph)
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_NAMED_CHECK:
+        return (row.horizon, row.named_check)
+    raise ValueError(f"unsupported calibration dry-run comparison group: {group_name}")
+
+
+def _comparison_group_context(
+    group_name: str,
+    row: CalibrationDryRunSimulationRow,
+) -> dict[str, object]:
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_OVERALL:
+        return _comparison_context("all")
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_HORIZON:
+        return _comparison_context(row.horizon, horizon=row.horizon)
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_CATEGORY_SLOT:
+        return _comparison_context(
+            f"{row.horizon}:{row.category_slot}",
+            horizon=row.horizon,
+            category=row.category,
+            slot=row.slot,
+        )
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_GLYPH:
+        return _comparison_context(
+            f"{row.horizon}:{row.category_slot}:{row.glyph}",
+            horizon=row.horizon,
+            category=row.category,
+            slot=row.slot,
+            glyph=row.glyph,
+        )
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_NAMED_CHECK:
+        return _comparison_context(
+            f"{row.horizon}:{row.named_check}",
+            horizon=row.horizon,
+            named_check=row.named_check,
+        )
+    raise ValueError(f"unsupported calibration dry-run comparison group: {group_name}")
+
+
+def _comparison_context(
+    group_value: str,
+    *,
+    horizon: str | None = None,
+    category: str | None = None,
+    slot: int | None = None,
+    glyph: str | None = None,
+    named_check: str | None = None,
+) -> dict[str, object]:
+    return {
+        "group_value": group_value,
+        "horizon": horizon,
+        "category": category,
+        "slot": slot,
+        "glyph": glyph,
+        "named_check": named_check,
+    }
+
+
+def _validate_comparison_group_context(
+    *,
+    group_name: str,
+    horizon: str | None,
+    category: str | None,
+    slot: int | None,
+    glyph: str | None,
+    named_check: str | None,
+) -> None:
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_HORIZON and horizon is None:
+        raise ValueError("horizon comparison rows require horizon context")
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_CATEGORY_SLOT and (
+        horizon is None or category is None or slot is None
+    ):
+        raise ValueError("category_slot comparison rows require category slot context")
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_GLYPH and (
+        horizon is None or category is None or slot is None or glyph is None
+    ):
+        raise ValueError("glyph comparison rows require category slot glyph context")
+    if group_name == CALIBRATION_DRY_RUN_COMPARISON_GROUP_NAMED_CHECK and (
+        horizon is None or named_check is None
+    ):
+        raise ValueError("named_check comparison rows require named_check context")
+
+
+def _validate_comparison_counts(row: CalibrationDryRunComparisonRow) -> None:
+    if row.observation_count <= 0:
+        raise ValueError(
+            "calibration dry-run comparison observation_count must be positive"
+        )
+    if (
+        row.improved_count + row.worsened_count + row.unchanged_count
+        != row.observation_count
+    ):
+        raise ValueError(
+            "calibration dry-run comparison outcome counts must equal observation_count"
+        )
+    if (
+        row.baseline_hot_count + row.baseline_cold_count + row.baseline_neutral_count
+        != row.observation_count
+    ):
+        raise ValueError(
+            "calibration dry-run comparison baseline direction counts must equal "
+            "observation_count"
+        )
+    if (
+        row.simulated_hot_count + row.simulated_cold_count + row.simulated_neutral_count
+        != row.observation_count
+    ):
+        raise ValueError(
+            "calibration dry-run comparison simulated direction counts must equal "
+            "observation_count"
+        )
+
+
+def _validate_comparison_candidate_ids(
+    *,
+    unique_applied_candidate_count: int,
+    applied_candidate_ids: tuple[str, ...],
+) -> None:
+    if unique_applied_candidate_count <= 0:
+        raise ValueError(
+            "calibration dry-run comparison unique_applied_candidate_count must be positive"
+        )
+    if unique_applied_candidate_count != len(applied_candidate_ids):
+        raise ValueError(
+            "calibration dry-run comparison unique_applied_candidate_count must match "
+            "applied_candidate_ids"
+        )
+    if len(set(applied_candidate_ids)) != len(applied_candidate_ids):
+        raise ValueError(
+            "calibration dry-run comparison applied_candidate_ids must be unique"
+        )
+    if tuple(sorted(applied_candidate_ids)) != applied_candidate_ids:
+        raise ValueError(
+            "calibration dry-run comparison applied_candidate_ids must be sorted"
+        )
+
+
+def _comparison_outcome(row: CalibrationDryRunSimulationRow) -> str:
+    baseline_abs = round(abs(row.baseline_residual), 8)
+    simulated_abs = round(abs(row.simulated_residual), 8)
+    if simulated_abs < baseline_abs:
+        return "improved"
+    if simulated_abs > baseline_abs:
+        return "worsened"
+    return "unchanged"
+
+
+def _single_simulation_value(
+    rows: list[CalibrationDryRunSimulationRow],
+    field_name: str,
+) -> str:
+    values = sorted({str(getattr(row, field_name)) for row in rows})
+    if len(values) != 1:
+        raise ValueError(
+            f"calibration dry-run comparison rows must share one {field_name}"
+        )
+    return values[0]
+
+
+def _mean(values: list[float]) -> float:
+    return round(sum(values) / len(values), 8)
+
+
+def _mean_abs(values: list[float]) -> float:
+    return round(sum(abs(value) for value in values) / len(values), 8)
+
+
+def _comparison_row_sort_key(row: CalibrationDryRunComparisonRow) -> tuple[object, ...]:
+    return (
+        CALIBRATION_DRY_RUN_COMPARISON_GROUPS.index(row.group_name),
+        row.group_value,
+    )
 
 
 def apply_calibration_adjustment_candidates_dry_run(
