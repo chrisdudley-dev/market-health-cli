@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 
-from market_health.calibration.calibration_review import REVIEW_COLD, REVIEW_HOT
+from market_health.calibration.calibration_review import (
+    REVIEW_COLD,
+    REVIEW_HOT,
+    CalibrationGlyphReviewRow,
+    CalibrationNamedCheckReviewRow,
+)
 from market_health.calibration.residuals import VALID_HORIZONS
 
 CALIBRATION_ADJUSTMENT_CANDIDATE_SCHEMA_VERSION = "calibration_adjustment_candidate.v1"
@@ -33,6 +39,8 @@ CALIBRATION_ADJUSTMENT_CANDIDATE_REVIEW_CLASSIFICATIONS = (
     REVIEW_HOT,
     REVIEW_COLD,
 )
+
+DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT = 3
 
 CALIBRATION_ADJUSTMENT_CANDIDATE_COLUMNS = (
     "schema_version",
@@ -233,6 +241,194 @@ class CalibrationAdjustmentCandidateRow:
             "calibration_review_run_id": self.calibration_review_run_id,
             "dry_run_only": self.dry_run_only,
         }
+
+
+def build_calibration_adjustment_candidates_from_review_tables(
+    *,
+    glyph_review_rows: Iterable[CalibrationGlyphReviewRow] = (),
+    named_check_review_rows: Iterable[CalibrationNamedCheckReviewRow] = (),
+    calibration_review_run_id: str = "calibration-review",
+    min_observation_count: int = DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT,
+) -> tuple[CalibrationAdjustmentCandidateRow, ...]:
+    return tuple(
+        sorted(
+            (
+                *build_glyph_calibration_adjustment_candidates(
+                    glyph_review_rows,
+                    calibration_review_run_id=calibration_review_run_id,
+                    min_observation_count=min_observation_count,
+                ),
+                *build_named_check_calibration_adjustment_candidates(
+                    named_check_review_rows,
+                    calibration_review_run_id=calibration_review_run_id,
+                    min_observation_count=min_observation_count,
+                ),
+            ),
+            key=_candidate_sort_key,
+        )
+    )
+
+
+def build_glyph_calibration_adjustment_candidates(
+    rows: Iterable[CalibrationGlyphReviewRow],
+    *,
+    calibration_review_run_id: str = "calibration-review",
+    min_observation_count: int = DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT,
+) -> tuple[CalibrationAdjustmentCandidateRow, ...]:
+    _validate_candidate_builder_inputs(
+        calibration_review_run_id=calibration_review_run_id,
+        min_observation_count=min_observation_count,
+    )
+
+    candidates: list[CalibrationAdjustmentCandidateRow] = []
+    for row in sorted(rows, key=_glyph_review_row_sort_key):
+        if not _review_row_is_candidate_eligible(row, min_observation_count):
+            continue
+
+        candidates.append(
+            CalibrationAdjustmentCandidateRow(
+                candidate_scope=CALIBRATION_ADJUSTMENT_SCOPE_GLYPH,
+                source_review_table=CALIBRATION_ADJUSTMENT_SOURCE_TABLE_GLYPH_REVIEW,
+                horizon=row.horizon,
+                category=row.category,
+                slot=row.slot,
+                glyph=row.glyph,
+                review_classification=row.review_classification,
+                adjustment_direction=_adjustment_direction_for_review_classification(
+                    row.review_classification
+                ),
+                score_delta=_score_delta_for_mean_residual(row.mean_residual),
+                observation_count=row.observation_count,
+                mean_residual=row.mean_residual,
+                mean_abs_residual=row.mean_abs_residual,
+                residual_attribution_run_id=row.residual_attribution_run_id,
+                calibration_review_run_id=calibration_review_run_id,
+                window_label=row.window_label,
+                window_start_date=row.window_start_date,
+                window_end_date=row.window_end_date,
+            )
+        )
+
+    return tuple(candidates)
+
+
+def build_named_check_calibration_adjustment_candidates(
+    rows: Iterable[CalibrationNamedCheckReviewRow],
+    *,
+    calibration_review_run_id: str = "calibration-review",
+    min_observation_count: int = DEFAULT_CALIBRATION_ADJUSTMENT_MIN_OBSERVATION_COUNT,
+) -> tuple[CalibrationAdjustmentCandidateRow, ...]:
+    _validate_candidate_builder_inputs(
+        calibration_review_run_id=calibration_review_run_id,
+        min_observation_count=min_observation_count,
+    )
+
+    candidates: list[CalibrationAdjustmentCandidateRow] = []
+    for row in sorted(rows, key=_named_check_review_row_sort_key):
+        if not _review_row_is_candidate_eligible(row, min_observation_count):
+            continue
+
+        candidates.append(
+            CalibrationAdjustmentCandidateRow(
+                candidate_scope=CALIBRATION_ADJUSTMENT_SCOPE_NAMED_CHECK,
+                source_review_table=(
+                    CALIBRATION_ADJUSTMENT_SOURCE_TABLE_NAMED_CHECK_REVIEW
+                ),
+                horizon=row.horizon,
+                category=row.category,
+                slot=row.slot,
+                glyph=row.glyph,
+                named_check=row.named_check,
+                review_classification=row.review_classification,
+                adjustment_direction=_adjustment_direction_for_review_classification(
+                    row.review_classification
+                ),
+                score_delta=_score_delta_for_mean_residual(row.mean_residual),
+                observation_count=row.observation_count,
+                mean_residual=row.mean_residual,
+                mean_abs_residual=row.mean_abs_residual,
+                residual_attribution_run_id=row.residual_attribution_run_id,
+                calibration_review_run_id=calibration_review_run_id,
+                window_label=row.window_label,
+                window_start_date=row.window_start_date,
+                window_end_date=row.window_end_date,
+            )
+        )
+
+    return tuple(candidates)
+
+
+def _validate_candidate_builder_inputs(
+    *,
+    calibration_review_run_id: str,
+    min_observation_count: int,
+) -> None:
+    _normalize_required_text(calibration_review_run_id, "calibration_review_run_id")
+    if min_observation_count <= 0:
+        raise ValueError("min_observation_count must be positive")
+
+
+def _review_row_is_candidate_eligible(
+    row: CalibrationGlyphReviewRow | CalibrationNamedCheckReviewRow,
+    min_observation_count: int,
+) -> bool:
+    if row.review_classification not in (
+        CALIBRATION_ADJUSTMENT_CANDIDATE_REVIEW_CLASSIFICATIONS
+    ):
+        return False
+    if row.observation_count < min_observation_count:
+        return False
+    if row.observation_count < row.min_observation_count:
+        return False
+    return row.mean_residual != 0
+
+
+def _adjustment_direction_for_review_classification(
+    review_classification: str,
+) -> str:
+    if review_classification == REVIEW_HOT:
+        return CALIBRATION_ADJUSTMENT_DIRECTION_DECREASE_SCORE
+    if review_classification == REVIEW_COLD:
+        return CALIBRATION_ADJUSTMENT_DIRECTION_INCREASE_SCORE
+    raise ValueError(
+        "unsupported calibration adjustment candidate review classification: "
+        f"{review_classification}"
+    )
+
+
+def _score_delta_for_mean_residual(mean_residual: float) -> float:
+    return round(-mean_residual, 8)
+
+
+def _candidate_sort_key(row: CalibrationAdjustmentCandidateRow) -> str:
+    return row.candidate_id
+
+
+def _glyph_review_row_sort_key(row: CalibrationGlyphReviewRow) -> tuple[object, ...]:
+    return (
+        row.window_label,
+        _optional_date(row.window_start_date) or "",
+        _optional_date(row.window_end_date) or "",
+        row.horizon,
+        row.category,
+        row.slot,
+        row.glyph,
+    )
+
+
+def _named_check_review_row_sort_key(
+    row: CalibrationNamedCheckReviewRow,
+) -> tuple[object, ...]:
+    return (
+        row.window_label,
+        _optional_date(row.window_start_date) or "",
+        _optional_date(row.window_end_date) or "",
+        row.horizon,
+        row.named_check,
+        row.category or "",
+        row.slot or 0,
+        row.glyph or "",
+    )
 
 
 def _normalize_horizon(value: str) -> str:
