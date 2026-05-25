@@ -46,6 +46,84 @@ CHECK_REPLAY_ROW_COLUMNS = (
 )
 
 
+REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION = (
+    "reviewed_check_score_calibration_adjustment.v1"
+)
+
+
+@dataclass(frozen=True)
+class ReviewedCheckScoreCalibrationAdjustment:
+    horizon: str
+    category: str
+    slot: int
+    score_delta: float
+    calibration_review_run_id: str
+    dry_run_simulation_run_id: str
+    approved_by: str
+    rationale: str
+    schema_version: str = REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        horizon = self.horizon.strip().upper()
+        category = self.category.strip().upper()
+
+        if (
+            self.schema_version
+            != REVIEWED_CHECK_SCORE_CALIBRATION_ADJUSTMENT_SCHEMA_VERSION
+        ):
+            raise ValueError(
+                "unsupported reviewed check score calibration adjustment schema "
+                f"version: {self.schema_version}"
+            )
+        if horizon not in VALID_HORIZONS:
+            raise ValueError(
+                f"unsupported reviewed check score calibration horizon: {self.horizon}"
+            )
+        if category not in {"A", "B", "C", "D", "E"}:
+            raise ValueError(
+                f"unsupported reviewed check score calibration category: {self.category}"
+            )
+        if not 1 <= self.slot <= 6:
+            raise ValueError(
+                f"unsupported reviewed check score calibration slot: {self.slot}"
+            )
+        if self.score_delta == 0:
+            raise ValueError(
+                "reviewed check score calibration score_delta cannot be zero"
+            )
+        for field_name in (
+            "calibration_review_run_id",
+            "dry_run_simulation_run_id",
+            "approved_by",
+            "rationale",
+        ):
+            if not str(getattr(self, field_name)).strip():
+                raise ValueError(
+                    f"reviewed check score calibration {field_name} is required"
+                )
+
+        object.__setattr__(self, "horizon", horizon)
+        object.__setattr__(self, "category", category)
+
+    @property
+    def category_slot(self) -> str:
+        return f"{self.category}{self.slot}"
+
+    def to_record(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "horizon": self.horizon,
+            "category": self.category,
+            "slot": self.slot,
+            "category_slot": self.category_slot,
+            "score_delta": self.score_delta,
+            "calibration_review_run_id": self.calibration_review_run_id,
+            "dry_run_simulation_run_id": self.dry_run_simulation_run_id,
+            "approved_by": self.approved_by,
+            "rationale": self.rationale,
+        }
+
+
 @dataclass(frozen=True)
 class CheckReplayRow:
     replay_date: date
@@ -121,6 +199,9 @@ def build_fixture_check_replay_rows(
     symbols: Iterable[str],
     horizons: Iterable[str] = VALID_HORIZONS,
     inventory: Iterable[CheckInventoryRow] | None = None,
+    reviewed_calibration_adjustments: Iterable[
+        ReviewedCheckScoreCalibrationAdjustment
+    ] = (),
 ) -> tuple[CheckReplayRow, ...]:
     selected_inventory = (
         iter_check_inventory() if inventory is None else tuple(inventory)
@@ -149,12 +230,92 @@ def build_fixture_check_replay_rows(
                     )
                 )
 
+    calibrated_rows = apply_reviewed_check_score_calibration_adjustments(
+        rows,
+        reviewed_calibration_adjustments,
+    )
+
     return tuple(
         sorted(
-            rows,
+            calibrated_rows,
             key=lambda row: (row.symbol, row.category, row.slot, row.horizon),
         )
     )
+
+
+def apply_reviewed_check_score_calibration_adjustments(
+    rows: Iterable[CheckReplayRow],
+    adjustments: Iterable[ReviewedCheckScoreCalibrationAdjustment],
+) -> tuple[CheckReplayRow, ...]:
+    source_rows = tuple(rows)
+    adjustment_rows = tuple(adjustments)
+    if not adjustment_rows:
+        return source_rows
+
+    _validate_reviewed_calibration_adjustments(adjustment_rows)
+
+    adjusted_rows: list[CheckReplayRow] = []
+    for row in source_rows:
+        score_delta = round(
+            sum(
+                adjustment.score_delta
+                for adjustment in adjustment_rows
+                if _reviewed_adjustment_matches_check_row(adjustment, row)
+            ),
+            8,
+        )
+        if score_delta == 0:
+            adjusted_rows.append(row)
+            continue
+
+        adjusted_rows.append(
+            CheckReplayRow(
+                replay_date=row.replay_date,
+                symbol=row.symbol,
+                category=row.category,
+                slot=row.slot,
+                horizon=row.horizon,
+                glyph=row.glyph,
+                named_check=row.named_check,
+                score=_clamp_check_score(row.score + score_delta),
+                replayability_class=row.replayability_class,
+                measurement_status=row.measurement_status,
+                source_module=row.source_module,
+                function_name=row.function_name,
+                schema_version=row.schema_version,
+            )
+        )
+
+    return tuple(adjusted_rows)
+
+
+def _validate_reviewed_calibration_adjustments(
+    adjustments: tuple[ReviewedCheckScoreCalibrationAdjustment, ...],
+) -> None:
+    scopes = [
+        (adjustment.horizon, adjustment.category, adjustment.slot)
+        for adjustment in adjustments
+    ]
+    if len(set(scopes)) != len(scopes):
+        raise ValueError(
+            "reviewed check score calibration adjustments must have unique "
+            "horizon/category/slot scopes"
+        )
+
+
+def _reviewed_adjustment_matches_check_row(
+    adjustment: ReviewedCheckScoreCalibrationAdjustment,
+    row: CheckReplayRow,
+) -> bool:
+    return (
+        adjustment.horizon == row.horizon
+        and adjustment.category == row.category
+        and adjustment.slot == row.slot
+    )
+
+
+def _clamp_check_score(value: float) -> float:
+    return round(max(0.0, min(10.0, value)), 4)
 
 
 def _measurement_status_for_inventory(item: CheckInventoryRow) -> str:
