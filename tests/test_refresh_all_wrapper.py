@@ -62,6 +62,7 @@ exit 0
     )
 
     env = os.environ.copy()
+    env.pop("INVOCATION_ID", None)
     env["HOME"] = str(tmp_path)
     env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
 
