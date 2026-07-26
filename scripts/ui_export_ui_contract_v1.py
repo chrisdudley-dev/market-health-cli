@@ -1,7 +1,15 @@
 import json
 import os
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from market_health.ui_contract_meta import DIMENSIONS_META_V1
 
 out_json = Path(os.path.expanduser("~/.cache/jerboa/market_health.ui.v1.json"))
 out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -11,6 +19,8 @@ state_p = Path(
 env_p = Path(os.path.expanduser("~/.cache/jerboa/environment.v1.json"))
 sect_p = Path(os.path.expanduser("~/.cache/jerboa/market_health.sectors.json"))
 pos_p = Path(os.path.expanduser("~/.cache/jerboa/positions.v1.json"))
+rec_p = Path(os.path.expanduser("~/.cache/jerboa/recommendations.v1.json"))
+forecast_p = Path(os.path.expanduser("~/.cache/jerboa/forecast_scores.v1.json"))
 
 
 def read_json(p: Path):
@@ -54,8 +64,6 @@ status_cmd = os.path.expanduser("~/bin/jerboa-market-health-status")
 status_line = None
 if os.path.exists(status_cmd) and os.access(status_cmd, os.X_OK):
     try:
-        import subprocess
-
         status_line = subprocess.check_output([status_cmd], text=True).strip()
     except Exception:
         status_line = None
@@ -64,6 +72,26 @@ state = read_json(state_p)
 env = read_json(env_p)
 sect = read_json(sect_p)
 pos = read_json(pos_p)
+rec_raw = read_json(rec_p)
+forecast_raw = read_json(forecast_p)
+
+rec_status = "ok"
+rec = rec_raw
+if rec_raw is None:
+    rec_status = "missing"
+    rec = None
+elif isinstance(rec_raw, dict) and rec_raw.get("_error"):
+    rec_status = "unreadable"
+    rec = None
+
+forecast_status = "ok"
+forecast = forecast_raw
+if forecast_raw is None:
+    forecast_status = "missing"
+    forecast = None
+elif isinstance(forecast_raw, dict) and forecast_raw.get("_error"):
+    forecast_status = "unreadable"
+    forecast = None
 
 if not status_line:
     status_line = status_line_fallback(state)
@@ -173,11 +201,15 @@ payload = {
         "environment": meta(env_p),
         "sectors": meta(sect_p),
         "positions": meta(pos_p),
+        "recommendations": meta(rec_p),
+        "forecast_scores": meta(forecast_p),
         "events_provider": meta(ev_cfg_p),
     },
     "summary": {
         "symbols_sample": symbols,
         "positions_count": len(pos_list),
+        "recommendations_status": rec_status,
+        "forecast_scores_status": forecast_status,
         "events_count": len(events_list),
         "events_status": (
             events.get("status", "?") if isinstance(events, dict) else "?"
@@ -189,6 +221,9 @@ payload = {
         "environment": env,
         "sectors": sect,
         "positions": pos,
+        "dimensions_meta": DIMENSIONS_META_V1,
+        "recommendations": rec,
+        "forecast_scores": forecast,
         "events": events,
     },
 }

@@ -8,14 +8,17 @@ from datetime import datetime
 VOLATILE_KEYS = {"asof", "generated_at", "updated_at", "timestamp", "ts"}
 
 
-def _run_export(tmp_path: Path):
+def _run_export(tmp_path: Path, *, direct_python: bool = False):
     env = os.environ.copy()
     env["HOME"] = str(tmp_path)
     env["USERPROFILE"] = str(tmp_path)
 
-    cmd = ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"]
-    if os.name == "nt":
+    if direct_python:
         cmd = [sys.executable, "scripts/ui_export_ui_contract_v1.py"]
+    else:
+        cmd = ["bash", "scripts/jerboa/bin/jerboa-market-health-ui-export"]
+        if os.name == "nt":
+            cmd = [sys.executable, "scripts/ui_export_ui_contract_v1.py"]
 
     subprocess.run(cmd, check=True, env=env)
 
@@ -73,6 +76,7 @@ def test_contract_empty_home_is_valid(tmp_path):
         "sectors",
         "state",
         "recommendations",
+        "forecast_scores",
         "events_provider",
     ]:
         m = contract["meta"][k]
@@ -87,7 +91,13 @@ def test_contract_empty_home_is_valid(tmp_path):
     assert contract["data"]["sectors"] is None
     assert contract["data"]["state"] is None
     assert contract["data"]["recommendations"] is None
+    assert contract["data"]["forecast_scores"] is None
     assert contract["summary"]["recommendations_status"] in {
+        "ok",
+        "missing",
+        "unreadable",
+    }
+    assert contract["summary"]["forecast_scores_status"] in {
         "ok",
         "missing",
         "unreadable",
@@ -120,8 +130,30 @@ def test_contract_with_fixtures_is_populated_and_signature_stable(tmp_path):
     assert isinstance(contract["data"]["positions"], dict)
     assert isinstance(contract["data"]["sectors"], list)
     assert isinstance(contract["data"]["state"], dict)
+    assert isinstance(contract["data"]["recommendations"], dict)
+    assert isinstance(contract["data"]["forecast_scores"], dict)
 
     expected_path = Path("tests/fixtures/expected/ui_contract.signature.tsv")
     expected = expected_path.read_text().splitlines()
     got = _shape_signature(contract)
     assert got == expected
+
+
+def test_contract_standalone_python_export_path_has_full_shape(tmp_path):
+    src = Path("tests/fixtures/scenarios/bullish/jerboa_cache")
+    dst = tmp_path / ".cache" / "jerboa"
+    (dst / "state").mkdir(parents=True, exist_ok=True)
+
+    for f in src.glob("*.json"):
+        (dst / f.name).write_text(f.read_text())
+    for f in (src / "state").glob("*.json"):
+        (dst / "state" / f.name).write_text(f.read_text())
+
+    contract = _run_export(tmp_path, direct_python=True)
+    _assert_envelope(contract)
+
+    assert "recommendations" in contract["meta"]
+    assert "forecast_scores" in contract["meta"]
+    assert contract["data"]["dimensions_meta"]["F"]["display_name"] == "Plan"
+    assert isinstance(contract["data"]["recommendations"], dict)
+    assert isinstance(contract["data"]["forecast_scores"], dict)
