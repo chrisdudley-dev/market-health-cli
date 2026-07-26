@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-PY="/root/market-health-cli/.venv/bin/python"
+PY="${PYTHON:-python3}"
 set -Eeuo pipefail
 
 FORCE=0
@@ -151,26 +151,50 @@ else
   echo "refresh-all: status=$status reason=$reason market_changed=$changed_market positions_changed=$changed_pos rec_changed=$changed_rec rec_rc=$rec_rc"
 fi
 
+# JERBOA_REC_ASOF_SYNC_V1
+# Keep recommendations "asof" coherent with the UI snapshot "asof".
+# This does NOT hit Schwab; it only edits the local JSON file.
+UI_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
+if [ "$status" != "error" ] && [ -s "$UI_JSON" ] && [ -s "$REC_JSON" ]; then
+  ui_asof="$(
+    UI_JSON="$UI_JSON" "$PY" - <<'PYASOF'
+import json
+import os
+from pathlib import Path
+
+ui_json = Path(os.environ["UI_JSON"])
+try:
+    payload = json.loads(ui_json.read_text(encoding="utf-8"))
+except Exception:
+    payload = {}
+print(payload.get("asof", ""))
+PYASOF
+  )"
+  if [ -n "$ui_asof" ]; then
+    UI_ASOF="$ui_asof" REC_JSON="$REC_JSON" "$PY" - <<'PYSYNC'
+import json
+import os
+from pathlib import Path
+
+ui = os.environ.get("UI_ASOF", "")
+rec_path = Path(os.environ["REC_JSON"])
+data = json.loads(rec_path.read_text(encoding="utf-8"))
+data["asof"] = ui
+rec = data.get("recommendation")
+if isinstance(rec, dict):
+    rec["asof"] = ui
+if "generated_at" in data:
+    data["generated_at"] = ui
+rec_path.write_text(
+    json.dumps(data, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
+PYSYNC
+  fi
+fi
+
 # Exit non-zero only if a subcommand failed
 if [ "$status" = "error" ]; then
   exit 1
 fi
 exit 0
-# JERBOA_REC_ASOF_SYNC_V1
-# Keep recommendations "asof" coherent with the UI snapshot "asof".
-# This does NOT hit Schwab; it only edits the local JSON file.
-UI_JSON="${HOME}/.cache/jerboa/market_health.ui.v1.json"
-if [ -s "$UI_JSON" ] && [ -s "$REC_JSON" ]; then
-  ui_asof="$("$PY" - <<'PYASOF'
-import json
-from pathlib import Path
-d=json.loads(Path("/root/.cache/jerboa/market_health.ui.v1.json").read_text())
-print(d.get("asof",""))
-PYASOF
-  )"
-  if [ -n "$ui_asof" ]; then
-    REC_JSON="$REC_JSON" UI_ASOF="$ui_asof" "$PY" -c 'import os,json; from pathlib import Path; ui=os.environ.get("UI_ASOF",""); rp=Path(os.environ["REC_JSON"]); d=json.loads(rp.read_text(encoding="utf-8")); d["asof"]=ui; rec=d.get("recommendation"); (isinstance(rec,dict) and rec.__setitem__("asof",ui)); ("generated_at" in d and d.__setitem__("generated_at",ui)); rp.write_text(json.dumps(d, indent=2, sort_keys=True)+chr(10), encoding="utf-8")+chr(10), encoding="utf-8")'
-  fi
-fi
-# --- end JERBOA_REC_ASOF_SYNC_V1 ---
-
