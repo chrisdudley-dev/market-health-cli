@@ -1,250 +1,20 @@
 # Market Health CLI
 
-A terminal-first, color‑coded dashboard that summarizes sector “market health” at a glance.  
-Built with [Rich](https://github.com/Textualize/rich) and designed to look great on a Raspberry Pi.
+Terminal-first market-health scoring and dashboard tooling for sector ETFs and related portfolio workflows.
+The project is built around a compact Rich-based UI, JSON cache artifacts, and small refresh/export scripts that can run locally or on a Raspberry Pi.
 
-> Educational tool only — not investment advice.
+> Educational tool only. Not investment advice.
 
----
+## What this repo provides
 
-## Highlights
-
-- **Pi Grid**: ultra-compact, single‑grid view for small displays (e.g., Raspberry Pi).
-- **Color coding**: intuitive heat-style backgrounds from **weak → strong**.
-- **Live or offline**: fetches data via `yfinance`, or render from a local JSON file.
-- **Zero-friction demo**: generate realistic demo data with `--demo`.
-
----
-
-## Quickstart (run locally)
-
-```bash
-# Create and activate a virtual environment (Windows PowerShell shown)
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the compact Pi grid with demo data (auto-fit columns)
-python market_ui.py --demo --pi-grid --grid-cols 0
-```
-
-### Live data (no demo)
-```bash
-python market_ui.py --pi-grid --grid-cols 0
-```
-> Requires internet access; data is pulled via `yfinance`.
-
----
-
-## Raspberry Pi notes
-
-On Raspberry Pi, using the community **piwheels** index speeds up installation for heavy packages like NumPy/Pandas:
-
-```bash
-# Optional: use piwheels for much faster installs on Raspberry Pi
-export PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip wheel
-pip install -r requirements.txt
-
-# Compact grid tuned for small screens
-python market_ui.py --pi-grid --grid-cols 0 --watch 30
-```
-
-You can fine‑tune the grid density by changing `--grid-cols` (e.g., `--grid-cols 4`).  
-Use `--mono` for a monochrome look (no colors).
-
----
-
-## CLI usage
-
-`market_ui.py` controls what you see in the terminal. The most useful flags:
-
-| Flag | Type / Default | What it does |
-| --- | --- | --- |
-| `--pi-grid` | `bool` | Show the compact single‑grid (best for Pi screens). |
-| `--grid-cols` | `int` (default **4**; use **0** to auto‑fit) | Number of columns in the grid. |
-| `--demo` | `bool` | Use generated demo data. |
-| `--json` | `str` | Load data from a JSON file instead of live fetch. |
-| `--sectors` | `list[str]` | Override default sector tickers (e.g., `--sectors XLK XLF XLV`). |
-| `--topk` | `int` (default **3**) | In the standard (non‑grid) view, show details for the top‑K sectors. |
-| `--mono` | `bool` | Monochrome output (no color). |
-| `--watch` | `int` | Auto‑refresh every _N_ seconds. |
-| `--period` | `str` (default **1y**) | `yfinance` lookback period (e.g., `6mo`, `1y`). |
-| `--interval` | `str` (default **1d**) | `yfinance` interval (e.g., `1d`, `1h`). |
-| `--ttl` | `int` (default **300**) | In‑process cache TTL (seconds) for live fetch. |
-
-Examples:
-
-```bash
-# Minimal Pi grid with auto-fit columns
-python market_ui.py --pi-grid --grid-cols 0
-
-# Demo grid with a fixed 4‑column layout
-python market_ui.py --demo --pi-grid --grid-cols 4
-
-# Standard view with details (no grid)
-python market_ui.py --sectors XLK XLF XLY XLV
-```
-
----
-
-## Dimensions (A–E)
-
-The UI uses five mnemonic **Dimensions (A–E)**. The letter codes are stable identifiers; the human-facing names come from the ui.v1 contract (`dimensions_meta`).
-
-| Code | Dimension | Meaning |
-|---|---|---|
-| A | Announcements | catalysts/events/news/earnings/macro |
-| B | Backdrop | context/regime (currently reflected across trend/structure + environment/regime) |
-| C | Crowding | flow/positioning/participation (“who’s in this”) |
-| D | Danger | risk/volatility/correlation stress |
-| E | Execution | frictions, liquidity, sizing constraints (migration in progress) |
-
-Migration note:
-- The scoring engine currently computes **A–F check groups** (6 × 6 = 36 checks).
-- During the transition, **Backdrop** is effectively represented by today’s **B** (Trend & Structure) and **E** (Environment & Regime).
-- **Execution** is currently **F** (Execution & Frictions) and is planned to migrate into **E**.
-
-## Scoring framework (current A–F check groups)
-
-
-Your framework is organized into **6 categories (A–F)**. Each category contains **6 checks/variables** for a total of **36 distinct factors**. These roll up into each sector’s score and color.
-
-### A — Announcements
-**Focus:** external events, sentiment, and “catalysts.”  
-**Variables:**
-- **News** — recent headlines, sentiment, or price/volume proxy spikes
-- **Analysts** — upgrades/downgrades, price targets, recommendations
-- **Event** — scheduled catalysts (earnings, product launches, regulatory)
-- **Insiders** — insider buying/selling activity
-- **Peers/Macro** — sector‑wide or macro catalysts impacting the symbol
-- **Guidance** — outlook revisions and earnings guidance
-
-### B — Backdrop (Trend & Structure)
-**Focus:** technical price/volume structure.  
-**Variables:**
-- **Stacked MAs** — alignment 9EMA > 20EMA > 50SMA
-- **RS vs SPY** — 5‑day relative strength versus SPY
-- **BB Mid** — reclaim of the 20‑day SMA (Bollinger mid)
-- **20D Break** — breakout above the 20‑day high
-- **Vol ×** — volume expansion vs. 20‑day average
-- **Hold 20EMA** — pullbacks respecting the 20EMA
-
-### C — Crowding (Position & Flow)
-**Focus:** positioning, flows, participation.  
-**Variables:**
-- **EM Fit** — fit to an exponential moving structure
-- **OI/Flow** — options open interest & flow activity
-- **Blocks/DP** — large prints / dark‑pool activity
-- **Leaders% > 20D** — % of leaders above 20‑day MA
-- **Money Flow** — net inflows/outflows
-- **SI/Days** — short interest vs. average daily volume
-
-### D — Danger (Risk & Volatility)
-**Focus:** volatility, correlation, risk control.  
-**Variables:**
-- **ATR%** — Average True Range as % of price
-- **IV%** — implied volatility proxy (e.g., BB width)
-- **Correlation** — 20‑day correlation vs. SPY
-- **Event Risk** — earnings/event risk placeholder
-- **Gap Plan** — gap‑risk strategy placeholder
-- **Sizing/RR** — position sizing & risk/reward vs ATR/EMA
-
-### E — Environment & Regime (Backdrop)
-**Focus:** broader market/sector regime.  
-**Variables:**
-- **SPY Trend** — SPY alignment with 20/50‑day averages
-- **Sector Rank** — relative rank of sector ETF (e.g., 5‑bar return)
-- **Breadth** — sector breadth / internal trend health
-- **VIX Regime** — VIX vs. its 20‑day SMA (calm vs stressed)
-- **3‑Day RS** — short‑term RS vs. SPY
-- **Drivers** — macro drivers alignment (placeholder)
-
-### F — Execution & Frictions (future: E Execution)
-**Focus:** trade management and execution discipline.  
-**Variables:**
-- **Trigger** — defined trade trigger present
-- **Invalidation** — clear stop/invalid level
-- **Targets** — realistic upside targets
-- **Time Stop** — time‑based exit rule
-- **Slippage** — liquidity / bid‑ask cost
-- **Alerts** — monitoring/alerting in place
-
-> **Summary:** 36 checks total (6 × 6). A = Announcements; B/E form Backdrop context; C = Crowding; D = Danger; F = Execution (planned to move into E).
-
----
-
-## Rendering from JSON
-
-You can render without fetching live data by pointing to a JSON file:
-
-```bash
-python market_ui.py --json scores.json --pi-grid --grid-cols 0
-```
-
-**JSON format** (per sector), roughly:
-
-```json
-[
-  {
-    "symbol": "XLK",
-    "A": [{"label": "News", "score": 2}, {"label": "Analysts", "score": 1}],
-    "B": [{"label": "...", "score": 0}],
-    "C": [{"label": "...", "score": 2}],
-    "D": [{"label": "...", "score": 1}],
-    "E": [{"label": "...", "score": 1}],
-    "F": [{"label": "...", "score": 0}]
-  }
-]
-```
-
-To generate `scores.json` yourself using the compute engine:
-
-```bash
-# Module form
-python -m market_health.mh_cli --out scores.json
-
-# Or script form
-python market_health/mh_cli.py --out scores.json
-```
-
-Then render it:
-```bash
-python market_ui.py --json scores.json --pi-grid --grid-cols 0
-```
-
----
-
-## Project layout (key files)
-
-```
-market_health/           # scoring engine and CLI
-  engine.py              # computes category checks from price data
-  mh_cli.py              # writes scores.json (yfinance)
-market_ui.py             # terminal UI (Rich) – includes Pi Grid mode
-requirements.txt
-```
-
----
-
-## Troubleshooting
-
-- **No colors in terminal**: try a different terminal or omit `--mono`. Windows Terminal and PowerShell work well.
-- **Slow installs on Pi**: use `PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple`.
-- **Network hiccups**: use `--json` to render previously saved `scores.json` offline.
-
----
-
-## License
-
-MIT © Christopher Dudley
+- A terminal dashboard for current sector health
+- A scorer that exports JSON/CSV score artifacts
+- Cache refresh wrappers for Pi/Jerboa-style automation
+- Contract docs and fixtures for UI, scoring, positions, recommendations, events, and forecast scores
 
 ## Install
+
+Create a virtual environment and install the project in editable mode:
 
 ```bash
 python -m venv .venv
@@ -253,35 +23,216 @@ python -m pip install -U pip
 python -m pip install -e ".[dev]"
 ```
 
-
-## Quick start
-
-Run the UI (Pi Grid):
+If you are on a Raspberry Pi, `pip` can be much faster with `piwheels`:
 
 ```bash
-python -m market_health.market_ui --pi-grid
+export PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -U pip wheel
+python -m pip install -e ".[dev]"
 ```
 
-Export the UI contract (writes to `~/.cache/jerboa/market_health.ui.v1.json`):
+## Quickstart
+
+1. Activate the environment.
+2. Run the UI in Pi Grid mode.
+3. Use `--demo` if you want generated sample data instead of live data.
 
 ```bash
-bash scripts/jerboa/bin/jerboa-market-health-ui-export
+market-health --pi-grid --grid-cols 0
+market-health --pi-grid --grid-cols 0 --demo
 ```
 
+If you prefer the repository root launcher, the same UI is available through:
 
-## Architecture
+```bash
+python market_ui.py --pi-grid --grid-cols 0
+```
 
-- Refresh/export pipeline writes cache artifacts under `~/.cache/jerboa/...`
-- The UI reads one contract: `market_health.ui.v1.json`
-- Recommendations are embedded from `recommendations.v1.json`
+## Supported console scripts
 
-Key entry points:
-- `scripts/jerboa/bin/jerboa-market-health-ui-export`
-- `scripts/export_recommendations_v1.py`
-- `market_health/market_ui.py`
+The package exposes two console entry points from `pyproject.toml`:
 
-## Docs
+- `market-health`
+- `market-health-pi`
 
-- `docs/SCORING.md` — scoring semantics + A/C/D feature flags
-- `docs/UI_CONTRACT.md` — UI contract fields + example
-- `docs/TESTING.md` — local gates + fixture regeneration
+Both currently dispatch to the same terminal UI entry point. `market-health-pi` is the wrapper-friendly name for Pi/Jerboa usage.
+
+Examples:
+
+```bash
+market-health --pi-grid --grid-cols 0
+market-health-pi --pi-grid --grid-cols 0
+```
+
+## Entry points
+
+The main runtime surfaces are:
+
+- `python -m market_health` -> score export CLI via `market_health.__main__`
+- `python -m market_health.mh_cli` -> score export CLI
+- `python market_health/mh_cli.py` -> score export script form
+- `python -m market_health.market_ui` -> UI module entry point
+- `python market_ui.py` -> repository-root UI launcher
+
+The UI accepts the current flags implemented in `market_health/market_ui.py`:
+
+- `--sectors`
+- `--topk`
+- `--mono`
+- `--watch`
+- `--json`
+- `--demo`
+- `--period`
+- `--interval`
+- `--ttl`
+- `--pi-grid`
+- `--grid-cols`
+
+Useful UI examples:
+
+```bash
+# Live data in compact grid mode
+market-health --pi-grid --grid-cols 0
+
+# Render from a saved JSON file
+market-health --json ~/.cache/jerboa/market_health.ui.v1.json --pi-grid --grid-cols 0
+
+# UI module form
+python -m market_health.market_ui --pi-grid --grid-cols 0
+
+# Standard non-grid terminal view
+market-health --sectors XLK XLF XLY XLV
+```
+
+## JSON workflows
+
+The repo uses JSON cache artifacts as the stable handoff between refreshers, exporters, and the UI.
+
+### UI contract
+
+The main UI artifact is:
+
+- `~/.cache/jerboa/market_health.ui.v1.json`
+
+It is documented in [`docs/UI_CONTRACT.md`](docs/UI_CONTRACT.md) and used by the Pi/Jerboa wrappers as the human-readable dashboard payload.
+
+### Score export
+
+The scorer CLI writes sector score JSON, and can also write CSV totals:
+
+```bash
+python -m market_health.mh_cli --out scores.json
+python -m market_health.mh_cli --out scores.json --out-csv scores.csv
+```
+
+The score export is the source input for the UI’s live mode and for downstream validation workflows.
+
+### Cache artifacts
+
+Common local cache files:
+
+- `~/.cache/jerboa/environment.v1.json`
+- `~/.cache/jerboa/market_health.sectors.json`
+- `~/.cache/jerboa/positions.v1.json`
+- `~/.cache/jerboa/recommendations.v1.json`
+- `~/.cache/jerboa/forecast_scores.v1.json`
+- `~/.cache/jerboa/calibration.v1.json`
+- `~/.cache/jerboa/calendar.v1.json`
+- `~/.cache/jerboa/state/market_health_refresh_all.state.json`
+
+These files are read by the UI exporter and the refresh wrappers. They are not committed to the repository.
+
+## Raspberry Pi and Jerboa wrappers
+
+The `scripts/jerboa/bin/` directory contains the wrapper commands used for Pi/Jerboa-style installs:
+
+- `jerboa-market-health-refresh`
+- `jerboa-market-health-refresh-all`
+- `jerboa-market-health-status`
+- `jerboa-market-health-ui-export`
+- `jerboa-market-health-positions-refresh`
+- `jerboa-market-health-recommendations-refresh`
+- `jerboa-market-health-forecast-scores-refresh`
+- `jerboa-market-health-calendar-refresh`
+- `jerboa-market-health-calibration-refresh`
+- `jerboa-market-health-alert`
+
+Typical flow:
+
+1. Refresh positions and market caches.
+2. Export the combined UI JSON contract.
+3. Render the Pi grid from the exported contract.
+
+Examples:
+
+```bash
+scripts/cache/refresh_market_health_cache.sh
+scripts/jerboa/bin/jerboa-market-health-ui-export
+market-health --json ~/.cache/jerboa/market_health.ui.v1.json --pi-grid --grid-cols 0
+```
+
+For a compact welcome view on small displays, `scripts/cache/market_health_show_grid.sh` launches the Pi grid directly.
+
+## Project layout
+
+```text
+market_health/              core scoring, UI, and provider modules
+market_ui.py                repository-root UI launcher
+mh_make_scores.py           helper entry for score generation
+scripts/                    export, validation, and refresh utilities
+scripts/cache/              cache refresh helpers
+scripts/jerboa/bin/         Pi/Jerboa wrapper commands
+docs/                      scoring, UI, positions, recommendations, events, testing, contracts
+tests/                     fixture-backed regression checks
+```
+
+## Architecture overview
+
+- `market_health.engine` computes sector scores from market data
+- `market_health.mh_cli` exports score JSON and CSV artifacts
+- `market_health.market_ui` renders the terminal dashboard and Pi Grid
+- `scripts/export_*.py` and `scripts/validate_*.py` handle contract-specific JSON workflows
+- `scripts/jerboa/bin/*` compose local caches into refreshable Pi/Jerboa runtime commands
+
+The UI supports both live computation and offline rendering from JSON files. In Pi Grid mode it prefers a compact display and can read the exported UI contract directly.
+
+## Documentation
+
+Current docs under `docs/`:
+
+- [`docs/SCORING.md`](docs/SCORING.md)
+- [`docs/UI_CONTRACT.md`](docs/UI_CONTRACT.md)
+- [`docs/TESTING.md`](docs/TESTING.md)
+- [`docs/positions.v1.md`](docs/positions.v1.md)
+- [`docs/recommendations.v1.md`](docs/recommendations.v1.md)
+- [`docs/events_provider.md`](docs/events_provider.md)
+- [`docs/contracts/forecast_scores.v1.md`](docs/contracts/forecast_scores.v1.md)
+- [`docs/scoring_real_vs_placeholder.md`](docs/scoring_real_vs_placeholder.md)
+
+Fixtures and examples live under `tests/fixtures/` and `docs/examples/`.
+
+## Verification and maintenance
+
+For routine local checks, use the project’s documented test workflow:
+
+```bash
+python -m ruff format --check .
+python -m ruff check .
+python -m pytest -q
+```
+
+If you intentionally change JSON contracts or score outputs, update the corresponding fixtures and docs together. `docs/TESTING.md` has the regeneration commands for the UI contract signature and the scoring regression snapshots.
+
+## Troubleshooting
+
+- No colors in the terminal: try a different terminal or use `--mono`.
+- Pi installs are slow: set `PIP_EXTRA_INDEX_URL=https://www.piwheels.org/simple`.
+- Want offline rendering: point the UI at a saved JSON file with `--json`.
+- Need fresh cache state: run the refresh wrapper or `scripts/cache/refresh_market_health_cache.sh`.
+- Want status/debug output for the current cache chain: use `jerboa-market-health-status` or inspect `~/.cache/jerboa/state/market_health_refresh_all.state.json`.
+
+## License
+
+MIT © Christopher Dudley
