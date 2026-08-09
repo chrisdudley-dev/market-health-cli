@@ -3,6 +3,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+from setuptools import find_packages
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"
@@ -17,6 +19,16 @@ def _market_health_packages() -> set[str]:
     for init_file in (ROOT / "market_health").glob("**/__init__.py"):
         packages.add(".".join(init_file.parent.relative_to(ROOT).parts))
     return packages
+
+
+def _discovered_market_health_packages() -> set[str]:
+    return set(
+        find_packages(
+            where=str(ROOT),
+            include=["market_health*"],
+            exclude=["tests*"],
+        )
+    )
 
 
 def test_setuptools_discovers_all_market_health_packages() -> None:
@@ -36,6 +48,7 @@ def test_setuptools_discovers_all_market_health_packages() -> None:
     assert package_find.get("exclude", []) == ["tests*"]
 
     expected_packages = _market_health_packages()
+    assert _discovered_market_health_packages() == expected_packages
     assert expected_packages == {
         "market_health",
         "market_health.brokers",
