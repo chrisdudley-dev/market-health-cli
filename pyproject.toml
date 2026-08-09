@@ -23,9 +23,12 @@ market-health = "market_health.dashboard_legacy:main"
 market-health-pi = "market_health.dashboard_legacy:main"
 mh = "market_health.dashboard_legacy:main"
 [tool.setuptools]
-packages = ["market_health"]
 py-modules = ["market_ui"]
 include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["market_health*"]
+exclude = ["tests*"]
 
 # setuptools-scm pulls version from Git tags like v0.2.3
 [tool.setuptools_scm]
