@@ -145,3 +145,17 @@ def prepareAndroidWheels = tasks.register('prepareAndroidWheels', Exec) {
         layout.buildDirectory.dir('locked-wheels').get().asFile.absolutePath
 }
 tasks.matching { it.name.startsWith('install') && it.name.endsWith('PythonRequirements') }.configureEach { dependsOn prepareAndroidWheels }
+// Expose only the existing disposable debug key's location, never its private bytes
+// or any release credential. AGP's default path may differ between environments.
+tasks.register('writeValidationSigningInfo') {
+    dependsOn 'validateSigningDebug'
+    doLast {
+        def debug = android.signingConfigs.debug
+        if (!'androiddebugkey'.equalsIgnoreCase(debug.keyAlias) || debug.storeFile == null || !debug.storeFile.isFile()) {
+            throw new GradleException('Validation requires the existing standard debug signing configuration.')
+        }
+        def target = layout.buildDirectory.file('validation-debug-signing.json').get().asFile
+        target.parentFile.mkdirs()
+        target.text = groovy.json.JsonOutput.toJson([keystore: debug.storeFile.absolutePath, alias: debug.keyAlias])
+    }
+}

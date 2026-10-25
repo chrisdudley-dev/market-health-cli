@@ -39,10 +39,12 @@ def main():
     (reports / "bundle-config.json").write_text(config)
     if "PAGE_ALIGNMENT_16K" not in config:
         raise RuntimeError("AAB does not request 16 KB native APK ZIP alignment")
-    keystore = (
-        Path(os.environ.get("ANDROID_USER_HOME", str(Path.home() / ".android")))
-        / "debug.keystore"
-    )
+    signing = json.loads((build / "validation-debug-signing.json").read_text())
+    if signing.get("alias", "").lower() != "androiddebugkey":
+        raise RuntimeError(
+            "Only the standard disposable debug key may sign validation APKs"
+        )
+    keystore = Path(signing["keystore"])
     if not keystore.is_file():
         raise RuntimeError("The build runner disposable debug keystore is missing")
     apks = build / "release-validation.apks"

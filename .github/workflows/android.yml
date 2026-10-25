@@ -41,7 +41,7 @@ jobs:
           python -m pytest -o addopts='' -q
       - name: Build debug and unsigned release; audit actual APKs and AAB
         working-directory: android
-        run: ./gradlew --no-daemon -PmhPython=python3.13 :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease :app:bundleRelease :app:lintDebug :app:lintRelease :app:validateReleaseSigning
+        run: ./gradlew --no-daemon -PmhPython=python3.13 :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease :app:bundleRelease :app:lintDebug :app:lintRelease :app:validateReleaseSigning :app:writeValidationSigningInfo
       - name: Prove that release builds reject a bad packaged ELF
         working-directory: android
         run: python3.13 tools/prove_release_gate.py
