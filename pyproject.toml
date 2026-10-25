@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "market-health-cli"
 dynamic = ["version"]                       # version is provided by setuptools-scm
-description = "Terminal market-health dashboard with a compact Pi grid (Rich)"
+description = "Market Health engine, policy, CLI and native Android application"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Christopher Dudley" }]
@@ -23,13 +23,21 @@ market-health = "market_health.dashboard_legacy:main"
 market-health-pi = "market_health.dashboard_legacy:main"
 mh = "market_health.dashboard_legacy:main"
 [tool.setuptools]
-packages = ["market_health"]
+packages = { find = { include = ["market_health*"] } }
 py-modules = ["market_ui"]
 include-package-data = true
 
 # setuptools-scm pulls version from Git tags like v0.2.3
 [tool.setuptools_scm]
-tag_regex = '^v?(?P<version>\\d+\\.\\d+\\.\\d+)$'
+tag_regex = '^v?(?P<version>\d+\.\d+\.\d+)$'
 version_scheme = "post-release"
 local_scheme = "no-local-version"
 fallback_version = "0.0.0"
+
+[project.optional-dependencies]
+prototype-desktop = ["PySide6>=6.7,<7"]
+dev = ["pytest>=8", "ruff>=0.16"]
+prototype-build = ["pyinstaller>=6"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

@@ -5,8 +5,11 @@ permissions:
 
 on:
   push:
-    branches: [ "pi-grid" ]
+    branches: [ "pi-grid", "main" ]
   pull_request:
+
+env:
+  QT_QPA_PLATFORM: offscreen
 
 jobs:
   test:

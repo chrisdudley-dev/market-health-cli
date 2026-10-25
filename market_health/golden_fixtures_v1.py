@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterable, Mapping, Tuple
 
 from market_health.forecast_features import OHLCV
 from market_health.forecast_score_provider import compute_forecast_universe
-from market_health.recommendations_engine import Recommendation, recommend
 
 
 def _ohlcv_trend(n: int = 90, *, direction: int = 1, step: float = 0.25) -> OHLCV:
@@ -81,29 +80,6 @@ def _sanitize_forecast(
     return out
 
 
-def _sanitize_rec(rec: Recommendation) -> Dict[str, Any]:
-    diag = rec.diagnostics or {}
-    edges_by_h = diag.get("edges_by_h")
-    if not isinstance(edges_by_h, dict):
-        edges_by_h = {}
-
-    return {
-        "action": rec.action,
-        "from_symbol": rec.from_symbol,
-        "to_symbol": rec.to_symbol,
-        "reason": rec.reason,
-        "constraints_applied": list(rec.constraints_applied),
-        "constraints_triggered": list(rec.constraints_triggered),
-        "diagnostics": {
-            "mode": diag.get("mode"),
-            "decision_metric": diag.get("decision_metric"),
-            "edge": _round_f(diag.get("edge")),
-            "robust_edge": _round_f(diag.get("robust_edge")),
-            "edges_by_h": {str(k): _round_f(v) for k, v in edges_by_h.items()},
-        },
-    }
-
-
 def build_universe() -> Tuple[Dict[str, OHLCV], list[str]]:
     # 11 sector ETFs + SPY
     syms = [
@@ -160,44 +136,7 @@ def _generate_golden_fixtures_v1_impl() -> Dict[str, Any]:
         "scores": _sanitize_forecast(scores, syms),
     }
 
-    # Forecast-mode recommend() path (pass scores=[], it won’t be used in forecast mode)
-    positions = {
-        "schema": "positions.v1",
-        "positions": [
-            {"symbol": "XLK", "market_value": 1000.0},
-            {"symbol": "XLF", "market_value": 1000.0},
-        ],
-    }
-
-    rec = recommend(
-        positions=positions,
-        scores=[],
-        constraints={
-            "forecast_scores": scores,
-            "forecast_horizons": (1, 5),
-            "min_improvement_threshold": 0.12,
-            "disagreement_veto_edge": 0.0,
-            "cooldown_trading_days": 0,
-            "cooldown_history": [],
-            # Relax diversity so we actually exercise the SWAP path deterministically
-            "max_weight_per_symbol": 1.0,
-            "min_distinct_symbols": 1,
-            "hhi_cap": 1.0,
-            "max_swaps_per_day": 1,
-            "swaps_today": 0,
-        },
-    )
-
-    rec_fixture = {
-        "schema": "golden.recommendation.forecast.v1",
-        "positions": positions,
-        "recommendation": _sanitize_rec(rec),
-    }
-
-    return {
-        "forecast": _force_horizon_fields_in_forecast_fixture(forecast_fixture),
-        "recommendation": rec_fixture,
-    }
+    return {"forecast": _force_horizon_fields_in_forecast_fixture(forecast_fixture)}
 
 
 def _find_symbol_map_for_horizons(x):

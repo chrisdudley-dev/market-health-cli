@@ -1,8 +1,0 @@
-{
-  "client_id": "REPLACE_ME",
-  "client_secret": "REPLACE_ME",
-  "redirect_uri": "http://127.0.0.1:8080/callback",
-  "auth_url": "https://api.schwabapi.com/v1/oauth/authorize",
-  "token_url": "https://api.schwabapi.com/v1/oauth/token",
-  "scope": ""
-}
