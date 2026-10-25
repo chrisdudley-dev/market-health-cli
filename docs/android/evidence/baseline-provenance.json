@@ -1,0 +1,685 @@
+{
+  "status": "PASS",
+  "baseline_apk_sha256": "f836e1f425bf63d7daf073cd7f9489da7bc9357a4eb830015580eaf0d174ab5f",
+  "incompatible_libraries": 40,
+  "libraries": [
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_multiarray_tests.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "36bc5175776b6dad1ad7cc73c9de8d8e2eecaa3575b8b256dee60e048ce3208f",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_multiarray_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_multiarray_umath.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "f1dd6a75078c2ef5f1fb590249c160d7356f99c4ae6e143f175e77a2f3fa7e7d",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_multiarray_umath.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_operand_flag_tests.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "57b1c2e1a93c70ecda9430947dec45f27ceae5bc73a9a4499c1e5bad47c8bd44",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_operand_flag_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_rational_tests.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "ea3a7da9452b19a3f75b7811b4f6f975eeba83ba7fbe56334f7231962a325670",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_rational_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_simd.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "61cc782ed422b002d828c3b8aa1f7c240a8248e2e3a07d96dc9fc5dbf5909ae8",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_simd.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_struct_ufunc_tests.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "3f6384cc2cb92130e8d06c8d76aa519e1e8fcd86169addc8631df2e1066d1ebe",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_struct_ufunc_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/core/_umath_tests.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "b0543b8de404f2f61ecd364a72934b9196903fa49dcb1a6cd32d77acaf8221d7",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/core/_umath_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/fft/_pocketfft_internal.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "088deedcd6b46ea40935e0e65ee115457d06f719a028f723127f939707af02d3",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/fft/_pocketfft_internal.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/linalg/_umath_linalg.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "37a68f89ac9811492eb67daf32a967b8a08dfff1c0a49f191339043d9bff4e0d",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/linalg/_umath_linalg.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/linalg/lapack_lite.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "c2649656ac6bd362b9d3306eca70a73f13047be6e8669a1bbf3e2bebbeb4aebe",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/linalg/lapack_lite.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_bounded_integers.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "9d0d483fbbb05a0ad5d564b925de1198c2181b435f0d11d8fc0c899a6562f9e4",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_bounded_integers.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_common.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "fb4d73152f661ca9115835a559526743cb61ed553a32681b5a79eec159c7b8e6",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_common.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_generator.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "e83ed95f742130760a791e18917a0d925f26ecdb3ef4c708013855d14537f7cb",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_generator.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_mt19937.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "9b820d2f967e4d448de2af91806960da816089da0c7bce4ca30fe6de923162a4",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_mt19937.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_pcg64.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "4ea1ba415128f029043bda968d8d0b41fcb7cfc95b999ad3d3e706bdbfecc6f0",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_pcg64.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_philox.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "03270145ab4afc6ab6e8984a763fb764f75ced5cb21a12f7d98c08045cd27188",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_philox.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/_sfc64.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "88289c10e1619e8b6d202b86ebd569c824d7c109f4275c730bd4778464da2d6d",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/_sfc64.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/bit_generator.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "f6297c0f891186777315df5426f0461ae02f94d88cbebabea45e444b732d09a4",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/bit_generator.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-arm64-v8a.imy!/numpy/random/mtrand.so",
+      "abi": "arm64-v8a",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "9530bd5a3d0316930a79672c7c824c47978fa9fc7a36eb88ece47d824aa44a3b",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_arm64_v8a.whl",
+      "wheel_sha256": "2ae373d334378391c770badbfb65e7c2f441726df35893927e2a3ceae6ebe24a",
+      "wheel_member": "numpy/random/mtrand.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/chaquopy/lib/libgfortran.so.3",
+      "abi": "x86_64",
+      "package": "chaquopy-libgfortran",
+      "version": "4.9",
+      "source_kind": "Fortran runtime",
+      "pt_load": [
+        4096,
+        4096
+      ],
+      "elf_sha256": "105972f64294df805f4c4efb82452cf79f1a1dab295589787ee18b038132dd6c",
+      "wheel_url": "https://chaquo.com/pypi-13.1/chaquopy-libgfortran/chaquopy_libgfortran-4.9-0-py3-none-android_21_x86_64.whl",
+      "wheel_sha256": "375b3f8949f1826a969586fa529178f469f5e86565896be201264cf7faa35ee8",
+      "wheel_member": "chaquopy/lib/libgfortran.so.3",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/chaquopy/lib/libopenblas.so",
+      "abi": "x86_64",
+      "package": "chaquopy-openblas",
+      "version": "0.2.20",
+      "source_kind": "OpenBLAS",
+      "pt_load": [
+        4096,
+        4096
+      ],
+      "elf_sha256": "516cd69ce4023d3eae58f89379dcd1451a7e106cf2ae85dbebd4a0c2d453be0c",
+      "wheel_url": "https://chaquo.com/pypi-13.1/chaquopy-openblas/chaquopy_openblas-0.2.20-5-py3-none-android_21_x86_64.whl",
+      "wheel_sha256": "6b258351c0ce1229f71057808f51117ab96c291d3ef1887a92e1d5fb75d319be",
+      "wheel_member": "chaquopy/lib/libopenblas.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_multiarray_tests.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "2b5ab9edd970190a423c99ebe9b7db0eec9e34cf7217a559d1826c7b791558cf",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_multiarray_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_multiarray_umath.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "88070bf92c05c040c473c04fde57626f56fbfa6fa4cdd1a92a1579fd0f168034",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_multiarray_umath.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_operand_flag_tests.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "cfe8275a87e2f34649c1a1b7fae05d6c12fa8bb783f5c2d55d4422aa88e90256",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_operand_flag_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_rational_tests.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "26dbf30cdb8517b2f50b47b064f20720fa5d8a57268e8060c2b02031187acce5",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_rational_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_simd.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "0879e5bd71bfd00da040f5682fa9f96a025889564243c9cf398ea2ab8ae2e25d",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_simd.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_struct_ufunc_tests.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "64ad429b0c690b0036e1ffd404b9e827faa4477b0a5c1d55ba92b448589ca37b",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_struct_ufunc_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/core/_umath_tests.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "46aba4e82ca18015587143fb93fecb2e3699388097f0da9ef56845d4e66b0415",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/core/_umath_tests.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/fft/_pocketfft_internal.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "1d4918a5189b0932466cc4005b28cf74b36a303158055d73f66327a5cbc2711c",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/fft/_pocketfft_internal.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/linalg/_umath_linalg.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "ad876a34799866699ee52ddf141d09323cc09f401f0b152818ddc5feb0b67b9d",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/linalg/_umath_linalg.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/linalg/lapack_lite.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "0b5b4b74b96efdeef41cd6190535a0cf72507ffe18d99354f0373edf876bc9b8",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/linalg/lapack_lite.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_bounded_integers.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "27c8fd25adbbcca180924b3ccaaf0966ea322f028f54f9ab8334b64f4fde58cf",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_bounded_integers.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_common.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "681f59fe5aa8eeb63d3f45cb9cf7dec3cafb9f9db51595f87783eb2a8ebe8cee",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_common.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_generator.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "a5907a2b5cb050b872adf0863ae95e6d277f80737aea42510428f465e97e6ae9",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_generator.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_mt19937.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "86f148380d0e38be7051fa448383615def571a8cd77aa51f971b1ccf367d96bd",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_mt19937.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_pcg64.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "1959822cab1baee6217227ecbf79d838b7e718548965b5d2a906443638d8c536",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_pcg64.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_philox.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "0b413bbc6785f7e9746e809afdd1399c932d07ffcdae73d2b6e6d31c1747f4b6",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_philox.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/_sfc64.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "632a40d456038baac74ac7086577ea7dc57b414bb9f4b2d077fbd5ff6ff9ba11",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/_sfc64.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/bit_generator.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "57d364992318f3311940524405407e3a6e8034d030c263ed3feacb0828fa6252",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/bit_generator.so",
+      "origin_verified": true
+    },
+    {
+      "path": "app-debug.apk!/assets/chaquopy/requirements-x86_64.imy!/numpy/random/mtrand.so",
+      "abi": "x86_64",
+      "package": "numpy",
+      "version": "1.26.2",
+      "source_kind": "numpy",
+      "pt_load": [
+        4096,
+        4096,
+        4096
+      ],
+      "elf_sha256": "3b3dcb136880fdb889a19ed0b92e8871c7d4d25c9bfbe6efe7f888ee400e4240",
+      "wheel_url": "https://chaquo.com/pypi-13.1/numpy/numpy-1.26.2-0-cp311-cp311-android_21_x86_64.whl",
+      "wheel_sha256": "1715d70abfd05ddcfd4b333967adf692c5cbb35a875345541aba77ab2c1f3b8c",
+      "wheel_member": "numpy/random/mtrand.so",
+      "origin_verified": true
+    }
+  ]
+}

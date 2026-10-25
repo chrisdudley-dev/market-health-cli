@@ -13,6 +13,97 @@ import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class CoreParityTest {
+    @Test fun actualRuntimeHasExpectedPageSizeAndPinnedNumericalVersions() {
+        val arguments = InstrumentationRegistry.getArguments()
+        val actual = android.system.Os.sysconf(android.system.OsConstants._SC_PAGESIZE)
+        val expected = arguments.getString("mhPageSize")?.toLong()
+        if (expected != null) assertEquals("actual Android kernel page size", expected, actual)
+        assertTrue(actual == 4096L || actual == 16384L)
+        assertTrue(RuntimeCompatibility.supported())
+        val python = Python.getInstance()
+        assertEquals("1.26.2", python.getModule("numpy").get("__version__").toString())
+        assertEquals("2.1.3", python.getModule("pandas").get("__version__").toString())
+        assertTrue(python.getModule("sys").get("version").toString().startsWith("3.13."))
+    }
+
+    @Test fun disabledMonitoringDoesNotConsumeARefresh(): Unit = kotlinx.coroutines.runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val repository = CoreRepository.get(context)
+        repository.call("settings", JSONObject().put("background", false))
+        val before = repository.state().getJSONObject("status").optString("scan_key")
+        val worker = androidx.work.testing.TestListenableWorkerBuilder<RefreshWorker>(context).build()
+        assertEquals(androidx.work.ListenableWorker.Result.success(), worker.doWork())
+        assertEquals(before, repository.state().getJSONObject("status").optString("scan_key"))
+    }
+
+    @Test fun enabledBackgroundWorkerUsesTheSharedEngineAndPersistentHistory(): Unit = kotlinx.coroutines.runBlocking {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val repository = CoreRepository.get(context)
+        val fixture = instrumentation.context.assets.open("parity-input.json").bufferedReader().use { it.readText() }
+        val gateway = object : RefreshGateway {
+            override suspend fun state() = repository.state()
+            override suspend fun refresh(refreshId: String) = repository.refreshDocument(JSONObject(fixture), refreshId)
+        }
+        val factory = object : androidx.work.WorkerFactory() {
+            override fun createWorker(appContext: android.content.Context, workerClassName: String,
+                workerParameters: androidx.work.WorkerParameters): androidx.work.ListenableWorker? =
+                if (workerClassName == RefreshWorker::class.java.name) RefreshWorker(appContext, workerParameters, gateway) else null
+        }
+        try {
+            repository.call("holding", JSONObject().put("symbol", "XLE").put("account", "Worker QA").put("shares", 3))
+            repository.call("settings", JSONObject().put("background", true))
+            val worker = androidx.work.testing.TestListenableWorkerBuilder<RefreshWorker>(context).setWorkerFactory(factory).build()
+            assertEquals(androidx.work.ListenableWorker.Result.success(), worker.doWork())
+            val after = repository.state()
+            assertEquals("ok", after.getJSONObject("status").getString("status"))
+            val rows = after.getJSONArray("rows")
+            val row = (0 until rows.length()).map { rows.getJSONObject(it) }.first { it.getString("symbol") == "XLE" }
+            assertEquals("HOLD", row.getString("action"))
+            val expected = JSONArray(instrumentation.context.assets.open("parity-expected.json").bufferedReader().use { it.readText() })
+                .getJSONObject(0).getJSONObject("scores")
+            for (field in listOf("c", "h1", "h5", "blend", "stop", "buy"))
+                assertEquals(field, expected.getDouble(field), row.getJSONObject("scores").getDouble(field), 0.0)
+            assertTrue(JSONArray(repository.call("history", JSONObject().put("symbol", "XLE").put("account", "Worker QA"))).length() > 0)
+        } finally {
+            repository.call("settings", JSONObject().put("background", false))
+            repository.call("remove", JSONObject().put("symbol", "XLE").put("account", "Worker QA"))
+        }
+    }
+
+    // Explicit local release probe: CI's frozen tests never depend on a public data source.
+    @Test fun liveBackgroundWorkerRunsThroughThePackagedCore(): Unit = kotlinx.coroutines.runBlocking {
+        org.junit.Assume.assumeTrue(InstrumentationRegistry.getArguments().getString("mhLiveProbe") == "true")
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val repository = CoreRepository.get(context)
+        val previous = repository.state().getJSONObject("status").optString("scan_key")
+        val manager = androidx.work.WorkManager.getInstance(context)
+        val work = androidx.work.OneTimeWorkRequestBuilder<RefreshWorker>()
+            .setConstraints(androidx.work.Constraints.Builder().setRequiredNetworkType(androidx.work.NetworkType.CONNECTED).build()).build()
+        try {
+            repository.call("settings", JSONObject().put("background", true))
+            instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
+            manager.enqueue(work).result.get()
+            val info = kotlinx.coroutines.withTimeout(180_000) {
+                var current = requireNotNull(manager.getWorkInfoById(work.id).get())
+                while (!current.state.isFinished) {
+                    kotlinx.coroutines.delay(500)
+                    current = requireNotNull(manager.getWorkInfoById(work.id).get())
+                }
+                current
+            }
+            assertEquals(androidx.work.WorkInfo.State.SUCCEEDED, info.state)
+            val after = repository.state()
+            assertEquals("ok", after.getJSONObject("status").getString("status"))
+            assertNotEquals(previous, after.getJSONObject("status").getString("scan_key"))
+            assertTrue(after.getJSONArray("rows").length() >= 25)
+        } finally {
+            repository.call("settings", JSONObject().put("background", false))
+            manager.cancelWorkById(work.id).result.get()
+        }
+    }
+
     @Test fun frozenCliAndEmbeddedAndroidResultsAreExactlyEqual() {
         val assets = InstrumentationRegistry.getInstrumentation().context.assets
         val input = assets.open("parity-input.json").bufferedReader().use { it.readText() }

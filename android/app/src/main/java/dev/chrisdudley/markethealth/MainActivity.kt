@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
             setContent { MaterialTheme(colorScheme = colors) {
                 Column(Modifier.fillMaxSize().background(bg).padding(24.dp)) {
                     Text("Market Health · compatibility", style = MaterialTheme.typography.headlineSmall)
-                    Text("This debug build requires a device using 4 KB memory pages. This device uses a different page size. No scores or policy decisions have been calculated. A compatible native dependency build is required.")
+                    Text("This build supports devices using 4 KB or 16 KB memory pages. This device uses a different page size. No scores or policy decisions have been calculated.")
                 }
             } }
             return

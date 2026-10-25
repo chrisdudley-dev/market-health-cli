@@ -7,7 +7,7 @@ import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 
 object RuntimeCompatibility {
-    fun supported(): Boolean = Os.sysconf(OsConstants._SC_PAGESIZE) == 4096L
+    fun supported(): Boolean = Os.sysconf(OsConstants._SC_PAGESIZE) in listOf(4096L, 16384L)
 }
 
 class MarketHealthApplication : Application() {

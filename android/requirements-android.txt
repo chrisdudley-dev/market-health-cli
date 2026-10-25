@@ -1,0 +1,10 @@
+# All files are verified by prepareAndroidWheels against requirements-lock.json.
+# pip is offline because Chaquopy synthesizes requirements for its second ABI.
+chaquopy-libcxx==180000
+chaquopy-openblas==0.3.33
+numpy==1.26.2
+pandas==2.1.3
+python-dateutil==3.0.0
+pytz==2026.5
+six==1.17.0
+tzdata==2026.5

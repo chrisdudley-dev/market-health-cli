@@ -45,10 +45,10 @@ object RefreshCycleIds {
     }
 }
 
-class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+class RefreshWorker(context: Context, params: WorkerParameters, private val repository: RefreshGateway) : CoroutineWorker(context, params) {
+    constructor(context: Context, params: WorkerParameters) : this(context, params, CoreRepository.get(context))
     @android.annotation.SuppressLint("ApplySharedPref", "UseKtx") // Synchronous persistence on the worker thread is required before scoring.
     override suspend fun doWork(): Result {
-        val repository = CoreRepository.get(applicationContext)
         return try {
             // Re-read persisted setting after reboot/process restart; never rely on Activity state.
             val settings = repository.state().getJSONObject("settings")

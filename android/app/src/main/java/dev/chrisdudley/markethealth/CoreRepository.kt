@@ -10,8 +10,14 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
+/** Platform refresh boundary; the worker may use a fixture transport in Android tests. */
+interface RefreshGateway {
+    suspend fun state(): JSONObject
+    suspend fun refresh(refreshId: String = java.util.UUID.randomUUID().toString()): JSONObject
+}
+
 /** A single process-wide gateway; all maths, policy and DB writes stay in Python. */
-class CoreRepository private constructor(private val application: android.app.Application) {
+class CoreRepository private constructor(private val application: android.app.Application) : RefreshGateway {
     private val mutex = Mutex()
     private val refreshMutex = Mutex()
     private val database get() = File(application.filesDir, "market-health.sqlite3").absolutePath
@@ -24,7 +30,7 @@ class CoreRepository private constructor(private val application: android.app.Ap
             }
         }
 
-    suspend fun state() = JSONObject(call("state"))
+    override suspend fun state() = JSONObject(call("state"))
 
     suspend fun resume(): JSONObject {
         val current = state()
@@ -32,7 +38,7 @@ class CoreRepository private constructor(private val application: android.app.Ap
         return state()
     }
 
-    suspend fun refresh(refreshId: String = java.util.UUID.randomUUID().toString()): JSONObject = refreshMutex.withLock {
+    override suspend fun refresh(refreshId: String): JSONObject = refreshMutex.withLock {
         val universe = JSONArray(call("universe"))
         val document = try {
             YahooChartSource.fetch(universe).put("refresh_id", refreshId)
@@ -40,9 +46,17 @@ class CoreRepository private constructor(private val application: android.app.Ap
             call("failure", JSONObject().put("message", e.message ?: "Market refresh failed"))
             throw e
         }
+        completeRefresh(document)
+    }
+
+    internal suspend fun refreshDocument(document: JSONObject, refreshId: String): JSONObject = refreshMutex.withLock {
+        completeRefresh(document.put("refresh_id", refreshId))
+    }
+
+    private suspend fun completeRefresh(document: JSONObject): JSONObject {
         val result = JSONObject(call("refresh", document))
         NotificationPublisher.deliver(application, this, result.optJSONArray("notifications") ?: JSONArray())
-        state()
+        return state()
     }
 
     companion object {
