@@ -99,6 +99,7 @@ jobs:
           target: ${{ matrix.target }}
           arch: x86_64
           disable-linux-hw-accel: false
+          ram-size: 4096M
           emulator-boot-timeout: 600
           script: python3 android/tools/run_runtime_checks.py --artifacts runtime-artifacts --page-size ${{ matrix.page_size }} --report-dir runtime-reports
       - uses: actions/upload-artifact@v4

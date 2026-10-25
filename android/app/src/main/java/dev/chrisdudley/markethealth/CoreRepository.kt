@@ -49,7 +49,7 @@ class CoreRepository private constructor(private val application: android.app.Ap
         completeRefresh(document)
     }
 
-    internal suspend fun refreshDocument(document: JSONObject, refreshId: String): JSONObject = refreshMutex.withLock {
+    suspend fun refreshDocument(document: JSONObject, refreshId: String): JSONObject = refreshMutex.withLock {
         completeRefresh(document.put("refresh_id", refreshId))
     }
 

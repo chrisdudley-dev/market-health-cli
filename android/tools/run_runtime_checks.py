@@ -78,6 +78,7 @@ def main():
                     "android.permission.POST_NOTIFICATIONS",
                 ]
             )
+            run(adb + ["logcat", "-c"])
             output = run(
                 adb
                 + [
@@ -102,6 +103,33 @@ def main():
                 or not re.search(r"OK \(\d+ tests?\)", output)
                 or passed < 11
             ):
+                print("MH_INSTRUMENTATION_FAILURE_BEGIN " + label, flush=True)
+                print(output[-20000:], flush=True)
+                logcat = run(adb + ["logcat", "-d", "-v", "threadtime"], check=False)
+                (report / f"{label}-logcat.log").write_text(logcat)
+                relevant = [
+                    line
+                    for line in logcat.splitlines()
+                    if any(
+                        token in line
+                        for token in (
+                            "AndroidRuntime",
+                            "DEBUG",
+                            "Fatal signal",
+                            "linker",
+                            "python.stderr",
+                            "com.chaquo",
+                            "libpython",
+                            "libopenblas",
+                            "LowMemory",
+                            "lmkd",
+                            "UnsatisfiedLink",
+                            "dev.chrisdudley",
+                        )
+                    )
+                ]
+                print("\n".join(relevant[-250:]), flush=True)
+                print("MH_INSTRUMENTATION_FAILURE_END " + label, flush=True)
                 raise RuntimeError(f"{label} instrumentation failed; see saved log")
             startup = run(
                 adb + ["shell", "am", "start", "-W", "-n", PACKAGE + "/.MainActivity"]
