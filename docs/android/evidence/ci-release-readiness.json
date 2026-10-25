@@ -1,0 +1,512 @@
+{
+  "tested_commit": "20e432dae3c1059efbf446b41d7791d793d91f4f",
+  "android_run": {
+    "id": 40201995021,
+    "status": "PASS",
+    "url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021",
+    "jobs": [
+      {
+        "id": 121194922085,
+        "name": "build",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995021,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run android-actions/setup-android@v3",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/cache@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Full regression with Android-pinned numerical versions",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build debug and unsigned release; audit actual APKs and AAB",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Prove that release builds reject a bad packaged ELF",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Build an APK from the actual AAB with a disposable debug signature",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Native wheel provenance",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Post Run actions/cache@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 21
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22
+          },
+          {
+            "name": "Post Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          }
+        ]
+      },
+      {
+        "id": 121196487305,
+        "name": "runtime (16384, google_apis_ps16k)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995021,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run android-actions/setup-android@v3",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/download-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Enable emulator KVM access",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Actual debug and release Android runtime parity",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 121196487315,
+        "name": "runtime (4096, default)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995021,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run android-actions/setup-android@v3",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/download-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Enable emulator KVM access",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Actual debug and release Android runtime parity",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-java@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      }
+    ]
+  },
+  "python_run": {
+    "id": 40201995075,
+    "status": "PASS",
+    "url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995075",
+    "jobs": [
+      {
+        "id": 121194922138,
+        "name": "test (3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995075,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Lint",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      },
+      {
+        "id": 121194922307,
+        "name": "test (3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995075,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Lint",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      },
+      {
+        "id": 121194922327,
+        "name": "test (3.13)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40201995075,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Lint",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Post Run actions/setup-python@v5",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          }
+        ]
+      }
+    ]
+  },
+  "build_log_excerpts": [
+    "2026-10-25T14:24:34.5236616Z 623 passed, 1 skipped, 18 subtests passed in 26.21s",
+    "2026-10-25T14:25:13.3569951Z PASS: 12 locked wheels verified; pip uses only this offline wheelhouse.",
+    "2026-10-25T14:27:00.5699650Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:28:26.3706352Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:28:26.4726253Z Release signing: unsigned; no credentials supplied.",
+    "2026-10-25T14:28:35.5590462Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:28:39.2591733Z > Task :app:lintRelease",
+    "2026-10-25T14:28:39.3594895Z > Task :app:lintDebug",
+    "2026-10-25T14:28:39.3621042Z BUILD SUCCESSFUL in 4m 4s",
+    "2026-10-25T14:29:12.7159677Z PASS: 12 locked wheels verified; pip uses only this offline wheelhouse.",
+    "2026-10-25T14:29:16.7156798Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:29:17.9163535Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:29:17.9186185Z BUILD SUCCESSFUL in 17s",
+    "2026-10-25T14:29:26.7451252Z {\"release_rejects_incompatible_packaged_elf\": \"PASS\", \"partial_signing_rejected\": \"PASS\", \"clean_release_rebuilt\": \"PASS\", \"production_key_created\": false}",
+    "2026-10-25T14:29:32.6629393Z PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.",
+    "2026-10-25T14:29:32.7966867Z PASS: actual AAB produced a signed, 16 KB-aligned validation APK.",
+    "2026-10-25T14:29:43.0826771Z PASS: all 40 incompatible packaged libraries match their asserted published wheel bytes."
+  ],
+  "artifacts": [
+    {
+      "id": 12602292091,
+      "name": "MarketHealth-release-readiness",
+      "sha256": "92a50b3c9f27193e28ffd60102780e0f12abac4e8f7a0aae3ee5017cfb527689",
+      "url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021/artifacts/12602292091"
+    },
+    {
+      "id": 12602696580,
+      "name": "Android-runtime-4096",
+      "sha256": "35612b5e830871a63428067bd984ced737972f34f81bebe47e47423b0b4b612e",
+      "url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021/artifacts/12602696580"
+    },
+    {
+      "id": 12602790711,
+      "name": "Android-runtime-16384",
+      "sha256": "71a0a89238df0fa4492e466f281058a4a918756d90622042e25a22f840af8e8c",
+      "url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021/artifacts/12602790711"
+    }
+  ]
+}

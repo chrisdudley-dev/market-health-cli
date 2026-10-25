@@ -25,10 +25,11 @@ The existing current, forecast, structure, Stop/Buy and GlyphSpec engines remain
 in Python. Added portable work includes the exact MH Policy, rule explanations,
 manual holdings/accounts, SQLite schema and audit trail, persistent rescue state,
 notification transition/outbox logic, sizing, shared engine adapter and CLI.
-The final host run passed 612 tests plus 18 subtests. The Android-pinned host run
+The initial migration host run passed 612 tests plus 18 subtests. The initial Android-pinned host run
 passed 93 tests; the Android 15 emulator passed eight instrumentation tests,
 including exact embedded-runtime parity and real OS notification delivery.
-See [validation evidence](VALIDATION.md) for coverage and remaining release gates.
+See the [original validation](VALIDATION.md) for that historical run and the
+[current release matrix](RELEASE_READINESS.md) for the subsequent 16 KB work.
 
 The portable store has moved from `desktop/store.py` to `storage/sqlite.py`.
 Application orchestration, sizing and structured logging moved to `application/`.
@@ -48,9 +49,12 @@ Python package and Android source staging exclude that prototype.
 
 Chaquopy 17.1 supports CPython embedding and Android API 24+. This app uses API 26+
 for native Android time/notification APIs. Its published package index contains
-NumPy 1.26.2 and pandas 2.1.3 wheels for Python 3.11 on arm64-v8a and x86_64.
-Those versions are pinned for reproducible Android builds and matching host parity
-runs. Existing CLI dependency versions remain supported and testable separately.
+NumPy 1.26.2 and pandas 2.1.3 wheels for Python 3.13 on arm64-v8a and x86_64.
+The release candidate uses CPython 3.13.16 and OpenBLAS 0.3.33 build 2; all wheel
+bytes are hash-locked. NumPy/pandas version numbers remain unchanged from the
+initial Python 3.11 build. See [native provenance](NATIVE_DEPENDENCIES.md) for the
+ABI-specific build changes and the full regression/runtime evidence. Existing CLI
+dependency versions remain supported and testable separately.
 
 Current yfinance uses curl_cffi, for which the checked Chaquopy package index has
 no Android wheel. This affects transport, not scoring. `engine.py` now permits its
@@ -118,11 +122,14 @@ Sources: [Chaquopy setup](https://chaquo.com/chaquopy/doc/current/android.html),
 
 ## Verified native dependency release gate
 
-Inspection of the built arm64 NumPy extension shows PT_LOAD alignment 0x1000 (4 KB).
-The stable NumPy/pandas/OpenBLAS dependency set therefore cannot be claimed compatible
-with 16 KB Android devices. This is confirmed by the upstream package issue
-https://github.com/chaquo/chaquopy/issues/1464. The current artifact is a 4 KB debug
-build. Application startup checks device page size before loading the Python engine.
-`verify16kDependencies` blocks general release builds until native wheels are rebuilt
-with compatible alignment and exact runtime parity is rerun on both page sizes.
-Switching to experimental dependency builds or rewriting mathematics is not a fix.
+The original Python 3.11 APK had 40 incompatible native libraries, each traced to
+its exact source wheel. CPython 3.13 wheels of the same NumPy/pandas versions and
+explicitly pinned OpenBLAS 0.3.33 builds resolve their alignment failures without
+changing financial formulas. All 266 ELF libraries in the candidate APK/AAB pass.
+
+`verify16kDependencies` now inspects the actual release APK; release assembly and
+bundle tasks enforce the same gate. CI proves rejection by injecting a 4 KB ELF
+into a final APK, then rebuilding a clean candidate. Both 4 KB and 16 KB emulators
+execute exact parity on debug and AAB-derived release APKs. These results establish
+x86_64 runtime validation and arm64 build compatibility. Physical ARM execution,
+vendor battery behavior and production signing remain manual release gates.

@@ -1,4 +1,10 @@
-# Android validation record
+# Original Android migration validation record
+
+This is historical evidence for the initial Python 3.11 / 4 KB debug artifact.
+Its outstanding 16 KB/reboot gates were subsequently resolved in the
+[current release verification matrix](RELEASE_READINESS.md). The live 25-symbol
+refresh below belongs to this original stack; it has not been rerun on the new
+Python 3.13 stack. Statements below describe the original artifact only.
 
 Validated 2026-10-25 against repository main commit
 `1d14614ddc13c62fd273eb82b3cddc36e6d3b298`.
@@ -14,7 +20,7 @@ Validated 2026-10-25 against repository main commit
 | Android lint | 0 errors, 10 warnings (including dependency-version notices) |
 | Android 15/API 35 x86_64, 4 KB software emulator | 8 instrumentation tests passed in 98.831 seconds |
 | Live refresh on the Android emulator | 25 universe symbols calculated; status OK; no DATA ERROR rows |
-| Native dependency ELF audit | All 132 libraries meet 4 KB alignment; general 16 KB release is blocked |
+| Native dependency ELF audit | Original pip-only audit covered 132 libraries at 4 KB; the later full-APK audit found 272 ELF libraries, 40 incompatible with 16 KB |
 
 The emulator executes the actual packaged Python implementation. The exact fixture
 compares C, H1, H5, Blend, State, Stop, Buy, GlyphSpec, policy action and reason codes

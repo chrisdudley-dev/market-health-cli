@@ -5,7 +5,8 @@ remains available and testable. The Android UI embeds that same Python engine wi
 Chaquopy; Kotlin contains no scoring or MH Policy implementation.
 
 [Android build and usage](android/README.md) ·
-[Architecture, completed work and migration report](docs/android/ARCHITECTURE.md)
+[Architecture and migration](docs/android/ARCHITECTURE.md) ·
+[Release verification matrix](docs/android/RELEASE_READINESS.md)
 
 ## Application
 
@@ -15,9 +16,11 @@ account labels, shares, Net Liq, settings, prior policy states, rescue counts, s
 transitions and the notification outbox. WorkManager supports approximate 15/30/60
 minute background refresh. Notifications report meaningful owned-position transitions.
 
-The current debug artifact supports 4 KB Android memory-page devices. A native
-dependency audit blocks general release until 16 KB compatibility and runtime parity
-are verified. See `android/README.md` for the exact release gate.
+The current candidate passed exact parity on 4 KB and 16 KB Android x86_64 emulators,
+using both the debug APK and an APK generated from the release AAB. Actual packaged
+native libraries pass the enforced 16 KB ELF/ZIP gate for arm64-v8a and x86_64.
+Physical ARM runtime validation and production signing remain outstanding; this is
+not a general release. See the release verification matrix for evidence and scope.
 
 No brokerage/bank integration and no automatic trading are included. BUY and SELL
 are independent. Cash never relaxes the policy. Missing inputs show DATA ERROR;

@@ -61,7 +61,7 @@ The original ARM OpenBLAS/Fortran libraries, pandas libraries, Chaquopy runtime,
 CPython extensions and AndroidX libraries passed the original alignment audit.
 They are not incorrectly classified as failing simply because of package version.
 
-## Candidate resolution
+## Selected resolution
 
 - Chaquopy remains 17.1.0; upgrading the plugin alone cannot fix old wheel payloads.
 - CPython changes from 3.11.17 to 3.13.16. Stable cp313 NumPy 1.26.2 and pandas
@@ -72,6 +72,11 @@ They are not incorrectly classified as failing simply because of package version
   NumPy functionality is retained; no financial formula or policy is ported.
 - The inspected candidate APK contains 266 ELF libraries and passes the 16 KB
   ELF and direct-mapping ZIP checks. This is BUILD evidence, not runtime proof.
+- Independently, CI run [40201995021](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021)
+  installed both debug and AAB-derived release APKs on actual 4 KB and 16 KB
+  x86_64 kernels. All 11 required instrumentation tests passed on each APK/kernel
+  combination, followed by a reboot/persistence probe on each emulator.
+  See the [release matrix](RELEASE_READINESS.md); physical ARM remains untested.
 - All wheel URLs and SHA-256 digests are locked in `android/requirements-lock.json`.
   A verified offline wheelhouse handles Chaquopy's second-ABI requirements without
   dropping integrity checks.
