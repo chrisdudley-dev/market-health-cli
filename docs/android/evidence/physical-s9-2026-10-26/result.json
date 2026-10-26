@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "verification_date": "2026-10-26",
+  "time_zone": "America/New_York",
+  "candidate_commit": "20b26e433c1ab7150672d35f97a93f2cf4d88d94",
+  "application_commit": "20e432dae3c1059efbf446b41d7791d793d91f4f",
+  "device": {
+    "model": "Samsung Galaxy S9+ SM-G965U",
+    "physical": true,
+    "android_version": "10",
+    "api": 29,
+    "primary_cpu_abi": "arm64-v8a",
+    "page_size": 4096,
+    "kernel_qemu": "0",
+    "usb_powered": true
+  },
+  "source": {
+    "pr": "https://github.com/chrisdudley-dev/market-health-cli/pull/513",
+    "android_ci": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40203771523",
+    "python_ci": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40203771538",
+    "artifact": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40203771523/artifacts/12603445337",
+    "artifact_zip_digest_from_github_metadata": "sha256:9fae1c784bf62b009d8f30838d44919bef061cc9263d6da9f8d81c5ad54e1ab8",
+    "compressed_zip_digest_verified_locally": false,
+    "apk_hashes_verified_locally_against_prior_runtime_evidence": true
+  },
+  "results": {
+    "debug": {
+      "status": "PASS",
+      "passed": 11,
+      "skipped": 2,
+      "physical": true,
+      "model": "SM-G965U",
+      "android_version": "10",
+      "api": 29,
+      "abi": "arm64-v8a",
+      "page_size": 4096,
+      "artifact_sha256": "2c3479633e97c02010131284d521127fa96516ae5eb710cee973d0b609fe8e2f",
+      "native_audit": {
+        "status": "PASS",
+        "artifact_sha256": "2c3479633e97c02010131284d521127fa96516ae5eb710cee973d0b609fe8e2f",
+        "required_page_size": 16384,
+        "library_count": 266,
+        "incompatible_count": 0,
+        "build_inspection_only": true
+      },
+      "native_audit_report_sha256": "f0dcff09251e622cfb871b6ac58bccd57e549589fcfc8a58194edf1e767e2972"
+    },
+    "release": {
+      "status": "PASS",
+      "passed": 11,
+      "skipped": 2,
+      "physical": true,
+      "model": "SM-G965U",
+      "android_version": "10",
+      "api": 29,
+      "abi": "arm64-v8a",
+      "page_size": 4096,
+      "artifact_sha256": "d4023a64c868cf9bc9e711e468c91e4198eea8f79285bfa547726779f4b73233",
+      "startup": "PASS",
+      "startup_ms": 853,
+      "notification_permission_branch": "API 29: OS delivery and unchanged-state suppression; API 33+ runtime permission branch not applicable",
+      "native_audit": {
+        "status": "PASS",
+        "artifact_sha256": "d4023a64c868cf9bc9e711e468c91e4198eea8f79285bfa547726779f4b73233",
+        "required_page_size": 16384,
+        "library_count": 266,
+        "incompatible_count": 0,
+        "build_inspection_only": true
+      },
+      "native_audit_report_sha256": "c9e5aaf998e7c70e9ae795397952cda74129499b779075dbf704725e23b0be64"
+    },
+    "live": {
+      "status": "PASS",
+      "variant": "AAB-derived release validation APK",
+      "physical": true,
+      "test": "CoreParityTest#liveBackgroundWorkerRunsThroughThePackagedCore",
+      "duration_seconds": 13.843,
+      "source": "existing public market-data provider; Android HTTPS transport",
+      "criteria": [
+        "real WorkManager one-time request reaches SUCCEEDED",
+        "scan status ok",
+        "scan key changes",
+        "at least 25 result rows"
+      ],
+      "background_enabled_after_probe": false,
+      "proves_natural_doze_or_elapsed_periodic_timing": false
+    },
+    "reboot": {
+      "status": "PASS",
+      "physical": true,
+      "variant": "AAB-derived release validation APK",
+      "distinct_kernel_boot_ids": true,
+      "seed_test_passed": true,
+      "verify_test_passed": true,
+      "checks": [
+        "owned holding shares and account survive",
+        "rescue count survives",
+        "same active unique periodic WorkManager UUID survives",
+        "second cycle yields SELL and rescue count 2",
+        "history and one pending notification survive",
+        "unchanged subsequent SELL does not add a notification"
+      ],
+      "limitations": [
+        "The worker setting is intentionally false during this isolated reboot probe; persistent scheduling is not proof of an elapsed network refresh after reboot.",
+        "Does not establish natural Doze, unplugged periodic timing or vendor battery behavior."
+      ],
+      "monitoring_disabled_after_probe": true
+    }
+  },
+  "summary": {
+    "required_instrumentation_passes": 22,
+    "explicit_live_probe_passes": 1,
+    "explicit_reboot_probe_passes": 2,
+    "total_passes": 25,
+    "intentional_default_suite_skips": 4,
+    "changed_application_or_tests": false,
+    "production_signing_key_created": false,
+    "production_signed": false,
+    "automatic_coordination_restarted": false
+  },
+  "remaining_gates": {
+    "natural_doze_and_vendor_battery_behavior": "NOT TESTED",
+    "unplugged_elapsed_periodic_delivery": "NOT TESTED",
+    "physical_16k_runtime": "NOT TESTED",
+    "production_signing": "BLOCKED",
+    "play_distribution": "BLOCKED"
+  },
+  "evidence_files": {
+    "debug-startup.log": {
+      "sha256": "0cfe34ff3716bd91bd08b1629ee0c62f9f19959e39af77f6c4bd84f9a677ac40",
+      "bytes": 183
+    },
+    "debug-instrumentation.log": {
+      "sha256": "6bc65b2bd9f3bbc10864a218e54b1ad29e08e9fdb9decc5eddf5979aa7c6c85c",
+      "bytes": 10974
+    },
+    "release-startup.log": {
+      "sha256": "9a7bc90ae442e9bba26e9b3482376bb3d2314d91b25898700d0b838b3af06c44",
+      "bytes": 188
+    },
+    "release-instrumentation.log": {
+      "sha256": "007b8f066ef1414403c237849e746ac9b1f3329c69127b1515f371e73e6269e5",
+      "bytes": 10975
+    },
+    "release-live-refresh.log": {
+      "sha256": "7056f83efb189e0145352fe41b1cd77f0f9aa685b77db577c76abf797a3932bd",
+      "bytes": 788
+    },
+    "reboot-seed.log": {
+      "sha256": "6a7cb31a4db03d4f0a498f3df46dd62ed46ae47a8cf76afc46419af1a6889040",
+      "bytes": 806
+    },
+    "reboot-verify.log": {
+      "sha256": "5c8410f29eb1cf1cf97669698845005c7be7b33935fd028f0d84402ca8c9d5c6",
+      "bytes": 806
+    },
+    "post-reboot-startup.log": {
+      "sha256": "68ba153bcaa1cd6ce0708f73f08121536a39b5f7dcf1bb70f50e66e1e320b298",
+      "bytes": 188
+    },
+    "host-regression.log": {
+      "sha256": "f24202b178c8f5fef9935620bc15b8b9f46c1dcefa650424994582cb65f9c080",
+      "bytes": 743
+    },
+    "android-pinned-host-regression.log": {
+      "sha256": "ecbcf7db79cfafd072d25628973e0a72a2c4427e218d0b4fa90ffe83ec001e1e",
+      "bytes": 1478
+    }
+  },
+  "host_regression": {
+    "status": "PASS",
+    "python": "3.14.4",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "passed": 626,
+    "subtests_passed": 18,
+    "seconds": 20.46,
+    "jerboa_python": "explicit same virtual-environment interpreter"
+  },
+  "android_pinned_host_regression": {
+    "status": "PASS",
+    "python": "3.11.17",
+    "numpy": "1.26.2",
+    "pandas": "2.1.3",
+    "passed": 623,
+    "skipped": 1,
+    "warnings": 3,
+    "subtests_passed": 18,
+    "seconds": 19.6,
+    "jerboa_python": "explicit same virtual-environment interpreter"
+  },
+  "initial_host_invocation_failures": {
+    "host_failed": 8,
+    "android_pinned_host_failed": 8,
+    "cause": "subprocess exporter default python executable unavailable: exit 127; virtual-environment interpreter was invoked without PATH activation",
+    "resolution": "repeat both complete suites with JERBOA_PYTHON pointing to their existing virtual-environment interpreter",
+    "application_or_test_changes": false,
+    "raw_logs_retained_locally": true
+  }
+}

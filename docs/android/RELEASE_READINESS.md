@@ -1,12 +1,17 @@
 # Android release-readiness verification
 
-READY FOR PHYSICAL-DEVICE VALIDATION
+Physical arm64 runtime: PASS on Galaxy S9+ (Android 10/API 29, 4 KB).
+Extended phone battery/Doze acceptance and production signing remain open.
 
-Verified 2026-10-25 on draft [PR #513](https://github.com/chrisdudley-dev/market-health-cli/pull/513).
-Tested code commit: `20e432dae3c1059efbf446b41d7791d793d91f4f`.
-Subsequent documentation/evidence updates do not change application, test, dependency
-or build code. Android remains the final target; the CLI remains supported.
-This status permits hardware validation, not general distribution.
+The release-readiness baseline passed 2026-10-25 on draft
+[PR #513](https://github.com/chrisdudley-dev/market-health-cli/pull/513).
+Current tested candidate: `20b26e433c1ab7150672d35f97a93f2cf4d88d94`, whose
+application/build code is unchanged from `20e432dae3c1059efbf446b41d7791d793d91f4f`.
+On 2026-10-26, the user supplied a physical Galaxy S9+; both APK variants,
+the live refresh probe and an authorized actual reboot passed. See
+[the physical-device report and retained logs](PHYSICAL_S9_VALIDATION.md).
+This update changes documentation/evidence only. Android remains the final
+target; the CLI remains supported. General distribution is not approved.
 
 ## Verification matrix
 
@@ -14,11 +19,11 @@ This status permits hardware validation, not general distribution.
 |---|---|---|
 | Host Python tests | PASS | Full local suite: 626 passed, 18 subtests passed. Remote Python 3.11/3.12/3.13 regression and Ruff all passed in [run 40201995075](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995075). |
 | Android-pinned host tests | PASS | Full NumPy 1.26.2 / pandas 2.1.3 suite on host CPython 3.11: 623 passed, 1 optional Qt module skipped, 18 subtests passed, locally and in CI. Android uses CPython 3.13; host checks do not replace Android execution. |
-| 4 KB Android runtime | PASS | API 35 x86_64 PAGE_SIZE=4096. Debug and AAB-derived release APKs each passed all 11 required instrumentation tests and startup; reboot probe passed. [Evidence](evidence/runtime-4096.json). |
+| 4 KB Android runtime | PASS | API 35 x86_64 and physical Galaxy S9+ API 29 arm64-v8a, actual PAGE_SIZE=4096. Debug and AAB-derived release APKs each passed all 11 required instrumentation tests and startup; reboot probes passed. [Emulator evidence](evidence/runtime-4096.json), [phone evidence](evidence/physical-s9-2026-10-26/result.json). |
 | 16 KB Android runtime | PASS | Official API 35 google_apis_ps16k x86_64 PAGE_SIZE=16384. Both APKs each passed all 11 required instrumentation tests and startup; reboot probe passed. [Evidence](evidence/runtime-16384.json). |
 | x86_64 runtime | PASS | Packaged CPython 3.13, NumPy, pandas and Android/Python bridge executed on both kernels with exact CLI fixture parity. Jobs used 4096 MB RAM and KVM. |
 | arm64 build | PASS | Debug/release APKs and release AAB include arm64-v8a and x86_64. All 266 actual ELF libraries pass the 16 KB audit in each artifact. No arm64 runtime execution is implied. |
-| Physical arm64 runtime | NOT TESTED | No physical Android phone was used. Hardware parity, startup and platform acceptance remain required. |
+| Physical arm64 runtime | PASS | Galaxy S9+ SM-G965U, Android 10/API 29: both APK variants passed exact parity, packaged runtime, SQLite/rescue/history, notifications, worker, portfolio and navigation. Release-derived live refresh and actual reboot also passed. Scope is this device/API/page size. |
 | Background WorkManager behavior | PASS | Fixture-backed production worker execution, disabled monitoring, minimum cadence, retry identity and unique periodic request tested. Its UUID survived actual emulator reboot on both kernels. Connected-network constraints are configured; elapsed cadence under phone battery restrictions is not established. |
 | Notification behavior | PASS | Actual Android permission denial/grant, OS submission, owned transitions and unchanged-state suppression passed on both APKs/kernels. Rescue-to-SELL history/outbox behavior persisted across reboot. |
 | Phone/vendor Doze and battery behavior | NOT TESTED | Elapsed refresh/notification delivery under real phone restrictions remains hardware/manual acceptance. WorkManager timing is approximate. |
@@ -27,12 +32,13 @@ This status permits hardware validation, not general distribution.
 | AAB-to-APK validation | PASS | Checksum-pinned official bundletool 1.18.3 confirmed PAGE_ALIGNMENT_16K and generated a debug-signed universal APK. Official zipalign/apksigner and native audit passed before installation on both kernels. |
 | Signing infrastructure | PASS | Unsigned build, external environment configuration, fail-closed partial inputs and disposable test signing verified. No production private key created or committed. |
 | Release signing | BLOCKED | Owner-provided production credentials/manual authorization outstanding. Release APK/AAB are unsigned; runtime validation APK uses the runner's disposable debug key. |
-| Play/distribution readiness | BLOCKED | Physical ARM/manual acceptance and production signing/distribution credentials remain. No publishing or general release is claimed. |
-| Live external-provider refresh on upgraded stack | NOT TESTED | Optional live probe excluded from deterministic CI. Previous 25-symbol live success belongs to Python 3.11. Fixture-backed production worker/calculation tests passed on the new stack. |
+| Play/distribution readiness | BLOCKED | Extended phone battery/Doze/manual acceptance and production signing/distribution credentials remain. No publishing or general release is claimed. |
+| Live external-provider refresh on upgraded stack | PASS | Physical S9+ release-derived APK passed the explicitly enabled existing probe: actual WorkManager success, status ok, changed scan key and at least 25 result rows. Public-source probe remains separate from deterministic CI. |
 
 ELF/ZIP inspection establishes BUILD compatibility. Only packaged application
 execution establishes RUNTIME validation. A built arm64 APK is not a physical ARM
-result. API 26 is the build minimum; runtime evidence here covers API 35.
+result. API 26 is the build minimum; runtime evidence covers API 35 emulators
+and the API 29 physical S9+. Physical 16 KB runtime remains untested.
 
 ## Exact parity and regression scope
 
@@ -82,8 +88,12 @@ cd android
 
 ## Remote CI and retained artifacts
 
-Final Android [run 40201995021](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021)
-completed successfully on the tested code commit.
+Current candidate Android [run 40203771523](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40203771523)
+and Python [run 40203771538](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40203771538)
+completed successfully on `20b26e4`; their successful status was rechecked for
+physical validation. The table and retained artifacts below preserve the earlier
+successful [run 40201995021](https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021)
+on unchanged application code `20e432d`.
 
 | CI item | Status | Evidence |
 |---|---|---|
@@ -101,7 +111,7 @@ and [16 KB logs](https://github.com/chrisdudley-dev/market-health-cli/actions/ru
 CI artifacts expire 2027-01-23. The committed [CI snapshot](evidence/ci-release-readiness.json)
 retains job/step status, verification log excerpts, URLs and archive digests.
 
-Installed candidate SHA-256 values, identical across page-size jobs:
+Earlier `20e432d` candidate SHA-256 values, identical across its page-size jobs:
 
 - Debug APK: `ff9e049767423901fe3bdcff21cadc47dfbddbda2b6c7f632b8fdaa55c299523`.
 - AAB-derived release test APK: `4aa0f362a0b86a51e6d6e615ef443e71125d1ab60a62d4fc0c80712add4f2d91`.
@@ -134,11 +144,13 @@ Partial configuration fails without logging values. `:app:requireReleaseSigning`
 rejects an unsigned distribution attempt. CI uses only the runner's standard
 disposable debug key for validation; that private key is excluded from uploads.
 
-Next acceptance requires a physical ARM phone: install the candidate, execute the
-same exact fixture parity and notification checks, verify restart/reboot persistence,
-and observe background delivery under real battery settings. Production signing
-requires the owner's manual credentials. These gates remain open; no physical-device
-validation or general release is claimed.
+Both candidate variants passed physical S9+ installation, exact fixture parity
+and notification checks. The release-derived APK additionally passed live worker
+refresh and actual reboot persistence, as scoped in the
+[phone report](PHYSICAL_S9_VALIDATION.md). Extended elapsed background
+delivery under real unplugged/Doze/vendor battery settings remains untested.
+Production signing requires separately authorized owner credentials. These
+remaining gates prevent a general-release claim.
 
 This phase stops here. The desktop prototype stays isolated. No Strike, AI/model,
 Options Health, brokerage, bank, account credentials, order placement or publishing

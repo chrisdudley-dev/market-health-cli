@@ -19,8 +19,12 @@ minute background refresh. Notifications report meaningful owned-position transi
 The current candidate passed exact parity on 4 KB and 16 KB Android x86_64 emulators,
 using both the debug APK and an APK generated from the release AAB. Actual packaged
 native libraries pass the enforced 16 KB ELF/ZIP gate for arm64-v8a and x86_64.
-Physical ARM runtime validation and production signing remain outstanding; this is
-not a general release. See the release verification matrix for evidence and scope.
+Both APK variants also passed exact parity and the required instrumentation on
+a physical Galaxy S9+ (Android 10/API 29, arm64-v8a, 4 KB), with additional live
+refresh and reboot-persistence checks. Extended phone battery/Doze acceptance
+and production signing remain outstanding; this is not a general release.
+See the [physical validation report](docs/android/PHYSICAL_S9_VALIDATION.md)
+and release verification matrix for evidence and scope.
 
 No brokerage/bank integration and no automatic trading are included. BUY and SELL
 are independent. Cash never relaxes the policy. Missing inputs show DATA ERROR;

@@ -27,9 +27,12 @@ Then use the Gradle wrapper:
 
 The APK is `app/build/outputs/apk/debug/app-debug.apk`. This is a debug build for
 local installation. The candidate targets arm64-v8a and x86_64, Android 8.0/API 26+
-with 4 KB or 16 KB pages. **Runtime validation currently covers API 35 x86_64
-emulators on both page sizes**, including debug and AAB-derived release APKs;
-physical ARM phones have not been tested. API 26 is the build minimum, not a claim
+with 4 KB or 16 KB pages. **Runtime validation covers API 35 x86_64
+emulators on both page sizes and a physical Galaxy S9+ (Android 10/API 29,
+arm64-v8a, 4 KB)**, including debug and AAB-derived release APKs. The S9+ also
+passed live worker refresh and reboot persistence; extended battery/Doze
+acceptance remains open. See [the phone report](../docs/android/PHYSICAL_S9_VALIDATION.md).
+API 26 is the build minimum, not a claim
 of runtime testing on every supported Android version. Release signing keys are
 not stored in this repo. Without external signing inputs, release APK/AAB outputs
 are unsigned. See [signing and verification](../docs/android/RELEASE_READINESS.md).
