@@ -10,8 +10,9 @@ application/build code is unchanged from `20e432dae3c1059efbf446b41d7791d793d91f
 On 2026-10-26, the user supplied a physical Galaxy S9+; both APK variants,
 the live refresh probe and an authorized actual reboot passed. See
 [the physical-device report and retained logs](PHYSICAL_S9_VALIDATION.md).
-This update changes documentation/evidence only. Android remains the final
-target; the CLI remains supported. General distribution is not approved.
+Natural-idle preparation adds only test/evidence infrastructure; production
+application code remains unchanged. Android remains the final target; the CLI
+remains supported. General distribution is not approved.
 
 ## Verification matrix
 
@@ -26,7 +27,8 @@ target; the CLI remains supported. General distribution is not approved.
 | Physical arm64 runtime | PASS | Galaxy S9+ SM-G965U, Android 10/API 29: both APK variants passed exact parity, packaged runtime, SQLite/rescue/history, notifications, worker, portfolio and navigation. Release-derived live refresh and actual reboot also passed. Scope is this device/API/page size. |
 | Background WorkManager behavior | PASS | Fixture-backed production worker execution, disabled monitoring, minimum cadence, retry identity and unique periodic request tested. Its UUID survived actual emulator reboot on both kernels. Connected-network constraints are configured; elapsed cadence under phone battery restrictions is not established. |
 | Notification behavior | PASS | Actual Android permission denial/grant, OS submission, owned transitions and unchanged-state suppression passed on both APKs/kernels. Rescue-to-SELL history/outbox behavior persisted across reboot. |
-| Phone/vendor Doze and battery behavior | NOT TESTED | Elapsed refresh/notification delivery under real phone restrictions remains hardware/manual acceptance. WorkManager timing is approximate. |
+| Phone/vendor natural battery/Doze — DEBUG APK | NOT TESTED | A bounded four-hour observation is being prepared using the original physically validated debug artifact after an explicitly authorized same-signed in-place update. [Protocol and visibility limits](NATURAL_IDLE_DEBUG_ACCEPTANCE.md). No idle outcome is claimed yet. |
+| Phone/vendor natural battery/Doze — RELEASE-derived APK | NOT TESTED | A debug-artifact natural-idle result must not be attributed to this artifact. Its completed physical functional/parity/live/reboot validation remains PASS and separate. WorkManager timing is approximate. |
 | Native ELF and APK ZIP compatibility | PASS | All 266 libraries pass on both ABIs; direct-mapped JNI entries are uncompressed and 16 KB ZIP-aligned. Nested Chaquopy .imy payloads are inspected. BUILD evidence only. |
 | Automatic 16 KB release gate | PASS | Release APK/AAB assembly enforces actual-payload checks. CI injected a 4 KB ELF into the final APK and confirmed release failure with ABI/path diagnostics, then rebuilt clean artifacts. |
 | AAB-to-APK validation | PASS | Checksum-pinned official bundletool 1.18.3 confirmed PAGE_ALIGNMENT_16K and generated a debug-signed universal APK. Official zipalign/apksigner and native audit passed before installation on both kernels. |
