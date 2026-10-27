@@ -1,6 +1,6 @@
 # Market Health Android UI/UX
 
-Implementation is in progress on android/ui-ux-refinement. The required resume/history fix passed its separate gate at 54937ab before visual changes began; see RESUME_RECONCILIATION.md. The failed physical candidate remains preserved, and natural battery acceptance remains open.
+Implementation is complete on android/ui-ux-refinement for coordinator review. The required resume/history fix passed its separate gate at 54937ab before visual changes began; see RESUME_RECONCILIATION.md. The failed physical candidate remains preserved, and natural battery acceptance remains open.
 
 The visual direction uses quiet teal accents, distinct surfaces, readable numeric summaries and visible freshness. All eight destinations remain. Screens render authoritative C/H1/H5/Blend, State, Stop, Buy, GlyphSpec, policy, reasons, rescue, ownership and sizing; they do not calculate those values.
 
@@ -16,4 +16,4 @@ Theme preference is local presentation storage separate from authoritative SQLit
 
 No Strike placeholder, model dependency, chat, brokerage, bank or order feature is introduced. New UI candidates are exercised on disposable emulators, not automatically installed over the preserved S9+ artifact.
 
-Final visual/test/performance evidence will be recorded after implementation; preparation and design intent are not passing runtime evidence.
+Visual/test/performance evidence and explicit manual limitations are recorded in FINAL_UI_UX_REPORT.md and evidence/verification.json.

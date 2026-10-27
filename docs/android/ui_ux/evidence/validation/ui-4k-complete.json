@@ -1,0 +1,23 @@
+{
+  "serial": "emulator-5556",
+  "page_size": 4096,
+  "time_utc": "2026-10-27T11:48:09.579560+00:00",
+  "tests": 28,
+  "passed": 26,
+  "skipped": 2,
+  "status": "PASS",
+  "arguments": [
+    "-e",
+    "mhVisualEvidence",
+    "true",
+    "-e",
+    "mhGolden",
+    "true",
+    "-e",
+    "mhCompareGolden",
+    "true",
+    "-e",
+    "mhPerformance",
+    "true"
+  ]
+}

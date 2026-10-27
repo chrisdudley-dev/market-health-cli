@@ -1,0 +1,171 @@
+{
+  "implementation_commit": "0fcf87d5f375a8958319e82db89762192c045e61",
+  "runtime": "API35 x86_64 emulator",
+  "narrow_profile": {
+    "pixels": [
+      1080,
+      2220
+    ],
+    "density_dpi": 480,
+    "font_scale": 1.0
+  },
+  "captures": "actual Compose root; unretouched; excludes system bars outside root",
+  "data": "synthetic presentation fixtures; repeated approved frozen scores at synthetic history times, not authentic observations",
+  "frozen_score_source": "tests/fixtures/android/parity-expected.json",
+  "frozen_score_source_sha256": "0e38d0668bcd8caed4d4954d4b057e467c739ed924450baa22be1fff68e2d12d",
+  "before_commit": "54937ab51e9d76355e5b026317771d820445e586",
+  "screenshots": {
+    "after/portfolio-light.png": {
+      "sha256": "930bd6aefcfb36f9ee8d9d8ab0cc5306146413b3cf1fbcf3d20dea73caa3ea92",
+      "bytes": 161876
+    },
+    "after/market-health-light.png": {
+      "sha256": "88824686a8e84f18f28eea46748a1d7c5eb7503500490ad61d1ac572ad2d2e0a",
+      "bytes": 181532
+    },
+    "after/history-dark.png": {
+      "sha256": "b4022e4fb5d475ed6eecf4c493b3b6dc4d05527e9fcdd6c177caf6f50d7908f7",
+      "bytes": 147744
+    },
+    "after/settings-light.png": {
+      "sha256": "5abdcc41df9f5c125113df5d48e757e83bc6cca58b982a17eed9aa6a06d65040",
+      "bytes": 186899
+    },
+    "after/market-health-dark.png": {
+      "sha256": "6615afc361dbe612d93ac3a476d94a378a051f14502357dc659ba98af90cc161",
+      "bytes": 180243
+    },
+    "after/policy-dark.png": {
+      "sha256": "f0869177b60e70a24495728999495620c9cdb46a3d53201fb604fc669d4f651b",
+      "bytes": 222901
+    },
+    "after/history-timeline-dark.png": {
+      "sha256": "0b25516d52222b81a35b4f0b5daf243705cf049a91d328a27260d5613df45176",
+      "bytes": 183697
+    },
+    "after/history-chart-dark.png": {
+      "sha256": "29aabfbc4a66ac3e1cb088943e348de7ba889f8659447ac105ff2a285a4f5bb4",
+      "bytes": 150450
+    },
+    "after/symbol-detail-light.png": {
+      "sha256": "5cde958ece9139e1a52fdc51d079514b364b0474fcb3054dbd9c59b499e18ebd",
+      "bytes": 183826
+    },
+    "after/policy-light.png": {
+      "sha256": "a61b0b19057a61a575bdfe7500ea41b14479cb1083437718dcaf010e8d718c73",
+      "bytes": 228734
+    },
+    "after/history-timeline-light.png": {
+      "sha256": "3f75d160b2e48556a084329a7c6703989d71e6acb766203be78845f6bd0dd9c9",
+      "bytes": 188267
+    },
+    "after/score-strip-light-golden.png": {
+      "sha256": "443576667f545cc2d20803ace742a1a9ea0bc1430cbdfbc5c370dde27c6c9e24",
+      "bytes": 15226
+    },
+    "after/symbol-detail-dark.png": {
+      "sha256": "b32bf04484f3b7b5b49caa1d57657afa8fa5e76b17eff403823834af6bf99731",
+      "bytes": 176763
+    },
+    "after/history-light.png": {
+      "sha256": "fbad354760fc95cfe40253de8cd7770d58f81efa42bc2b582c2feed5db56fef0",
+      "bytes": 147764
+    },
+    "after/history-chart-light.png": {
+      "sha256": "0274e004a314e5a21aecc8f03e0105d22262dc0b7f3779c53a299b64bb6ade83",
+      "bytes": 154044
+    },
+    "after/dashboard-dark.png": {
+      "sha256": "217d0981a667b2619b1628ef60a364731467644d5e58fad4a4b8aba67b4129af",
+      "bytes": 158973
+    },
+    "after/dashboard-light.png": {
+      "sha256": "bb282b4a0559a830c5f25a9b3a805df6cfcc29e74ea7b0880092f3f69b449640",
+      "bytes": 162324
+    },
+    "after/portfolio-dark.png": {
+      "sha256": "50e9dd9f52f6376d7cdaffcef12f24c6a8fd94d1b1f3be09da3bc2f25d3b07e8",
+      "bytes": 159115
+    },
+    "after/settings-dark.png": {
+      "sha256": "c6186255b9da2bb3ba89a8f6955c4fb8e6fb1a59c311193388806111a087dc1f",
+      "bytes": 181736
+    },
+    "before/history-dark.png": {
+      "sha256": "e18d6b92eb356e191cb1a29ab02e4dfcb95da491d495c57bd0f7b273bafd6557",
+      "bytes": 185945
+    },
+    "before/market-health-dark.png": {
+      "sha256": "2a9c75b14b064382c42fa4874a85611a76f85474259dc1f959e2e7065ebb57b3",
+      "bytes": 212141
+    },
+    "before/policy-dark.png": {
+      "sha256": "f7414922260b9e34a395309f3edd129da4b853a772d08c7e4e8619668f44e6ca",
+      "bytes": 198897
+    },
+    "before/symbol-detail-dark.png": {
+      "sha256": "8cf71817607051dfbaa1aa6b97e9029f996186ce3f5f6219f8783fa408ff3c5b",
+      "bytes": 190053
+    },
+    "before/dashboard-dark.png": {
+      "sha256": "51677cdd44d48b834d49c320ee2e678d7907ef64f6218a1b8a0c7d9b9e1b9b57",
+      "bytes": 126131
+    },
+    "before/portfolio-dark.png": {
+      "sha256": "eb4b215b599cb0aedbea618786c9275629d0cf16d3508ac6b1364646ffe06d86",
+      "bytes": 66469
+    },
+    "before/settings-dark.png": {
+      "sha256": "a70bb19be12dd42712e177bf0cc19466009fe1823d4a94f8ca9f0abb18d322ba",
+      "bytes": 162330
+    },
+    "responsive/tablet/market-health-light.png": {
+      "sha256": "83589a208c55fc019a11500733c97976487df8e391107746a9830b9b3dcfff45",
+      "bytes": 192414
+    },
+    "responsive/tablet/dashboard-light.png": {
+      "sha256": "396cf06fc461116e8e1ca565b47926d66a6679b41f5c70d5acfbaf8680b678b4",
+      "bytes": 160583
+    },
+    "responsive/tablet/settings-dark.png": {
+      "sha256": "bfc50c34a44d8032a7610dcabe84048d5ef826bc8670363338ec19e920e306b2",
+      "bytes": 242681
+    },
+    "responsive/narrow-font2/market-health-light.png": {
+      "sha256": "dcf4b22fadb6eef9b62b059407af674dfd362bc1d5f55768aee6e617f2824dbd",
+      "bytes": 180759
+    },
+    "responsive/narrow-font2/dashboard-light.png": {
+      "sha256": "4e3c84f029cb8904936b92c93055c7efb601cf0adc1d463a8309323b7dd77699",
+      "bytes": 178247
+    },
+    "responsive/narrow-font2/settings-dark.png": {
+      "sha256": "3216efd082ff9c71341a2523e2af9b529e810a9e6dd186d2536224b29813618f",
+      "bytes": 185870
+    },
+    "responsive/landscape/market-health-light.png": {
+      "sha256": "88e5ab88b192d3e3bd157b7a1aeef1c1e381dbf3e4b9962199fa0653b58a91db",
+      "bytes": 116093
+    },
+    "responsive/landscape/dashboard-light.png": {
+      "sha256": "87a87887236f798ba8fd1a59a982b91733516c1293eba144e45645cd2c4e08de",
+      "bytes": 99715
+    },
+    "responsive/landscape/settings-dark.png": {
+      "sha256": "b85be2225b36fa5783198056d51c3647ba2d2477fa9b7a49ded12a1f7b0e71a3",
+      "bytes": 97900
+    },
+    "responsive/modern-font15/market-health-light.png": {
+      "sha256": "f8a40a5fdf40817387f14fccbaaa7474e07ae7cfb263c82e3b06d1480bf3bc7a",
+      "bytes": 182161
+    },
+    "responsive/modern-font15/dashboard-light.png": {
+      "sha256": "a0bc74b66337b2f31834299859da9300a2ff84bac309e5ff0263fdcfedf40627",
+      "bytes": 179893
+    },
+    "responsive/modern-font15/settings-dark.png": {
+      "sha256": "f1420358b8ebee82b463003e3596a86eacfe38acd1c47033ffc74d073c7b6278",
+      "bytes": 216006
+    }
+  }
+}

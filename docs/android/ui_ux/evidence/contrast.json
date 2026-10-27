@@ -1,0 +1,32 @@
+{
+  "Light": {
+    "onSurface/surface": 14.45,
+    "onSurfaceVariant/surface": 6.58,
+    "onBackground/background": 13.31,
+    "onPrimaryContainer/primaryContainer": 10.44,
+    "error/surface": 6.84,
+    "policy_chip_text": {
+      "buy": 5.4,
+      "hold": 6.02,
+      "watch": 5.59,
+      "sell": 5.6,
+      "rescue": 5.97,
+      "neutral": 5.54
+    }
+  },
+  "Dark": {
+    "onSurface/surface": 13.34,
+    "onSurfaceVariant/surface": 9.21,
+    "onBackground/background": 15.09,
+    "onPrimaryContainer/primaryContainer": 7.76,
+    "error/surface": 9.38,
+    "policy_chip_text": {
+      "buy": 7.38,
+      "hold": 7.26,
+      "watch": 7.87,
+      "sell": 7.25,
+      "rescue": 7.18,
+      "neutral": 7.06
+    }
+  }
+}

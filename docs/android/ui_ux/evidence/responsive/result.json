@@ -1,0 +1,86 @@
+[
+  {
+    "serial": "emulator-5556",
+    "page_size": 4096,
+    "time_utc": "2026-10-27T11:49:22.625677+00:00",
+    "tests": 4,
+    "passed": 4,
+    "skipped": 0,
+    "status": "PASS",
+    "arguments": [
+      "-e",
+      "class",
+      "dev.chrisdudley.markethealth.UiUxTest#primaryNavigationRemainsReachable,dev.chrisdudley.markethealth.UiUxTest#allDestinationsAndThemesRender,dev.chrisdudley.markethealth.UiUxTest#largeFontKeepsControlsAndDetailReachable,dev.chrisdudley.markethealth.UiUxTest#visualEvidenceForSevenMajorScreensLightAndDark",
+      "-e",
+      "mhVisualEvidence",
+      "true"
+    ],
+    "profile": "narrow-font2",
+    "size": "1080x2220",
+    "density": "480",
+    "font_scale": "2.0"
+  },
+  {
+    "serial": "emulator-5556",
+    "page_size": 4096,
+    "time_utc": "2026-10-27T11:49:49.528446+00:00",
+    "tests": 4,
+    "passed": 4,
+    "skipped": 0,
+    "status": "PASS",
+    "arguments": [
+      "-e",
+      "class",
+      "dev.chrisdudley.markethealth.UiUxTest#primaryNavigationRemainsReachable,dev.chrisdudley.markethealth.UiUxTest#allDestinationsAndThemesRender,dev.chrisdudley.markethealth.UiUxTest#largeFontKeepsControlsAndDetailReachable,dev.chrisdudley.markethealth.UiUxTest#visualEvidenceForSevenMajorScreensLightAndDark",
+      "-e",
+      "mhVisualEvidence",
+      "true"
+    ],
+    "profile": "modern-font15",
+    "size": "1080x2400",
+    "density": "420",
+    "font_scale": "1.5"
+  },
+  {
+    "serial": "emulator-5556",
+    "page_size": 4096,
+    "time_utc": "2026-10-27T11:50:14.815345+00:00",
+    "tests": 4,
+    "passed": 4,
+    "skipped": 0,
+    "status": "PASS",
+    "arguments": [
+      "-e",
+      "class",
+      "dev.chrisdudley.markethealth.UiUxTest#primaryNavigationRemainsReachable,dev.chrisdudley.markethealth.UiUxTest#allDestinationsAndThemesRender,dev.chrisdudley.markethealth.UiUxTest#largeFontKeepsControlsAndDetailReachable,dev.chrisdudley.markethealth.UiUxTest#visualEvidenceForSevenMajorScreensLightAndDark",
+      "-e",
+      "mhVisualEvidence",
+      "true"
+    ],
+    "profile": "landscape",
+    "size": "2220x1080",
+    "density": "480",
+    "font_scale": "1.0"
+  },
+  {
+    "serial": "emulator-5556",
+    "page_size": 4096,
+    "time_utc": "2026-10-27T11:50:35.527090+00:00",
+    "tests": 4,
+    "passed": 4,
+    "skipped": 0,
+    "status": "PASS",
+    "arguments": [
+      "-e",
+      "class",
+      "dev.chrisdudley.markethealth.UiUxTest#primaryNavigationRemainsReachable,dev.chrisdudley.markethealth.UiUxTest#allDestinationsAndThemesRender,dev.chrisdudley.markethealth.UiUxTest#largeFontKeepsControlsAndDetailReachable,dev.chrisdudley.markethealth.UiUxTest#visualEvidenceForSevenMajorScreensLightAndDark",
+      "-e",
+      "mhVisualEvidence",
+      "true"
+    ],
+    "profile": "tablet",
+    "size": "1600x2560",
+    "density": "240",
+    "font_scale": "1.0"
+  }
+]

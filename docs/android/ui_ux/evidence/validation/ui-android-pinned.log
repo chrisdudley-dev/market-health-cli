@@ -1,0 +1,18 @@
+........................................................................ [ 11%]
+........................................................................ [ 22%]
+.................................................................................................................................. [ 43%]
+.................................................................... [ 53%]
+........................................................................ [ 64%]
+........................................................................ [ 76%]
+........................................................................ [ 87%]
+........................................................................ [ 98%]
+.......                                                                  [100%]
+=============================== warnings summary ===============================
+tests/test_clustered_stop_buy_dashboard_integration.py::test_clustered_executable_stop_buy_math_uses_cluster_edges_plus_atr_buffer
+tests/test_stop_buy_levels.py::test_generate_stop_buy_candidates_returns_required_fields
+tests/test_stop_buy_levels.py::test_generate_stop_buy_candidates_includes_floor_and_ceiling_sources
+  /home/christopher/Documents/Codex/2026-10-25/th/work/android-python/lib/python3.11/site-packages/pandas/core/util/hashing.py:330: RuntimeWarning: invalid value encountered in cast
+    vals.astype(str).astype(object), hash_key, encoding
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+637 passed, 1 skipped, 3 warnings, 18 subtests passed in 20.18s

@@ -1,0 +1,7 @@
+Starting: Intent { cmp=dev.chrisdudley.markethealth/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: dev.chrisdudley.markethealth/.MainActivity
+TotalTime: 614
+WaitTime: 616
+Complete

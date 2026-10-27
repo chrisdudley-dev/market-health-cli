@@ -1,0 +1,22 @@
+{
+  "source_commit": "54937ab51e9d76355e5b026317771d820445e586",
+  "scope": "before visual redesign; lifecycle fix already present",
+  "emulator": "API35 x86_64 4KB",
+  "viewport_pixels": [
+    1080,
+    2220
+  ],
+  "density_dpi": 480,
+  "font_scale": 1.0,
+  "theme": "dark only; original application has no light theme",
+  "data": "frozen Android test fixture plus prior synthetic instrumentation history; not live market observations",
+  "screenshots": [
+    "dashboard-dark.png",
+    "market-health-dark.png",
+    "symbol-detail-dark.png",
+    "portfolio-dark.png",
+    "history-dark.png",
+    "policy-dark.png",
+    "settings-dark.png"
+  ]
+}

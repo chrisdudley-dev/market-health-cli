@@ -1,0 +1,17 @@
+{
+  "serial": "emulator-5556",
+  "page_size": 4096,
+  "time_utc": "2026-10-27T11:49:22.625677+00:00",
+  "tests": 4,
+  "passed": 4,
+  "skipped": 0,
+  "status": "PASS",
+  "arguments": [
+    "-e",
+    "class",
+    "dev.chrisdudley.markethealth.UiUxTest#primaryNavigationRemainsReachable,dev.chrisdudley.markethealth.UiUxTest#allDestinationsAndThemesRender,dev.chrisdudley.markethealth.UiUxTest#largeFontKeepsControlsAndDetailReachable,dev.chrisdudley.markethealth.UiUxTest#visualEvidenceForSevenMajorScreensLightAndDark",
+    "-e",
+    "mhVisualEvidence",
+    "true"
+  ]
+}
