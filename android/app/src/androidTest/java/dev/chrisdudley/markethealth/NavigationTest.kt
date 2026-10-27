@@ -25,6 +25,11 @@ class NavigationTest {
         }
     }
 
+    private fun awaitSavedNotice() {
+        rule.waitUntil(15_000) { rule.onAllNodesWithText("Holding saved").fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithText("Holding saved").fetchSemanticsNodes().isEmpty() }
+    }
+
     @Test fun manualHoldingCanBeSavedAndRemoved() {
         rule.onNodeWithTag("open-menu").performClick()
         rule.onNodeWithTag("drawer-PORTFOLIO").performScrollTo().performClick()
@@ -34,14 +39,20 @@ class NavigationTest {
         rule.onNodeWithTag("save-holding").performClick()
         rule.waitUntil(30_000) { rule.onAllNodesWithText("IVE").fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithText("IVE").assertIsDisplayed()
-        rule.onNodeWithTag("remove-IVE").performScrollTo().performClick()
+        hideTestKeyboard(rule.activity)
+        awaitSavedNotice()
+        rule.onNodeWithTag("portfolio-list").performScrollToNode(hasTestTag("remove-IVE"))
+        rule.onNodeWithTag("remove-IVE").performClick()
         rule.onNodeWithText("Keep holding").performClick()
         rule.onNodeWithText("IVE").assertIsDisplayed()
         rule.onNodeWithTag("edit-IVE").performScrollTo().performClick()
         rule.onNodeWithTag("holding-shares").performTextReplacement("4")
         rule.onNodeWithTag("save-holding").performClick()
         rule.waitUntil(30_000) { rule.onAllNodesWithText("4.0").fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithTag("remove-IVE").performScrollTo().performClick()
+        hideTestKeyboard(rule.activity)
+        awaitSavedNotice()
+        rule.onNodeWithTag("portfolio-list").performScrollToNode(hasTestTag("remove-IVE"))
+        rule.onNodeWithTag("remove-IVE").performClick()
         rule.onNodeWithTag("confirm-remove").performClick()
         rule.waitUntil(30_000) { rule.onAllNodesWithText("IVE").fetchSemanticsNodes().isEmpty() }
     }

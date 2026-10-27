@@ -15,7 +15,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.runBlocking
@@ -29,6 +29,13 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.time.Instant
 import java.util.Collections
+
+internal fun hideTestKeyboard(activity: android.app.Activity) {
+    InstrumentationRegistry.getInstrumentation().runOnMainSync {
+        androidx.core.view.WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+            .hide(androidx.core.view.WindowInsetsCompat.Type.ime())
+    }
+}
 
 /** Declared synthetic presentation fixtures; source scores/reasons stay frozen and exact. */
 internal object UiFixtures {
@@ -66,13 +73,18 @@ internal object UiFixtures {
 
 @RunWith(AndroidJUnit4::class)
 class UiUxTest {
-    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
+    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    // The real Activity exists in both debug and release artifacts. Replace its
+    // content only inside instrumentation; no test Activity/data hook is shipped.
+    private fun setUi(content: @Composable () -> Unit) {
+        rule.runOnUiThread { rule.activity.setContent(content = content) }
+    }
     private var refreshes = 0
     private var loads = 0
     private fun content(data: JSONObject = UiFixtures.data(), history: JSONArray = UiFixtures.history(data),
         mode: ThemeMode = ThemeMode.LIGHT, font: Float? = null, busy: Boolean = false,
         error: String? = null, network: Boolean = true) {
-        rule.setContent {
+        setUi {
             var appearance by remember { mutableStateOf(mode) }
             MarketHealthTheme(appearance) {
                 val density = LocalDensity.current
@@ -121,9 +133,12 @@ class UiUxTest {
         rule.onNodeWithTag("symbol-search").performTextInput("XLE")
         rule.onNodeWithTag("symbol-XLE").performScrollTo().assertIsDisplayed()
         rule.onNodeWithTag("symbol-search").performTextClearance()
-        rule.onNodeWithTag("filter-OWNED").performScrollTo().performClick()
+        hideTestKeyboard(rule.activity)
+        rule.onNodeWithTag("symbols-list").performScrollToNode(hasTestTag("filter-OWNED"))
+        rule.onNodeWithTag("filter-OWNED").performClick()
         rule.onNodeWithText("1 symbols").assertIsDisplayed()
-        rule.onNodeWithTag("sort-menu").performScrollTo().performClick()
+        rule.onNodeWithTag("symbols-list").performScrollToNode(hasTestTag("sort-menu"))
+        rule.onNodeWithTag("sort-menu").performClick()
         rule.onNodeWithTag("sort-BLEND").performClick()
         rule.onNodeWithTag("sort-menu").assertTextEquals("Sort: Blend score")
     }
@@ -136,7 +151,8 @@ class UiUxTest {
         go(Destination.HISTORY)
         rule.onNodeWithText("No recorded decisions").performScrollTo().assertIsDisplayed()
         go(Destination.CANDIDATES)
-        rule.onNodeWithText("No buy candidates").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("symbols-list").performScrollToNode(hasText("No buy candidates"))
+        rule.onNodeWithText("No buy candidates").assertIsDisplayed()
     }
     @Test fun loadingDoesNotInventSavedResults() {
         content(JSONObject(), JSONArray(), busy = true)
@@ -212,7 +228,7 @@ class UiUxTest {
         val state = mutableStateOf(initial)
         val history = UiFixtures.history(initial)
         val noWrites = UiActions({}, { _, _ -> }, { _, done -> done() }, { _, done -> done() }, { _, done -> done() }, {})
-        rule.setContent { MarketHealthTheme(ThemeMode.LIGHT) {
+        setUi { MarketHealthTheme(ThemeMode.LIGHT) {
             MarketAppContent(UiState(state.value), history, Instant.parse(UiFixtures.timestamp), ThemeMode.LIGHT, {}, true, true, noWrites)
         } }
         go(Destination.MARKET)
@@ -265,7 +281,7 @@ class UiUxTest {
     @Test fun componentGoldenIsDeterministicOnDeclaredProfile() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("mhGolden") == "true")
         val scores = UiFixtures.data().array("rows").getJSONObject(0).obj("scores")
-        rule.setContent { MarketHealthTheme(ThemeMode.LIGHT) {
+        setUi { MarketHealthTheme(ThemeMode.LIGHT) {
             Surface(Modifier.width(328.dp)) { Column(Modifier.padding(16.dp)) { ScoreStrip(scores) } }
         } }
         rule.waitForIdle()
