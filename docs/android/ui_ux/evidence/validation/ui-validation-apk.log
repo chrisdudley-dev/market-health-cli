@@ -1,0 +1,3 @@
+PASS: 266 actual ELF libraries; 0 incompatible; required 16384 bytes.
+ELF/ZIP inspection is BUILD evidence only; Android runtime validation is separate.
+PASS: actual AAB produced a signed, 16 KB-aligned validation APK.

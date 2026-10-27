@@ -1,0 +1,195 @@
+{
+  "16384": {
+    "actual_reboot_with_changed_boot_id": "PASS",
+    "apk_sha256": "164d332c56693cff021cb24b1d4596a56aff1ea60f1740120b77e2690eb2ac14",
+    "full_instrumentation": {
+      "gate_pass": true,
+      "page_size": 16384,
+      "passed": 12,
+      "recorded_at_utc": "2026-10-27T09:23:59.651872+00:00",
+      "runner_tests": 14,
+      "serial": "emulator-5558",
+      "skipped": 2
+    },
+    "history_reconciliation": "PASS",
+    "no_physical_device_touched": true,
+    "page_size": 16384,
+    "same_activity_resume": "PASS",
+    "serial": "emulator-5558",
+    "startup": "PASS",
+    "test_sha256": "e207fbf3c94db4b008c973e09ddc3002dede0415151ae0dd428205064f37e1f3"
+  },
+  "4096": {
+    "actual_reboot_with_changed_boot_id": "PASS",
+    "apk_sha256": "164d332c56693cff021cb24b1d4596a56aff1ea60f1740120b77e2690eb2ac14",
+    "full_instrumentation": {
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 12,
+      "recorded_at_utc": "2026-10-27T09:24:34.622511+00:00",
+      "runner_tests": 14,
+      "serial": "emulator-5556",
+      "skipped": 2
+    },
+    "history_reconciliation": "PASS",
+    "no_physical_device_touched": true,
+    "page_size": 4096,
+    "same_activity_resume": "PASS",
+    "serial": "emulator-5556",
+    "startup": "PASS",
+    "test_sha256": "e207fbf3c94db4b008c973e09ddc3002dede0415151ae0dd428205064f37e1f3"
+  },
+  "android_pinned": "634 passed +18 subtests,1 optional Qt skip,3 existing pandas warnings",
+  "created_at_utc": "2026-10-27T09:27:08.091261+00:00",
+  "defect": "ANDROID-UI-RESUME-001",
+  "failed_candidate_evidence_commit": "259181b4518f0a0547e5fa2af339d7102cb4c7a1",
+  "first_gate_before_visual_polish": true,
+  "fixed_candidate_scope": "DEBUG APK, actual x86_64 emulators only; no physical fix validation",
+  "frozen_financial_source_diff": "none against validated candidate",
+  "host": "637 passed +18 subtests",
+  "native_audit": {
+    "artifact": "app-debug.apk",
+    "artifact_sha256": "164d332c56693cff021cb24b1d4596a56aff1ea60f1740120b77e2690eb2ac14",
+    "build_inspection_only": true,
+    "errors": [],
+    "incompatible_count": 0,
+    "library_count": 266,
+    "required_page_size": 16384,
+    "status": "PASS"
+  },
+  "natural_battery_gate": "OPEN \u2014 no retest started",
+  "physical_phone_artifact": "UNCHANGED original debug SHA256 2c3479633e97c02010131284d521127fa96516ae5eb710cee973d0b609fe8e2f",
+  "raw_logs": {
+    "resume-android-pinned": {
+      "bytes": 1558,
+      "sha256": "3332768dcf064062b5dadbb09a57c6eb7a6b5a3e9320e476fcff5d72fb9bd99e"
+    },
+    "resume-host": {
+      "bytes": 823,
+      "sha256": "f2f7c343f43da7c53693f8c29b98be50e0e7b9af2e07450a0cbf0903cbddc38a"
+    },
+    "resume-v2-fixed-16384-full": {
+      "bytes": 11755,
+      "sha256": "f3e9efcf7ece05ce1224b2cc463681d6fb9a4d91f07ad69fa33eb38a96160309"
+    },
+    "resume-v2-fixed-16384-reboot-seed": {
+      "bytes": 806,
+      "sha256": "73ccce4f04ee3850119a937707a97dbcf8abd16fabe8d8a0e0f1dc491b5b0c4c"
+    },
+    "resume-v2-fixed-16384-reboot-verify": {
+      "bytes": 806,
+      "sha256": "8da1f4adc1198cab64f2fc22c81ed698598498bc6cf39ea742461f3d699ad952"
+    },
+    "resume-v2-fixed-16384-targeted": {
+      "bytes": 861,
+      "sha256": "cfe0e44d5e41b9a71d9f26110f76e4e8789ace34aa3e3aac0978909c92afff5f"
+    },
+    "resume-v2-fixed-4096-full": {
+      "bytes": 11755,
+      "sha256": "a2d2fd5dee4955d41557e28b9fc9766ccf02484e7c49d8f79b9db425aec4efb9"
+    },
+    "resume-v2-fixed-4096-reboot-seed": {
+      "bytes": 805,
+      "sha256": "281b77e06cdb18fb3c8cb475f4616beb5b77486f35a865626f8d6f4decbedfa5"
+    },
+    "resume-v2-fixed-4096-reboot-verify": {
+      "bytes": 806,
+      "sha256": "4e839dac9af41ea0bb36face3e7048725881bb80b3368cd436557bbedc32962d"
+    },
+    "resume-v2-fixed-4096-targeted": {
+      "bytes": 861,
+      "sha256": "71f14490669b36c6dcf40f08cf2a2101b081244a2ea2b57fa4cbe4e5133119a4"
+    },
+    "resume-v2-negative-4k": {
+      "bytes": 4994,
+      "sha256": "6ef3cc9868841929fc568cd6d146e96c294dd77014fe4ad6b1e95965e115837e"
+    }
+  },
+  "runs": {
+    "resume-v2-fixed-16384-full": {
+      "gate_pass": true,
+      "page_size": 16384,
+      "passed": 12,
+      "recorded_at_utc": "2026-10-27T09:23:59.651872+00:00",
+      "runner_tests": 14,
+      "serial": "emulator-5558",
+      "skipped": 2
+    },
+    "resume-v2-fixed-16384-reboot-seed": {
+      "gate_pass": true,
+      "page_size": 16384,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:24:01.319858+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5558",
+      "skipped": 0
+    },
+    "resume-v2-fixed-16384-reboot-verify": {
+      "gate_pass": true,
+      "page_size": 16384,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:24:36.988307+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5558",
+      "skipped": 0
+    },
+    "resume-v2-fixed-16384-targeted": {
+      "gate_pass": true,
+      "page_size": 16384,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:23:42.479219+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5558",
+      "skipped": 0
+    },
+    "resume-v2-fixed-4096-full": {
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 12,
+      "recorded_at_utc": "2026-10-27T09:24:34.622511+00:00",
+      "runner_tests": 14,
+      "serial": "emulator-5556",
+      "skipped": 2
+    },
+    "resume-v2-fixed-4096-reboot-seed": {
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:24:36.323056+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5556",
+      "skipped": 0
+    },
+    "resume-v2-fixed-4096-reboot-verify": {
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:25:03.791830+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5556",
+      "skipped": 0
+    },
+    "resume-v2-fixed-4096-targeted": {
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 1,
+      "recorded_at_utc": "2026-10-27T09:24:16.216152+00:00",
+      "runner_tests": 1,
+      "serial": "emulator-5556",
+      "skipped": 0
+    },
+    "resume-v2-negative-4k": {
+      "expected_failure": true,
+      "gate_pass": true,
+      "page_size": 4096,
+      "passed": 0,
+      "post_resume_wait_failure": true,
+      "recorded_at_utc": "2026-10-27T09:24:08.819576+00:00",
+      "runner_tests": null,
+      "serial": "emulator-5556",
+      "skipped": 0
+    }
+  },
+  "schema": "market-health-resume-reconciliation/v1",
+  "status": "PASS"
+}

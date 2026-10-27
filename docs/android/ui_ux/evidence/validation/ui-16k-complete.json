@@ -1,0 +1,10 @@
+{
+  "serial": "emulator-5558",
+  "page_size": 16384,
+  "time_utc": "2026-10-27T10:24:10.994536+00:00",
+  "tests": 28,
+  "passed": 23,
+  "skipped": 5,
+  "status": "PASS",
+  "arguments": []
+}

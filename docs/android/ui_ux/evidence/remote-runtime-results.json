@@ -1,0 +1,54 @@
+{
+  "implementation_commit": "0fcf87d5f375a8958319e82db89762192c045e61",
+  "workflow_run": 40498679080,
+  "runtime4096": {
+    "status": "PASS",
+    "emulator": true,
+    "serial": "emulator-5554",
+    "requested_page_size": 4096,
+    "builds": [
+      {
+        "variant": "debug",
+        "apk_sha256": "d2d46e99be35da79a8b83bc9c62d0dc5c4057884004bcbc045aeacf00d83e492",
+        "instrumentation_passed": 23,
+        "instrumentation_skipped": 5,
+        "startup": "PASS"
+      },
+      {
+        "variant": "release-test-signed",
+        "apk_sha256": "dacb89863062abdcb48eaff08b50b28afce2fb5d6763071f7798d0773e215f27",
+        "instrumentation_passed": 23,
+        "instrumentation_skipped": 5,
+        "startup": "PASS"
+      }
+    ],
+    "actual_page_size": 4096,
+    "abi": "x86_64",
+    "reboot_rescue_history_notifications_workmanager": "PASS"
+  },
+  "runtime16384": {
+    "status": "PASS",
+    "emulator": true,
+    "serial": "emulator-5554",
+    "requested_page_size": 16384,
+    "builds": [
+      {
+        "variant": "debug",
+        "apk_sha256": "d2d46e99be35da79a8b83bc9c62d0dc5c4057884004bcbc045aeacf00d83e492",
+        "instrumentation_passed": 23,
+        "instrumentation_skipped": 5,
+        "startup": "PASS"
+      },
+      {
+        "variant": "release-test-signed",
+        "apk_sha256": "dacb89863062abdcb48eaff08b50b28afce2fb5d6763071f7798d0773e215f27",
+        "instrumentation_passed": 23,
+        "instrumentation_skipped": 5,
+        "startup": "PASS"
+      }
+    ],
+    "actual_page_size": 16384,
+    "abi": "x86_64",
+    "reboot_rescue_history_notifications_workmanager": "PASS"
+  }
+}

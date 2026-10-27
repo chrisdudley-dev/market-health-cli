@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "emulator": true,
+  "serial": "emulator-5556",
+  "requested_page_size": 4096,
+  "builds": [
+    {
+      "variant": "debug",
+      "apk_sha256": "f8af2ed84ae82cb82a9f23ad438f4a5e8a96db1a526e5edadf8cdba3a33bc9f1",
+      "instrumentation_passed": 23,
+      "instrumentation_skipped": 5,
+      "startup": "PASS"
+    },
+    {
+      "variant": "release-test-signed",
+      "apk_sha256": "73d7d8d0f61d331eeb7b23a523e167f4caf7e0ab0482c66167375eea7c6f853b",
+      "instrumentation_passed": 23,
+      "instrumentation_skipped": 5,
+      "startup": "PASS"
+    }
+  ],
+  "actual_page_size": 4096,
+  "abi": "x86_64",
+  "reboot_rescue_history_notifications_workmanager": "PASS"
+}

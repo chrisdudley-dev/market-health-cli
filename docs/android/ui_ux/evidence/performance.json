@@ -1,0 +1,34 @@
+{
+  "kind": "debug emulator observation, not physical release benchmark",
+  "test_data": "25 synthetic presentation rows, 300 repeated frozen-score history rows",
+  "scenarios": [
+    {
+      "scenario": "initial dashboard",
+      "elapsed_ms_including_test_automation": 61.690127,
+      "frames": 1,
+      "frame_p50_ms": 50.057049,
+      "frame_p95_ms": 50.057049
+    },
+    {
+      "scenario": "25-symbol list scroll",
+      "elapsed_ms_including_test_automation": 1048.728437,
+      "frames": 49,
+      "frame_p50_ms": 16.728684,
+      "frame_p95_ms": 16.923633
+    },
+    {
+      "scenario": "history chart and timeline",
+      "elapsed_ms_including_test_automation": 1398.477085,
+      "frames": 68,
+      "frame_p50_ms": 16.757538,
+      "frame_p95_ms": 17.630367
+    },
+    {
+      "scenario": "navigation",
+      "elapsed_ms_including_test_automation": 851.573257,
+      "frames": 49,
+      "frame_p50_ms": 16.761255,
+      "frame_p95_ms": 16.926034
+    }
+  ]
+}

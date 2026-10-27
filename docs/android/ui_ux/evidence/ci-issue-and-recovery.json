@@ -1,0 +1,16 @@
+{
+  "failed_run": 40488116204,
+  "failed_implementation": "9918e11368f1bda3820621962bbabee483211003",
+  "status": "FAIL",
+  "local_reproduction": "validation/ui-ci-small-reproduction.log",
+  "symptoms": [
+    "Keep holding confirmation not found after a click under the transient saved notice",
+    "Filter/empty-state nodes not yet composed in small lazy viewport"
+  ],
+  "fix_commit": "0fcf87d5f375a8958319e82db89762192c045e61",
+  "changes": "Await real save notice completion; use list-aware scrolling; hide test IME; host synthetic Compose content in real MainActivity so release runs the same entire suite",
+  "frozen_financial_expectations": "UNCHANGED",
+  "fixed_local_targeted": "validation/ui-ci-small-fixed.log",
+  "successful_run": 40498679080,
+  "successful_status": "PASS"
+}

@@ -1,0 +1,66 @@
+{
+  "headRefOid": "0fcf87d5f375a8958319e82db89762192c045e61",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:52:35Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679080/job/122170535627",
+      "name": "build",
+      "startedAt": "2026-10-27T11:46:42Z",
+      "status": "COMPLETED",
+      "workflowName": "Android build and parity"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:47:23Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679074/job/122170535170",
+      "name": "test (3.11)",
+      "startedAt": "2026-10-27T11:46:42Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:47:33Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679074/job/122170535539",
+      "name": "test (3.12)",
+      "startedAt": "2026-10-27T11:46:42Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:47:27Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679074/job/122170535352",
+      "name": "test (3.13)",
+      "startedAt": "2026-10-27T11:46:42Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:56:07Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679080/job/122173027291",
+      "name": "runtime (4096, default)",
+      "startedAt": "2026-10-27T11:52:38Z",
+      "status": "COMPLETED",
+      "workflowName": "Android build and parity"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-27T11:57:26Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40498679080/job/122173027369",
+      "name": "runtime (16384, google_apis_ps16k)",
+      "startedAt": "2026-10-27T11:52:38Z",
+      "status": "COMPLETED",
+      "workflowName": "Android build and parity"
+    }
+  ],
+  "retrieved_utc": "2026-10-27T12:00:08.759068+00:00"
+}

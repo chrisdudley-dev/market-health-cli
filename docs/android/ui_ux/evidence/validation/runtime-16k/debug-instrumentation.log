@@ -1,0 +1,449 @@
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.CoreParityTest:
+INSTRUMENTATION_STATUS: test=androidNotificationsHonorPermissionAndUnchangedStates
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=androidNotificationsHonorPermissionAndUnchangedStates
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=rescueAndHistorySurviveFreshStoreInstances
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=rescueAndHistorySurviveFreshStoreInstances
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=committedRefreshRetryReusesCycleAcrossFreshCalls
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=3
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=committedRefreshRetryReusesCycleAcrossFreshCalls
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=liveBackgroundWorkerRunsThroughThePackagedCore
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=4
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stack=org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+	at org.junit.Assume.assumeThat(Assume.java:106)
+	at org.junit.Assume.assumeTrue(Assume.java:50)
+	at dev.chrisdudley.markethealth.CoreParityTest$liveBackgroundWorkerRunsThroughThePackagedCore$1.invokeSuspend(CoreParityTest.kt:76)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:277)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at dev.chrisdudley.markethealth.CoreParityTest.liveBackgroundWorkerRunsThroughThePackagedCore(CoreParityTest.kt:75)
+
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=liveBackgroundWorkerRunsThroughThePackagedCore
+INSTRUMENTATION_STATUS_CODE: -4
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=actualRuntimeHasExpectedPageSizeAndPinnedNumericalVersions
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=5
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=actualRuntimeHasExpectedPageSizeAndPinnedNumericalVersions
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=6
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=schedulingHonorsAndroidMinimum
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=6
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=schedulingHonorsAndroidMinimum
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=7
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=disabledMonitoringDoesNotConsumeARefresh
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=7
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=disabledMonitoringDoesNotConsumeARefresh
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=8
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=enabledBackgroundWorkerUsesTheSharedEngineAndPersistentHistory
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=8
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=enabledBackgroundWorkerUsesTheSharedEngineAndPersistentHistory
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=9
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=frozenCliAndEmbeddedAndroidResultsAreExactlyEqual
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=9
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=frozenCliAndEmbeddedAndroidResultsAreExactlyEqual
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=10
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=chartTransportWithEmptyProviderSessionsMatchesCli
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.CoreParityTest
+INSTRUMENTATION_STATUS: current=10
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=chartTransportWithEmptyProviderSessionsMatchesCli
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.NavigationTest
+INSTRUMENTATION_STATUS: current=11
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.NavigationTest:
+INSTRUMENTATION_STATUS: test=manualHoldingCanBeSavedAndRemoved
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.NavigationTest
+INSTRUMENTATION_STATUS: current=11
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=manualHoldingCanBeSavedAndRemoved
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.NavigationTest
+INSTRUMENTATION_STATUS: current=12
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=allEightNativeDestinationsOpen
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.NavigationTest
+INSTRUMENTATION_STATUS: current=12
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=allEightNativeDestinationsOpen
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.RebootPersistenceTest
+INSTRUMENTATION_STATUS: current=13
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.RebootPersistenceTest:
+INSTRUMENTATION_STATUS: test=rescueHistoryAndPeriodicScheduleSurviveReboot
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.RebootPersistenceTest
+INSTRUMENTATION_STATUS: current=13
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stack=org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+	at org.junit.Assume.assumeThat(Assume.java:106)
+	at org.junit.Assume.assumeTrue(Assume.java:50)
+	at dev.chrisdudley.markethealth.RebootPersistenceTest$rescueHistoryAndPeriodicScheduleSurviveReboot$1.invokeSuspend(RebootPersistenceTest.kt:24)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:277)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at dev.chrisdudley.markethealth.RebootPersistenceTest.rescueHistoryAndPeriodicScheduleSurviveReboot(RebootPersistenceTest.kt:22)
+
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.RebootPersistenceTest:
+INSTRUMENTATION_STATUS: test=rescueHistoryAndPeriodicScheduleSurviveReboot
+INSTRUMENTATION_STATUS_CODE: -4
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.ResumeReconciliationTest
+INSTRUMENTATION_STATUS: current=14
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.ResumeReconciliationTest:
+INSTRUMENTATION_STATUS: test=sameActivityAdoptsBackgroundCommitOnResumeWithoutRefreshOrRecreation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.ResumeReconciliationTest
+INSTRUMENTATION_STATUS: current=14
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=sameActivityAdoptsBackgroundCommitOnResumeWithoutRefreshOrRecreation
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=15
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+dev.chrisdudley.markethealth.UiUxTest:
+INSTRUMENTATION_STATUS: test=scoreValuesAndDetailAuditUseAuthoritativeValues
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=15
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=scoreValuesAndDetailAuditUseAuthoritativeValues
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=16
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=emptyOfflineErrorAndLoadingStatesStayExplicit
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=16
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=emptyOfflineErrorAndLoadingStatesStayExplicit
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=17
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=appearancePersistsOutsideAuthoritativeSettings
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=17
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=appearancePersistsOutsideAuthoritativeSettings
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=18
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=staleStatusAndOneRefreshPath
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=18
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=staleStatusAndOneRefreshPath
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=19
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=searchFilterSortAndExistingMembershipArePreserved
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=19
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=searchFilterSortAndExistingMembershipArePreserved
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=20
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=visualEvidenceForSevenMajorScreensLightAndDark
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=20
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stack=org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+	at org.junit.Assume.assumeThat(Assume.java:106)
+	at org.junit.Assume.assumeTrue(Assume.java:50)
+	at dev.chrisdudley.markethealth.UiUxTest.visualEvidenceForSevenMajorScreensLightAndDark(UiUxTest.kt:252)
+
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=visualEvidenceForSevenMajorScreensLightAndDark
+INSTRUMENTATION_STATUS_CODE: -4
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=21
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=loadingDoesNotInventSavedResults
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=21
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=loadingDoesNotInventSavedResults
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=22
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=historyRetainsRecordedTransitionsAndPointOnlyData
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=22
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=historyRetainsRecordedTransitionsAndPointOnlyData
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=23
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=profileRenderingOnDisposableEmulator
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=23
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stack=org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+	at org.junit.Assume.assumeThat(Assume.java:106)
+	at org.junit.Assume.assumeTrue(Assume.java:50)
+	at dev.chrisdudley.markethealth.UiUxTest.profileRenderingOnDisposableEmulator(UiUxTest.kt:301)
+
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=profileRenderingOnDisposableEmulator
+INSTRUMENTATION_STATUS_CODE: -4
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=24
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=primaryNavigationRemainsReachable
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=24
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=primaryNavigationRemainsReachable
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=25
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=allDestinationsAndThemesRender
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=25
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=allDestinationsAndThemesRender
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=26
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=componentGoldenIsDeterministicOnDeclaredProfile
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=26
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stack=org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+	at org.junit.Assume.assumeThat(Assume.java:106)
+	at org.junit.Assume.assumeTrue(Assume.java:50)
+	at dev.chrisdudley.markethealth.UiUxTest.componentGoldenIsDeterministicOnDeclaredProfile(UiUxTest.kt:282)
+
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=componentGoldenIsDeterministicOnDeclaredProfile
+INSTRUMENTATION_STATUS_CODE: -4
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=27
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=currentDetailReconcilesWhileHistoricalSelectionRetainsOriginal
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=27
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=currentDetailReconcilesWhileHistoricalSelectionRetainsOriginal
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=28
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=
+INSTRUMENTATION_STATUS: test=largeFontKeepsControlsAndDetailReachable
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.chrisdudley.markethealth.UiUxTest
+INSTRUMENTATION_STATUS: current=28
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=28
+INSTRUMENTATION_STATUS: stream=.
+INSTRUMENTATION_STATUS: test=largeFontKeepsControlsAndDetailReachable
+INSTRUMENTATION_STATUS_CODE: 0
+INSTRUMENTATION_RESULT: stream=
+
+Time: 38.27
+
+OK (28 tests)
+
+
+INSTRUMENTATION_CODE: -1

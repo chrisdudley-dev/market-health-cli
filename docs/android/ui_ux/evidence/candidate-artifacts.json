@@ -1,0 +1,29 @@
+{
+  "implementation_commit": "0fcf87d5f375a8958319e82db89762192c045e61",
+  "branch": "android/ui-ux-refinement",
+  "created_utc": "2026-10-27T11:55:32.518772+00:00",
+  "signing": "Release APK/AAB unsigned. AAB-derived validation APK uses the existing standard disposable debug key; no production key.",
+  "physical_phone": "No UI candidate installed; original failed idle candidate preserved.",
+  "artifacts": {
+    "app-debug.apk": {
+      "sha256": "f8af2ed84ae82cb82a9f23ad438f4a5e8a96db1a526e5edadf8cdba3a33bc9f1",
+      "bytes": 95242603
+    },
+    "app-debug-androidTest.apk": {
+      "sha256": "99f8b99d4d514d72badaef599bc1a68f1ecfb7bf2a4b95197d7f860f630c9f79",
+      "bytes": 1364991
+    },
+    "app-release-unsigned.apk": {
+      "sha256": "578d5a2e2b0d202e5d589b71eff4cc100b5eec470a1f02a79608891086f228ab",
+      "bytes": 91159482
+    },
+    "app-release.aab": {
+      "sha256": "e3d1143031a213be331b0b8d81d719308d98259a0dd6644d11808be2aaa3cdbf",
+      "bytes": 72021369
+    },
+    "app-release-test-signed.apk": {
+      "sha256": "73d7d8d0f61d331eeb7b23a523e167f4caf7e0ab0482c66167375eea7c6f853b",
+      "bytes": 88910071
+    }
+  }
+}
