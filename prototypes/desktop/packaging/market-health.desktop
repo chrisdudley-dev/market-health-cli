@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Market Health
+Comment=Local market scores and manual portfolio policy
+Exec=MarketHealth
+Icon=market-health
+Terminal=false
+Categories=Office;Finance;

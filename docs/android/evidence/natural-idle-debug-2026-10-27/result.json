@@ -1,0 +1,320 @@
+{
+  "background": {
+    "decisions_per_success": 25,
+    "failure_scans_in_same_segment": 2,
+    "failures": "Required SPY/VIX unavailable; stored stale-state failure records and exponential retries, followed by successful live 25-symbol results. Exact original transport cause is not retained; no unsupported provider/network root-cause claim.",
+    "later_successful_scans_not_attributed_to_unplugged_segment": 35,
+    "latest_cycle_matches_latest_scan": true,
+    "new_decisions": 1000,
+    "new_failure_scans": 17,
+    "new_successful_scans": 40,
+    "period_count_after": 48,
+    "period_count_before": 8,
+    "post_work": {
+      "generation": 1,
+      "id": "7c729bd1-8ffa-421b-b902-3edbf5cf750c",
+      "interval_duration": 1800000,
+      "last_enqueue_time": 1793090134140,
+      "period_count": 48,
+      "run_attempt_count": 0,
+      "schedule_requested_at": 1793090134172,
+      "state": 0,
+      "stop_reason": -256
+    },
+    "same_work_uuid": true,
+    "successful_scans_before_recorded_charging_after_conservative_start": 5,
+    "work_uuid": "7c729bd1-8ffa-421b-b902-3edbf5cf750c"
+  },
+  "candidate": {
+    "application_id": "dev.chrisdudley.markethealth",
+    "installed_sha256": "2c3479633e97c02010131284d521127fa96516ae5eb710cee973d0b609fe8e2f",
+    "observer_commit": "5e0d767f0373aa2f3922edb7a0df0437a9f37879",
+    "production_code_commit": "20e432dae3c1059efbf446b41d7791d793d91f4f",
+    "source_commit": "20b26e433c1ab7150672d35f97a93f2cf4d88d94",
+    "version_code": 2,
+    "version_name": "0.2.0-rc1"
+  },
+  "defect": {
+    "calculation_or_policy_defect": false,
+    "description": "Existing Activity retains pre-idle cached state after normal resume despite fresh authoritative SQLite results. Normal Back/reopen recreates Activity and displays persisted latest result without a refresh.",
+    "id": "ANDROID-UI-RESUME-001",
+    "persisted_latest_timestamp": "2026-10-27T08:35:20.253Z",
+    "screen_after_normal_reopen": [
+      "OK \u00b7 2026-10-27T08:35:20.253Z"
+    ],
+    "stale_screen_before_normal_reopen": [
+      "STALE \u00b7 OK \u00b7 2026-10-26T08:10:19.318Z"
+    ]
+  },
+  "device": {
+    "abi": "arm64-v8a",
+    "android": "10",
+    "api": 29,
+    "model": "SM-G965U",
+    "page_size": 4096,
+    "same_boot": true
+  },
+  "final_status": "FAIL \u2014 APPLICATION DEFECT IDENTIFIED",
+  "new_application_build_or_install_after_test": false,
+  "persistence": {
+    "active_owned_transition_coverage": "NOT TESTED: no owned holdings or live transition; no synthetic rows added",
+    "baseline_counts": {
+      "accounts": 5,
+      "decisions": 39,
+      "holdings": 0,
+      "notifications": 4,
+      "policy_state": 25,
+      "portfolio_events": 12,
+      "scans": 11,
+      "settings": 11,
+      "transitions": 4
+    },
+    "historical_prefix": {
+      "decisions": {
+        "all_prior_ids_present": true,
+        "new_rows": 1000,
+        "prior_rows_identical": true
+      },
+      "notifications": {
+        "all_prior_ids_present": true,
+        "new_rows": 0,
+        "prior_rows_identical": true
+      },
+      "scans": {
+        "all_prior_ids_present": true,
+        "new_rows": 57,
+        "prior_rows_identical": true
+      },
+      "transitions": {
+        "all_prior_ids_present": true,
+        "new_rows": 0,
+        "prior_rows_identical": true
+      }
+    },
+    "integrity": {
+      "all_current_rescue_counts_zero_without_ownership": true,
+      "all_decision_scan_links_exist": true,
+      "all_notification_decision_links_exist": true,
+      "all_transition_decision_links_exist": true,
+      "app_integrity": [
+        "ok"
+      ],
+      "decisions_per_success": {
+        "18": 25,
+        "19": 25,
+        "20": 25,
+        "21": 25,
+        "22": 25,
+        "27": 25,
+        "28": 25,
+        "29": 25,
+        "30": 25,
+        "31": 25,
+        "32": 25,
+        "33": 25,
+        "34": 25,
+        "35": 25,
+        "36": 25,
+        "37": 25,
+        "38": 25,
+        "39": 25,
+        "40": 25,
+        "41": 25,
+        "42": 25,
+        "43": 25,
+        "44": 25,
+        "45": 25,
+        "46": 25,
+        "47": 25,
+        "55": 25,
+        "56": 25,
+        "57": 25,
+        "58": 25,
+        "59": 25,
+        "60": 25,
+        "61": 25,
+        "62": 25,
+        "63": 25,
+        "64": 25,
+        "65": 25,
+        "66": 25,
+        "67": 25,
+        "68": 25
+      },
+      "errors_after_conservative_start": 13,
+      "no_owned_policy_without_holdings": true,
+      "settings_exactly_unchanged": true,
+      "successes_after_conservative_start": 40,
+      "unique_notification_decision_ids": true,
+      "unique_successful_cycle_keys": true,
+      "work_integrity": [
+        "ok"
+      ]
+    },
+    "no_new_notifications": true,
+    "notification_states_unchanged": true,
+    "owned_positions": 0,
+    "post_counts": {
+      "accounts": 5,
+      "decisions": 1039,
+      "holdings": 0,
+      "notifications": 4,
+      "policy_state": 25,
+      "portfolio_events": 12,
+      "scans": 68,
+      "settings": 11,
+      "transitions": 4
+    },
+    "unchanged_tables": {
+      "accounts": true,
+      "holdings": true,
+      "portfolio_events": true,
+      "settings": true
+    }
+  },
+  "private_input_manifest": {
+    "post-idle-2026-10-27/batterystats-history.txt": {
+      "bytes": 2854,
+      "retention": "private local evidence, not committed",
+      "sha256": "b203c318ce0ca70acca7a4b26c227cdbe0c66799640282148ae360e03433d87d"
+    },
+    "post-idle-2026-10-27/deviceidle.txt": {
+      "bytes": 9147,
+      "retention": "private local evidence, not committed",
+      "sha256": "082e946c0081f2bba5affe09ca8b30979394e9d5e21bee3cd6af83e8d99efa15"
+    },
+    "post-idle-2026-10-27/jobscheduler.txt": {
+      "bytes": 425598,
+      "retention": "private local evidence, not committed",
+      "sha256": "edd9ad60a2865ecf7cbc34f93c382825681e8d2915a144538310c789259c52bc"
+    },
+    "post-idle-2026-10-27/logical-state.json": {
+      "bytes": 1585725,
+      "retention": "private local evidence, not committed",
+      "sha256": "1566365da8a23a92649cf0a12960b79e188323a4c7a8196bedfcbf8f466c70fa"
+    },
+    "post-idle-2026-10-27/raw-state.tar": {
+      "bytes": 2072064,
+      "retention": "private local evidence, not committed",
+      "sha256": "de451b6faab33704af238f51d2ee2fb6e2a074b63042366520013b083898c58d"
+    },
+    "post-idle-2026-10-27/reconciliation-normal-reopen.xml": {
+      "bytes": 15706,
+      "retention": "private local evidence, not committed",
+      "sha256": "c5c1866b54ab11fb6a478ebffa541a430df5df6908f23510138aef27e638feae"
+    },
+    "post-idle-2026-10-27/reconciliation-still-stale.xml": {
+      "bytes": 23251,
+      "retention": "private local evidence, not committed",
+      "sha256": "e799c14302bad046f464490173cbb3004cd8986bded83fa4bcf57da0144ca7ed"
+    },
+    "post-idle-2026-10-27/snapshot.json": {
+      "bytes": 1510,
+      "retention": "private local evidence, not committed",
+      "sha256": "3abc81d8a4d0533922810209b7c0538f8abab1c6ab295428a7398c3f3d017989"
+    },
+    "post-idle-2026-10-27/ui-reconciliation-check.json": {
+      "bytes": 623,
+      "retention": "private local evidence, not committed",
+      "sha256": "8ffc340e7d968828147abe719339b64674f9a7b30c2d9e62e1d826f643e80a08"
+    },
+    "pre-idle-baseline/batterystats-history.txt": {
+      "bytes": 85301,
+      "retention": "private local evidence, not committed",
+      "sha256": "67b7b0e6604825ed5eaf586ebb945f2f0cd2d332d1252fb200110445f4ecaac3"
+    },
+    "pre-idle-baseline/deviceidle.txt": {
+      "bytes": 8963,
+      "retention": "private local evidence, not committed",
+      "sha256": "40b6643bb3ed1cdd2034b9c3e3369b29628aa4ed4256fb9a1bd417dc6b6fc2f7"
+    },
+    "pre-idle-baseline/logical-state.json": {
+      "bytes": 83138,
+      "retention": "private local evidence, not committed",
+      "sha256": "bf98a3148a5413fdc793a7522051e2507abf12669dddbad8adc1a956d350e0cd"
+    },
+    "pre-idle-baseline/raw-state.tar": {
+      "bytes": 654848,
+      "retention": "private local evidence, not committed",
+      "sha256": "785f00504bd641a132028bef2d530caffb7ce7b4470b30f6988b47e92c0425f4"
+    },
+    "pre-idle-baseline/snapshot.json": {
+      "bytes": 1498,
+      "retention": "private local evidence, not committed",
+      "sha256": "d9efca82835a2ae1473b2a537b406eafcfffc577ec6b19f919c313c45ff1b930"
+    }
+  },
+  "production_source_changed": false,
+  "report_created_at_utc": "2026-10-27T08:52:32.174905+00:00",
+  "schema": "market-health-natural-idle-debug-evidence/v1",
+  "scope": "NATURAL BATTERY/DOZE ACCEPTANCE \u2014 DEBUG APK",
+  "timing": {
+    "baseline_utc": "2026-10-26T10:03:38.375176+00:00",
+    "battery_post_usb_charging_percent": 100,
+    "battery_start_percent": 100,
+    "continuous_four_hour_natural_idle_established": false,
+    "deep_idle_observed": false,
+    "first_observed_disconnected_utc": "2026-10-26T10:32:30+00:00",
+    "interpretation": "Long wall-clock observation is not an uninterrupted unplugged test. Retained idle history includes unlock interruptions and charging before planned four-hour endpoint.",
+    "last_connected_baseline_utc": "2026-10-26T10:06:19.342938+00:00",
+    "light_idle_observed": true,
+    "planned_earliest_end_utc": "2026-10-26T14:32:30+00:00",
+    "post_snapshot_utc": "2026-10-27T08:43:08.787315+00:00",
+    "recorded_return_to_charging_approx_utc": "2026-10-26T13:11:52+00:00",
+    "unplugged_battery_drain": "UNAVAILABLE: endpoint is charged and retained batterystats resets at 2026-10-27 04:41 local; do not report zero drain"
+  },
+  "verification_matrix": {
+    "android_pinned_host_tests": {
+      "evidence": "634 tests plus inherited 18 subtests, optional Qt collection skip and three pandas warnings",
+      "status": "PASS"
+    },
+    "foreground_reconciliation": {
+      "evidence": "ANDROID-UI-RESUME-001",
+      "status": "FAIL"
+    },
+    "four_hour_natural_battery_acceptance": {
+      "evidence": "Required continuous window not established; charging occurs before earliest planned end",
+      "status": "NOT TESTED"
+    },
+    "host_python_tests": {
+      "evidence": "637 tests plus inherited 18 subtests at observer preparation; no production code changed afterward",
+      "status": "PASS"
+    },
+    "natural_deep_doze": {
+      "evidence": "No deep-idle event in retained OS history",
+      "status": "NOT TESTED"
+    },
+    "natural_light_idle": {
+      "evidence": "Retained OS light-idle/maintenance events; never forced by agent",
+      "status": "PASS"
+    },
+    "new_owned_notification_delivery": {
+      "evidence": "Zero owned holdings; previous functional tests remain separate",
+      "status": "NOT TESTED"
+    },
+    "periodic_execution_and_recovery": {
+      "evidence": "40 period-count increase, 40 successful 25-symbol scans, recovery after 17 errors",
+      "status": "PASS"
+    },
+    "physical_16kb_arm": {
+      "evidence": "S9+ kernel is 4 KB",
+      "status": "NOT TESTED"
+    },
+    "production_signing": {
+      "evidence": "Outside phase; separate owner credentials/authorization required",
+      "status": "BLOCKED"
+    },
+    "read_only_observer": {
+      "evidence": "11 synthetic tests, full Ruff format/check, byte-stable before/after capture and SQLite integrity",
+      "status": "PASS"
+    },
+    "release_derived_natural_idle": {
+      "evidence": "This run used DEBUG APK exclusively",
+      "status": "NOT TESTED"
+    },
+    "rescue_history_and_sqlite_integrity": {
+      "evidence": "Prior rows retained, valid links/unique IDs, both DB integrity checks ok",
+      "status": "PASS"
+    }
+  }
+}

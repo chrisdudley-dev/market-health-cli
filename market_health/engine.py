@@ -19,7 +19,13 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
-import yfinance as yf
+
+# Data transport is optional for embedded Android and injected-OHLCV callers.
+# No scoring calculation depends on importing the desktop yfinance transport.
+try:
+    import yfinance as yf
+except ImportError:
+    yf = None
 from market_health.universe import get_asset_meta, get_default_scoring_symbols
 
 import threading
@@ -59,6 +65,8 @@ class _DownloadOverride:
 
 def _yf_download(*args, **kwargs):
     kwargs.setdefault("timeout", HTTP_TIMEOUT)
+    if yf is None and _DOWNLOAD_OVERRIDE_FN is None:
+        raise RuntimeError("No market-data transport installed; inject OHLCV inputs.")
     fn = _DOWNLOAD_OVERRIDE_FN or yf.download
     return fn(*args, **kwargs)
 

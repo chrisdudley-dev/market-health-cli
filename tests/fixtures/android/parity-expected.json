@@ -1,0 +1,221 @@
+[
+  {
+    "decision": {
+      "action": "HOLD",
+      "buy_qualified": false,
+      "can_add": false,
+      "checks": [
+        {
+          "actual": "66.6667 >= 55",
+          "code": "BUY_C",
+          "passed": true,
+          "rule": "C >= 55"
+        },
+        {
+          "actual": "68.3333 >= 60",
+          "code": "BUY_BLEND",
+          "passed": true,
+          "rule": "Blend >= 60"
+        },
+        {
+          "actual": "73.3333 >= 69.6667",
+          "code": "BUY_H1",
+          "passed": true,
+          "rule": "H1 >= C + 3"
+        },
+        {
+          "actual": "66.6667 >= 69.6667",
+          "code": "BUY_H5",
+          "passed": false,
+          "rule": "H5 >= C + 3"
+        },
+        {
+          "actual": "68.3333 >= 69.6667",
+          "code": "BUY_EDGE",
+          "passed": false,
+          "rule": "Blend >= C + 3"
+        },
+        {
+          "actual": "73.3333 <= 63.6667",
+          "code": "SELL_H1",
+          "passed": false,
+          "rule": "H1 <= C - 3"
+        },
+        {
+          "actual": "66.6667 <= 63.6667",
+          "code": "SELL_H5",
+          "passed": false,
+          "rule": "H5 <= C - 3"
+        },
+        {
+          "actual": "68.3333 <= 63.6667",
+          "code": "SELL_BLEND",
+          "passed": false,
+          "rule": "Blend <= C - 3"
+        },
+        {
+          "actual": "C=66.6667; H1=73.3333; H5=66.6667",
+          "code": "HOLD",
+          "passed": true,
+          "rule": "C >= 55 AND H1 >= C AND H5 >= C"
+        }
+      ],
+      "human_explanation": "Maintenance requirements pass. Do not add; BUY gate fails.",
+      "reason_codes": [
+        "HOLD_MAINTENANCE"
+      ],
+      "rescue_active": false,
+      "rescue_count": 0,
+      "symbol": "XLE",
+      "timestamp": "2025-08-13T00:00:00Z"
+    },
+    "scores": {
+      "asof": "2025-08-12 00:00:00",
+      "blend": 68.33333333,
+      "buy": 150.621745,
+      "c": 66.66666667,
+      "error": "",
+      "glyph": "A=5BB:F+++1+ B=976:2C21f< C=7A9:<FF-2+ D=864:2C0+n< E=BAA:-222-+",
+      "h1": 73.33333333,
+      "h5": 66.66666667,
+      "price": 149.271745,
+      "state": "",
+      "stop": 147.74134633333335,
+      "symbol": "XLE"
+    }
+  },
+  {
+    "decision": {
+      "action": "SELL",
+      "buy_qualified": false,
+      "can_add": false,
+      "checks": [
+        {
+          "actual": "35 >= 55",
+          "code": "BUY_C",
+          "passed": false,
+          "rule": "C >= 55"
+        },
+        {
+          "actual": "38.3333 >= 60",
+          "code": "BUY_BLEND",
+          "passed": false,
+          "rule": "Blend >= 60"
+        },
+        {
+          "actual": "41.6667 >= 38",
+          "code": "BUY_H1",
+          "passed": true,
+          "rule": "H1 >= C + 3"
+        },
+        {
+          "actual": "41.6667 >= 38",
+          "code": "BUY_H5",
+          "passed": true,
+          "rule": "H5 >= C + 3"
+        },
+        {
+          "actual": "38.3333 >= 38",
+          "code": "BUY_EDGE",
+          "passed": true,
+          "rule": "Blend >= C + 3"
+        },
+        {
+          "actual": "35 < 50",
+          "code": "C_BELOW_50",
+          "passed": true,
+          "rule": "C < 50"
+        }
+      ],
+      "human_explanation": "C < 50 \u2192 SELL. Forecast cannot rescue.",
+      "reason_codes": [
+        "C_BELOW_50"
+      ],
+      "rescue_active": false,
+      "rescue_count": 0,
+      "symbol": "GLDM",
+      "timestamp": "2025-08-13T00:00:00Z"
+    },
+    "scores": {
+      "asof": "2025-08-12 00:00:00",
+      "blend": 38.33333333,
+      "buy": 91.052177,
+      "c": 35.0,
+      "error": "",
+      "glyph": "A=788:2+++cc B=000:000000 C=277:F+F001 D=522:c02cc0 E=788:-++2fc",
+      "h1": 41.66666667,
+      "h5": 41.66666667,
+      "price": 87.81411,
+      "state": "DMG",
+      "stop": 86.18551033333333,
+      "symbol": "GLDM"
+    }
+  },
+  {
+    "decision": {
+      "action": "SELL",
+      "buy_qualified": false,
+      "can_add": false,
+      "checks": [
+        {
+          "actual": "46.6667 >= 55",
+          "code": "BUY_C",
+          "passed": false,
+          "rule": "C >= 55"
+        },
+        {
+          "actual": "52.9167 >= 60",
+          "code": "BUY_BLEND",
+          "passed": false,
+          "rule": "Blend >= 60"
+        },
+        {
+          "actual": "61.6667 >= 49.6667",
+          "code": "BUY_H1",
+          "passed": true,
+          "rule": "H1 >= C + 3"
+        },
+        {
+          "actual": "56.6667 >= 49.6667",
+          "code": "BUY_H5",
+          "passed": true,
+          "rule": "H5 >= C + 3"
+        },
+        {
+          "actual": "52.9167 >= 49.6667",
+          "code": "BUY_EDGE",
+          "passed": true,
+          "rule": "Blend >= C + 3"
+        },
+        {
+          "actual": "46.6667 < 50",
+          "code": "C_BELOW_50",
+          "passed": true,
+          "rule": "C < 50"
+        }
+      ],
+      "human_explanation": "C < 50 \u2192 SELL. Forecast cannot rescue.",
+      "reason_codes": [
+        "C_BELOW_50"
+      ],
+      "rescue_active": false,
+      "rescue_count": 0,
+      "symbol": "TECS",
+      "timestamp": "2025-08-13T00:00:00Z"
+    },
+    "scores": {
+      "asof": "2025-08-12 00:00:00",
+      "blend": 52.91666667,
+      "buy": 121.83533833321856,
+      "c": 46.66666667,
+      "error": "",
+      "glyph": "A=5A9:F+++^c B=321:00Cchf C=7AA:2+Fc2+ D=675:\\fF^cC E=789:-2F2fu",
+      "h1": 61.66666667,
+      "h5": 56.66666667,
+      "price": 121.399925,
+      "state": "DMG,OH",
+      "stop": 119.01778214285714,
+      "symbol": "TECS"
+    }
+  }
+]

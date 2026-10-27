@@ -344,60 +344,29 @@ def _rows_to_current_sectors_payload(
 
 
 def _render_positions_panel(
-    console,
-    mono: bool = False,
-    max_rows: int = 8,
-    sector_style=None,
-    current_rows: Optional[List[SectorRow]] = None,
-) -> None:
-    """Render 'My Positions' tri-score panel.
+    console, mono=False, max_rows=8, sector_style=None, current_rows=None
+):
+    """Compatibility renderer: ownership comes only from the local portfolio DB."""
+    from market_health.storage.sqlite import Store, app_data_dir
 
-    Prefer ASCII prototype output (matches the 3-digit 0/1/2 cells),
-    fallback to the Rich tri-score renderer.
-    """
-    current_sectors = _rows_to_current_sectors_payload(current_rows)
-
-    # 1) ASCII prototype (preferred)
-    try:
-        from .ui_triscore_ascii import render_positions_triscore_ascii  # type: ignore
-
-        try:
-            txt = render_positions_triscore_ascii(
-                mono=mono,
-                max_rows=max_rows,
-                sector_style=sector_style,
-                current_sectors=current_sectors,
-            )
-        except TypeError:
-            try:
-                txt = render_positions_triscore_ascii(mono=mono)
-            except TypeError:
-                txt = render_positions_triscore_ascii()
-        if txt:
-            console.print(str(txt).rstrip())
-            return
-    except Exception:
-        pass
-
-    # 2) Rich renderer fallback
-    try:
-        from .ui_triscore import render_positions_triscore
-
-        try:
-            out = render_positions_triscore(
-                mono=mono,
-                max_rows=max_rows,
-                sector_style=sector_style,
-                current_sectors=current_sectors,
-            )
-        except TypeError:
-            out = render_positions_triscore(mono=mono)
-        if out is not None:
-            console.print(out)
-            return
-    except Exception as e:
-        console.print(f"[yellow]Tri-Score panel unavailable: {e}[/yellow]")
+    path = app_data_dir() / "market-health.sqlite3"
+    if not path.exists():
         return
+    try:
+        store = Store(path)
+        holdings = store.holdings()
+        decisions = {r["symbol"]: r for r in store.latest()}
+        if holdings:
+            table = Table(title="Local portfolio")
+            for column in ("Symbol", "Account", "Shares", "MH Action"):
+                table.add_column(column)
+            for h in holdings[:max_rows]:
+                row = decisions.get(h["symbol"])
+                action = row["action"] if row and row["owned"] else "PENDING REFRESH"
+                table.add_row(h["symbol"], h["account"], str(h["shares"]), action)
+            console.print(table)
+    except Exception as exc:
+        console.print("Local portfolio unavailable: " + str(exc), markup=False)
 
 
 def render_pi_grid(
@@ -669,103 +638,9 @@ def main():
         render_once()
 
 
-def _recommendation_lines_from_contract(contract: dict) -> list[str]:
-    """
-    Render SWAP/NOOP recommendation summary from the UI contract.
-    This must be resilient to missing/unreadable caches.
-    """
-    summary = contract.get("summary") or {}
-    status = summary.get("recommendations_status", "missing")
-
-    data = contract.get("data") or {}
-    rec_blob = data.get("recommendations")
-
-    # Always show a stable section header
-    lines: list[str] = []
-    if status != "ok" or not isinstance(rec_blob, dict):
-        lines.append(f"Recommendation: (status={status})")
-        return lines
-
-    rec = rec_blob.get("recommendation")
-    if not isinstance(rec, dict):
-        lines.append(f"Recommendation: (status={status}, no recommendation)")
-        return lines
-
-    action = (rec.get("action") or "?").upper()
-
-    # Common useful fields (optional)
-    horizon = rec.get("horizon_trading_days")
-    if isinstance(horizon, int):
-        lines.append(f"Recommendation: {action} (horizon={horizon}d)")
-    else:
-        lines.append(f"Recommendation: {action}")
-
-    if action == "NOOP":
-        constraints = rec.get("constraints_applied") or []
-        if isinstance(constraints, list) and constraints:
-            lines.append("Reason: " + ", ".join(str(x) for x in constraints))
-        # optional diagnostics
-        diag = rec.get("diagnostics") or {}
-        if isinstance(diag, dict):
-            if "best_candidate" in diag:
-                lines.append(f"Best candidate: {diag.get('best_candidate')}")
-            if "delta_utility" in diag:
-                dm = diag.get("decision_metric") or (
-                    "robust_edge" if diag.get("mode") == "forecast" else "delta_utility"
-                )
-                val = diag.get("edge", diag.get("delta_utility"))
-                lines.append(f"Edge ({dm}): {val}")
-        return lines
-
-    if action == "SWAP":
-        diag = rec.get("diagnostics") or {}
-        if not isinstance(diag, dict):
-            diag = {}
-
-        # Try multiple field names to avoid tight coupling
-        from_sym = (
-            rec.get("from")
-            or rec.get("from_symbol")
-            or rec.get("sell")
-            or rec.get("sell_symbol")
-            or diag.get("held_to_replace")
-            or diag.get("worst_held")
-            or diag.get("sell_symbol")
-        )
-        to_sym = (
-            rec.get("to")
-            or rec.get("to_symbol")
-            or rec.get("buy")
-            or rec.get("buy_symbol")
-            or diag.get("best_candidate")
-            or diag.get("best_symbol")
-            or diag.get("candidate_symbol")
-        )
-
-        if from_sym and to_sym:
-            lines.append(f"Swap: {from_sym} -> {to_sym}")
-        elif to_sym:
-            lines.append(f"Swap target: {to_sym}")
-        else:
-            lines.append("Swap: (details unavailable)")
-
-        if "delta_utility" in diag:
-            dm = diag.get("decision_metric") or (
-                "robust_edge" if diag.get("mode") == "forecast" else "delta_utility"
-            )
-            val = diag.get("edge", diag.get("delta_utility"))
-            lines.append(f"Edge ({dm}): {val}")
-        return lines
-
-    # Fallback for other actions
-    diag = rec.get("diagnostics") or {}
-    if isinstance(diag, dict) and "delta_utility" in diag:
-        dm = diag.get("decision_metric") or (
-            "robust_edge" if diag.get("mode") == "forecast" else "delta_utility"
-        )
-        val = diag.get("edge", diag.get("delta_utility"))
-        lines.append(f"Edge ({dm}): {val}")
-    return lines
+def _recommendation_lines_from_contract(contract):
+    """Legacy recommendation artifacts are not a policy source."""
+    return []
 
 
 if __name__ == "__main__":

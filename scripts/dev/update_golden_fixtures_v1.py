@@ -21,10 +21,6 @@ def main() -> int:
     (out_dir / "golden.forecast_scores.v1.json").write_text(
         json.dumps(fx["forecast"], indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    (out_dir / "golden.recommendation.forecast.v1.json").write_text(
-        json.dumps(fx["recommendation"], indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
 
     print(f"OK: wrote fixtures into {out_dir}")
     return 0

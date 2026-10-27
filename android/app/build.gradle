@@ -1,0 +1,161 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'com.chaquo.python'
+}
+// Release credentials are optional external inputs. Partial configuration fails
+// closed; absent credentials produce an unsigned release candidate.
+def signingNames = ['MH_ANDROID_KEYSTORE', 'MH_ANDROID_KEYSTORE_PASSWORD', 'MH_ANDROID_KEY_ALIAS', 'MH_ANDROID_KEY_PASSWORD']
+def signingValues = signingNames.collectEntries { [(it): providers.environmentVariable(it).orNull] }
+def hasReleaseSigning = signingValues.values().every { it != null && !it.isEmpty() }
+if (signingValues.values().any { it != null } && !hasReleaseSigning) {
+    throw new GradleException('Release signing requires all four MH_ANDROID_KEYSTORE/KEY_ALIAS/password environment inputs; values are not logged.')
+}
+if (hasReleaseSigning) {
+    def keyPath = file(signingValues.MH_ANDROID_KEYSTORE).toPath().toAbsolutePath().normalize()
+    if (!keyPath.toFile().isFile() || !keyPath.toFile().canRead()) throw new GradleException('External release keystore is not readable.')
+    if (keyPath.startsWith(rootProject.projectDir.parentFile.toPath().toAbsolutePath().normalize())) throw new GradleException('Release keystore must be outside the Android project checkout.')
+}
+android {
+    signingConfigs {
+        releaseExternal {
+            if (hasReleaseSigning) {
+                storeFile file(signingValues.MH_ANDROID_KEYSTORE)
+                storePassword signingValues.MH_ANDROID_KEYSTORE_PASSWORD
+                keyAlias signingValues.MH_ANDROID_KEY_ALIAS
+                keyPassword signingValues.MH_ANDROID_KEY_PASSWORD
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false // Chaquopy's reflection boundary must remain intact.
+            if (hasReleaseSigning) signingConfig signingConfigs.releaseExternal
+        }
+    }
+    namespace 'dev.chrisdudley.markethealth'
+    compileSdk 36
+    buildToolsVersion "36.0.0"
+    defaultConfig {
+        applicationId 'dev.chrisdudley.markethealth'
+        minSdk 26
+        targetSdk 36
+        versionCode 2
+        versionName '0.2.0-rc1'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        ndk { abiFilters 'arm64-v8a', 'x86_64' }
+    }
+    buildFeatures { compose true }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17' }
+    sourceSets {
+        androidTest.assets.srcDir '../../tests/fixtures/android'
+    }
+    packaging {
+        resources.excludes += ['/META-INF/{AL2.0,LGPL2.1}']
+        jniLibs.useLegacyPackaging = false
+    }
+}
+// Build-time copies only. The repository root remains the single source of truth.
+def stageCore = tasks.register('stageCore', Sync) {
+    from('../../market_health') {
+        include '**/*.py'
+        exclude 'calibration/**', 'dashboard_legacy.py', 'market_ui.py', 'mh_cli.py',
+                'policy_cli.py', '__main__.py', 'refresh_snapshot.py'
+        into 'market_health'
+    }
+    into layout.buildDirectory.dir('generated/python')
+}
+chaquopy {
+    defaultConfig {
+        version '3.13'
+        def hostPython = providers.gradleProperty('mhPython').orElse(providers.environmentVariable('MH_BUILD_PYTHON')).orNull
+        if (hostPython != null) { buildPython hostPython }
+        pip {
+            options '--no-index', '--find-links', layout.buildDirectory.dir('locked-wheels').get().asFile.absolutePath
+            install '-r', project.file('../requirements-android.txt').absolutePath
+        }
+    }
+    sourceSets { main { srcDir layout.buildDirectory.dir('generated/python').get().asFile } }
+}
+tasks.matching { it.name.contains('Python') }.configureEach { dependsOn(stageCore) }
+tasks.named('preBuild').configure { dependsOn(stageCore) }
+dependencies {
+    implementation platform('androidx.compose:compose-bom:2025.10.01')
+    implementation 'androidx.activity:activity-compose:1.11.0'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.9.4'
+    implementation 'androidx.work:work-runtime-ktx:2.10.1'
+    implementation 'androidx.core:core-ktx:1.17.0'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+    androidTestImplementation platform('androidx.compose:compose-bom:2025.10.01')
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.work:work-testing:2.10.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// Inspect the installable artifacts, including native code inside Chaquopy .imy
+// archives. Both ELF segments and directly mapped APK ZIP entries must pass.
+def auditPython = providers.gradleProperty('mhPython').orElse(providers.environmentVariable('MH_BUILD_PYTHON')).getOrElse('python3.13')
+['Debug', 'Release'].each { variant ->
+    def lower = variant.toLowerCase()
+    def verify = tasks.register("verify${variant}NativePages", Exec) {
+        dependsOn "package${variant}"
+        def report = layout.buildDirectory.file("reports/native-pages/${lower}-apk.json")
+        doFirst {
+            def artifacts = fileTree(layout.buildDirectory.dir("outputs/apk/${lower}")).matching { include '*.apk' }.files
+            if (artifacts.size() != 1) throw new GradleException("Expected one actual ${lower} APK, found ${artifacts.size()}")
+            commandLine auditPython, '../tools/audit_native_pages.py', artifacts.first().absolutePath,
+                '--report', report.get().asFile.absolutePath,
+                '--runtime-version', '17.1.0', '--python-version', '3.13.16'
+        }
+    }
+    def guardedTasks = ["assemble${variant}".toString(), "connected${variant}AndroidTest".toString()]
+    tasks.matching { guardedTasks.contains(it.name) }.configureEach { dependsOn verify }
+}
+// Retain the existing public gate name; it now audits the final release APK.
+tasks.register('verify16kDependencies') { dependsOn 'verifyReleaseNativePages' }
+def verifyBundle = tasks.register('verifyReleaseBundleNativePages', Exec) {
+    dependsOn 'signReleaseBundle'
+    commandLine auditPython, '../tools/audit_native_pages.py',
+        layout.buildDirectory.file('outputs/bundle/release/app-release.aab').get().asFile.absolutePath,
+        '--report', layout.buildDirectory.file('reports/native-pages/release-aab.json').get().asFile.absolutePath,
+        '--runtime-version', '17.1.0', '--python-version', '3.13.16'
+}
+tasks.matching { it.name == 'bundleRelease' }.configureEach {
+    dependsOn 'verifyReleaseNativePages', verifyBundle
+}
+
+tasks.register('validateReleaseSigning') {
+    doLast { logger.lifecycle(hasReleaseSigning ? 'Release signing: external credentials configured.' : 'Release signing: unsigned; no credentials supplied.') }
+}
+tasks.register('requireReleaseSigning') {
+    doLast { if (!hasReleaseSigning) throw new GradleException('Release distribution requires external signing credentials. No production key is generated by this project.') }
+}
+
+// This executes on every build, even when files were restored from a CI cache.
+def prepareAndroidWheels = tasks.register('prepareAndroidWheels', Exec) {
+    commandLine auditPython, '../tools/prepare_wheels.py', project.file('../requirements-lock.json').absolutePath,
+        layout.buildDirectory.dir('locked-wheels').get().asFile.absolutePath
+}
+tasks.matching { it.name.startsWith('install') && it.name.endsWith('PythonRequirements') }.configureEach { dependsOn prepareAndroidWheels }
+// Expose only the existing disposable debug key's location, never its private bytes
+// or any release credential. AGP's default path may differ between environments.
+tasks.register('writeValidationSigningInfo') {
+    dependsOn 'validateSigningDebug'
+    doLast {
+        def debug = android.signingConfigs.debug
+        if (!'androiddebugkey'.equalsIgnoreCase(debug.keyAlias) || debug.storeFile == null || !debug.storeFile.isFile()) {
+            throw new GradleException('Validation requires the existing standard debug signing configuration.')
+        }
+        def target = layout.buildDirectory.file('validation-debug-signing.json').get().asFile
+        target.parentFile.mkdirs()
+        target.text = groovy.json.JsonOutput.toJson([keystore: debug.storeFile.absolutePath, alias: debug.keyAlias])
+    }
+}

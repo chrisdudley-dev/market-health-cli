@@ -1,0 +1,11 @@
+{
+  "asof": "2026-10-25T12:00:00Z",
+  "description": "Illustrative policy examples from the implementation specification. These are not live market quotes.",
+  "rows": [
+    {"symbol":"IVE","c":57,"h1":73,"h5":60,"blend":62,"price":238,"state":"RCL","asof":"Illustrative example"},
+    {"symbol":"RPG","c":58,"h1":62,"h5":53,"blend":57,"price":49.5,"state":"DMG","asof":"Illustrative example"},
+    {"symbol":"HOLD","c":58,"h1":58,"h5":58,"blend":58,"price":100,"asof":"Illustrative example"},
+    {"symbol":"WATCH","c":58,"h1":63,"h5":57,"blend":59,"price":80,"asof":"Illustrative example"},
+    {"symbol":"RESCUE","c":52,"h1":62,"h5":59,"blend":57,"price":120,"asof":"Illustrative example"}
+  ]
+}

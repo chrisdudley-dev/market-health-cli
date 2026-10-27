@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "emulator": true,
+  "serial": "emulator-5554",
+  "requested_page_size": 4096,
+  "builds": [
+    {
+      "variant": "debug",
+      "apk_sha256": "ff9e049767423901fe3bdcff21cadc47dfbddbda2b6c7f632b8fdaa55c299523",
+      "instrumentation_passed": 11,
+      "instrumentation_skipped": 2,
+      "startup": "PASS"
+    },
+    {
+      "variant": "release-test-signed",
+      "apk_sha256": "4aa0f362a0b86a51e6d6e615ef443e71125d1ab60a62d4fc0c80712add4f2d91",
+      "instrumentation_passed": 11,
+      "instrumentation_skipped": 2,
+      "startup": "PASS"
+    }
+  ],
+  "actual_page_size": 4096,
+  "abi": "x86_64",
+  "reboot_rescue_history_notifications_workmanager": "PASS",
+  "evidence": {
+    "tested_commit": "20e432dae3c1059efbf446b41d7791d793d91f4f",
+    "workflow_run": 40201995021,
+    "job_id": 121196487315,
+    "job_url": "https://github.com/chrisdudley-dev/market-health-cli/actions/runs/40201995021/job/121196487315",
+    "source": "MH_RUNTIME_RESULT JSON emitted by run_runtime_checks.py in the completed GitHub Actions job log"
+  }
+}

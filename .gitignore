@@ -46,3 +46,12 @@ secrets/
 *.bak.*
 mh_diag_*.log
 *.bak*
+
+# Android local tooling and generated artifacts
+android/.gradle/
+android/local.properties
+android/**/build/
+*.jks
+*.keystore
+
+android/.kotlin/
