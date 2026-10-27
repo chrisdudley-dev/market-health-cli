@@ -15,32 +15,32 @@
     {
       "item": "Android-pinned host",
       "status": "PASS",
-      "evidence": "637 tests +18 subtests,1optional Qt skip,3existing pandas warnings; ui-android-pinned.log",
+      "evidence": "637 tests and 18 subtests; one optional Qt skip and three existing pandas warnings; ui-android-pinned.log",
       "scope": "Host only; not Android runtime"
     },
     {
       "item": "4096-byte Android runtime",
       "status": "PASS",
-      "evidence": "validation/runtime-4k/runtime-result.json; both debug and AAB-derived test-signed release:23pass+5intentional skips each;28runner total",
+      "evidence": "validation/runtime-4k/runtime-result.json: debug and AAB-derived release each pass 23 tests, with five intentional skips (28 runner total).",
       "scope": "Actual API35 x86_64 kernel/runtime"
     },
     {
       "item": "16384-byte Android runtime",
       "status": "PASS",
-      "evidence": "validation/runtime-16k/runtime-result.json; both debug and AAB-derived test-signed release:23pass+5intentional skips each;28runner total",
+      "evidence": "validation/runtime-16k/runtime-result.json: debug and AAB-derived release each pass 23 tests, with five intentional skips (28 runner total).",
       "scope": "Actual API35 x86_64 kernel/runtime"
     },
     {
       "item": "x86_64 runtime",
       "status": "PASS",
-      "evidence": "Actual4KB+16KB debug/release execution; zero-tolerance frozen parity",
-      "scope": "Emulator execution"
+      "evidence": "Debug and AAB-derived release executed on both 4 KB and 16 KB kernels, with zero-tolerance frozen parity.",
+      "scope": "Actual emulator execution"
     },
     {
       "item": "arm64-v8a build",
       "status": "PASS",
-      "evidence": "Both ABI native libraries packaged;266actualELF records,0incompatible; build reports",
-      "scope": "BUILD only; no physical execution claim"
+      "evidence": "Both ABIs are packaged. All 266 actual ELF records pass alignment checks.",
+      "scope": "BUILD evidence; physical execution remains untested"
     },
     {
       "item": "Physical arm64 new UI runtime",
@@ -69,25 +69,25 @@
     {
       "item": "Light/dark/screenshots",
       "status": "PASS",
-      "evidence": "38PNG files with SHA256 manifest;7major screens both themes plus history detail and responsive evidence",
-      "scope": "Synthetic presentation fixtures; actual Compose rendering"
+      "evidence": "38 PNGs with SHA256 manifest; seven major screens in both themes, history detail and responsive evidence.",
+      "scope": "Synthetic fixtures rendered by actual Compose"
     },
     {
       "item": "Responsive/font scaling",
       "status": "PASS",
-      "evidence": "Four profiles x4explicit tests; 360dp/font2,411dp/font1.5,landscape740x360dp,tablet1067dp",
-      "scope": "Emulator display changes; no physical OEM claim"
+      "evidence": "Four profiles, four explicit tests each: 360 dp/font 2.0, 411 dp/font 1.5, 740\u00d7360 dp landscape and 1067 dp tablet.",
+      "scope": "Emulator display profiles"
     },
     {
       "item": "Component golden",
       "status": "PASS",
-      "evidence": "Committed fixed-profile PNG matches pixel-exact; unchanged consecutivecaptures equal",
-      "scope": "API35x86_64/480dpi/font1.0 only; not financial tolerance"
+      "evidence": "The committed PNG matches pixel-exactly and consecutive unchanged captures are identical.",
+      "scope": "API35 x86_64, 480 dpi, font 1.0"
     },
     {
       "item": "Accessibility semantics/contrast",
       "status": "PASS",
-      "evidence": "Score labels, actions/icons,heading/selection/switch semantics,large text and measured contrast>4.5:1",
+      "evidence": "Score labels, action icons, headings, selections, switch semantics and large text audited; measured contrast exceeds 4.5:1.",
       "scope": "Automated/source/palette audit"
     },
     {
@@ -111,8 +111,8 @@
     {
       "item": "Unsigned release APK/AAB and native gates",
       "status": "PASS",
-      "evidence": "266actualELFlibraries each;0failures;APK/ZIP and AAB PAGE_ALIGNMENT_16K verified",
-      "scope": "BUILD; runtime evidence listed separately"
+      "evidence": "266 actual ELF libraries per artifact; zero failures. APK ZIP and AAB PAGE_ALIGNMENT_16K checked.",
+      "scope": "BUILD; runtime execution is listed separately"
     },
     {
       "item": "Production release signing",
@@ -123,62 +123,62 @@
     {
       "item": "Original natural battery/Doze acceptance",
       "status": "FAIL",
-      "evidence": "NATURAL BATTERY/DOZE ACCEPTANCE \u2014 DEBUG APK; original stale-resume defect and incomplete4h/deep-idle evidence preserved at259181b",
-      "scope": "Original failed DEBUG artifact; not release-derived natural acceptance"
+      "evidence": "NATURAL BATTERY/DOZE ACCEPTANCE \u2014 DEBUG APK. Original resume failure and incomplete four-hour/deep-idle evidence preserved at 259181b.",
+      "scope": "Original failed DEBUG artifact"
     },
     {
       "item": "New UI natural battery/Doze acceptance",
       "status": "NOT TESTED",
-      "evidence": "No new4h run started; coordinator approval and independent physical artifact/run required",
+      "evidence": "No new four-hour test started. A separately approved physical run is required.",
       "scope": "Gate remains OPEN"
     },
     {
       "item": "Play/distribution readiness",
       "status": "BLOCKED",
-      "evidence": "Coordinator/manual UI/assistive review,natural idle gate,release credentials remain;no publishing begun",
-      "scope": "No general release readiness claim"
+      "evidence": "Coordinator/manual UI review, assistive testing, natural idle acceptance and release credentials remain. No publishing begun.",
+      "scope": "General release remains blocked"
     },
     {
       "item": "Remote Python CI",
       "status": "PASS",
-      "evidence": "Python3.11/3.12/3.13 allSUCCESS; run40498679074",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Python 3.11 / 3.12 / 3.13 all SUCCESS; run 40498679074",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote Android-pinned host",
       "status": "PASS",
-      "evidence": "Buildjob full pinned suiteSUCCESS; run40498679080",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Build job full pinned suiteSUCCESS; run 40498679080",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote Android build/lint",
       "status": "PASS",
-      "evidence": "Build debug/unsignedrelease/AAB,lintDebug/lintReleaseSUCCESS",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Build debug/unsigned release/AAB,lintDebug / lintRelease SUCCESS",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote4KB instrumentation",
       "status": "PASS",
-      "evidence": "Actualdebug+AAB-derivedtest-signedrelease23pass+5intentional skips each; startup+actualrebootPASS",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Debug and AAB-derived release each pass 23 tests with five intentional skips; startup and actual reboot PASS.",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote16KB instrumentation",
       "status": "PASS",
-      "evidence": "Actualdebug+AAB-derivedtest-signedrelease23pass+5intentional skips each; startup+actualrebootPASS",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Debug and AAB-derived release each pass 23 tests with five intentional skips; startup and actual reboot PASS.",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote artifact upload",
       "status": "PASS",
-      "evidence": "Allthreebuild/4KB/16KB artifact uploadsSUCCESS; official IDs/digests inremote-ci-details.json",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "All three build / 4 KB / 16 KB artifact uploads SUCCESS; official IDs/digests in remote-ci-details.json",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     },
     {
       "item": "Remote16KB release gates",
       "status": "PASS",
-      "evidence": "Actual packaged ELF/ZIP/AAB audit,known-badELFrejection andlockednativewheelprovenance allSUCCESS",
-      "scope": "Implementation commit0fcf87d; docs-only follow-up does not change artifacts"
+      "evidence": "Actual packaged ELF/ZIP/AAB audit,known-bad ELF rejection and locked native wheel provenance all SUCCESS",
+      "scope": "CI covers implementation 0fcf87d; later commits contain documentation only."
     }
   ]
 }
