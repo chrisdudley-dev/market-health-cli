@@ -39,7 +39,7 @@ class ResumeReconciliationTest {
         val scenario = ActivityScenario.launch(MainActivity::class.java)
         try {
             rule.waitUntil(30_000) {
-                rule.onAllNodes(hasText(firstTimestamp, substring = true)).fetchSemanticsNodes().isNotEmpty()
+                rule.onAllNodes(hasTestTag("refresh-timestamp-" + firstTimestamp)).fetchSemanticsNodes().isNotEmpty()
             }
             var originalActivity: MainActivity? = null
             var originalModel: MarketViewModel? = null
@@ -79,9 +79,9 @@ class ResumeReconciliationTest {
 
             scenario.moveToState(Lifecycle.State.RESUMED)
             rule.waitUntil(30_000) {
-                rule.onAllNodes(hasText(nextTimestamp, substring = true)).fetchSemanticsNodes().isNotEmpty()
+                rule.onAllNodes(hasTestTag("refresh-timestamp-" + nextTimestamp)).fetchSemanticsNodes().isNotEmpty()
             }
-            rule.onNode(hasText(nextTimestamp, substring = true)).assertIsDisplayed()
+            rule.onNode(hasTestTag("refresh-timestamp-" + nextTimestamp)).assertIsDisplayed()
             rule.waitUntil(30_000) {
                 originalModel!!.history.value.toString() == expectedHistory
             }

@@ -39,6 +39,28 @@ def fixture_result(input_json):
     )
 
 
+def ui_metadata(store):
+    """Additive, read-only presentation facts; never infer success from scores.
+
+    A failed/partial latest attempt can coexist with older complete results.
+    Expose the recorded scan status and recorded transitions, without changing
+    calculation, policy, history, outbox or persistence semantics.
+    """
+    with store.connect() as db:
+        successful = db.execute(
+            "SELECT * FROM scans WHERE status='ok' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        transitions = db.execute(
+            "SELECT d.* FROM transitions t JOIN decisions d ON d.id=t.decision_id "
+            "ORDER BY t.id DESC LIMIT 3"
+        ).fetchall()
+    return dict(
+        schema_version=1,
+        last_successful_refresh=dict(successful) if successful else None,
+        recent_transitions=[store._decision(row) for row in transitions],
+    )
+
+
 def state(store):
     holdings = store.holdings()
     owned = {h["symbol"] for h in holdings}
@@ -67,6 +89,7 @@ def state(store):
         status=store.status(),
         policy=policy_text(),
         notifications=store.pending_notifications(),
+        ui_metadata=ui_metadata(store),
     )
 
 

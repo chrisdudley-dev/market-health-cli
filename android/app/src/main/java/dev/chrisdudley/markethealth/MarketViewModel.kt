@@ -19,6 +19,8 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
     private val mutableHistory = MutableStateFlow(JSONArray())
     val history: StateFlow<JSONArray> = mutableHistory
     private var activeHistoryFilters: JSONObject? = null
+    private val mutableHistoryQuery = MutableStateFlow(JSONObject())
+    val historyQuery: StateFlow<JSONObject> = mutableHistoryQuery
     private var historyRequestVersion = 0L
     init { reload() }
 
@@ -33,9 +35,9 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
         current
     }
     fun refresh() = execute { repository.refresh() }
-    fun editHolding(payload: JSONObject) = execute { JSONObject(repository.call("holding", payload)) }
-    fun removeHolding(payload: JSONObject) = execute { JSONObject(repository.call("remove", payload)) }
-    fun saveSettings(payload: JSONObject) = execute {
+    fun editHolding(payload: JSONObject, onSuccess: () -> Unit = {}) = execute(onSuccess) { JSONObject(repository.call("holding", payload)) }
+    fun removeHolding(payload: JSONObject, onSuccess: () -> Unit = {}) = execute(onSuccess) { JSONObject(repository.call("remove", payload)) }
+    fun saveSettings(payload: JSONObject, onSuccess: () -> Unit = {}) = execute(onSuccess) {
         val result = JSONObject(repository.call("settings", payload))
         val settings = result.getJSONObject("settings")
         MonitorScheduler.apply(getApplication(), settings.getBoolean("background"), settings.getLong("interval"))
@@ -43,7 +45,7 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun history(filters: JSONObject = JSONObject(), append: Boolean = false) {
         val query = JSONObject(filters.toString())
-        if (!append) activeHistoryFilters = JSONObject(query.toString())
+        if (!append) { activeHistoryFilters = JSONObject(query.toString()); mutableHistoryQuery.value = JSONObject(query.toString()) }
         val requestVersion = ++historyRequestVersion
         viewModelScope.launch {
             try {
@@ -62,11 +64,11 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
-    private fun execute(operation: suspend () -> JSONObject) {
+    private fun execute(onSuccess: () -> Unit = {}, operation: suspend () -> JSONObject) {
         if (mutable.value.busy) return
         viewModelScope.launch {
             mutable.value = mutable.value.copy(busy = true, error = null)
-            try { mutable.value = UiState(operation()) }
+            try { mutable.value = UiState(operation()); onSuccess() }
             catch (e: Exception) {
                 val previous = runCatching { repository.state() }.getOrDefault(mutable.value.data)
                 mutable.value = UiState(previous, false, e.message ?: "Operation failed")
