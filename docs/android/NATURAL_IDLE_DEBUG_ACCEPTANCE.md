@@ -26,6 +26,12 @@ Android accepted `install -r -t`; no uninstall, data clearing, downgrade flag,
 root, replacement key, or protection bypass was used. The installed debug hash,
 UID and original first-install timestamp were verified after the update.
 
+The run was subsequently closed on 2026-10-27 with **FAIL — APPLICATION DEFECT
+IDENTIFIED**: foreground UI reconciliation retained an old snapshot. The full
+four-hour natural idle requirement was also not established. See the separate
+[result](NATURAL_IDLE_DEBUG_RESULT.md); the preparation protocol below remains
+as the record of what was intended.
+
 The release APK is non-debuggable with backup disabled. Its private DB and
 WorkManager DB were unavailable before replacement; a full byte comparison
 across replacement is therefore unavailable. Release UI Portfolio/History/
