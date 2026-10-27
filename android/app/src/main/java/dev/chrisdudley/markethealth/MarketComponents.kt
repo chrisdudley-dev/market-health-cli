@@ -222,3 +222,11 @@ private data class ScoreDisplay(val field: String, val label: String, val color:
         PolicyChip(action)
     }
 }
+
+@Composable internal fun PriceSummary(values: List<Pair<String, String>>) {
+    if (LocalDensity.current.fontScale > 1.3f) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        values.forEach { (label, value) -> ValuePair(label, value) }
+    } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        values.forEach { (label, value) -> ValuePair(label, value, Modifier.weight(1f)) }
+    }
+}

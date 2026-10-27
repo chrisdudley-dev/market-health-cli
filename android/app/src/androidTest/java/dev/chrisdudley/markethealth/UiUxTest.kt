@@ -182,6 +182,15 @@ class UiUxTest {
         rule.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("save-settings"))
         rule.onNodeWithTag("save-settings").assertIsDisplayed()
     }
+    @Test fun primaryNavigationRemainsReachable() {
+        content()
+        for (page in listOf(Destination.MARKET, Destination.PORTFOLIO, Destination.HISTORY, Destination.DASHBOARD)) {
+            if (rule.onAllNodesWithTag("navigation-rail").fetchSemanticsNodes().isNotEmpty())
+                rule.onNodeWithTag("nav-${page.name}").performScrollTo()
+            rule.onNodeWithTag("nav-${page.name}").performClick()
+            rule.onNodeWithTag("page-title").assertTextEquals(page.title)
+        }
+    }
     @Test fun appearancePersistsOutsideAuthoritativeSettings(): Unit = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val repository = CoreRepository.get(context)
@@ -232,6 +241,12 @@ class UiUxTest {
             for ((page, file) in listOf(Destination.DASHBOARD to "dashboard", Destination.MARKET to "market-health", Destination.PORTFOLIO to "portfolio", Destination.HISTORY to "history", Destination.POLICY to "policy", Destination.SETTINGS to "settings")) {
                 go(page)
                 capture("$file-${theme.lowercase()}")
+                if (page == Destination.HISTORY) {
+                    rule.onNodeWithTag("history-list").performScrollToNode(hasTestTag("history-chart"))
+                    capture("history-chart-${theme.lowercase()}")
+                    rule.onNodeWithTag("history-list").performScrollToNode(hasTestTag("history-100"))
+                    capture("history-timeline-${theme.lowercase()}")
+                }
                 if (page == Destination.MARKET) {
                     rule.onNodeWithTag("symbols-list").performScrollToNode(hasTestTag("symbol-XLE"))
         rule.onNodeWithTag("symbol-XLE").performClick()

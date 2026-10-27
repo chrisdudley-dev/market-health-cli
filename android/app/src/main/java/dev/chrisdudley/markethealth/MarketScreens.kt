@@ -108,8 +108,8 @@ internal val screenPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
             SymbolFilter.entries.forEach { value -> FilterChip(selected = filter == value, onClick = { filter = value }, label = { Text(value.label) },
                 modifier = Modifier.testTag("filter-${value.name}")) }
         } }
-        item { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${rows.size} symbols", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        item { FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("${rows.size} symbols", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(vertical = 12.dp))
             Box { TextButton(onClick = { sortMenu = true }, modifier = Modifier.testTag("sort-menu")) {
                 MarketGlyph(MarketIcon.FILTER); Spacer(Modifier.width(6.dp)); Text("Sort: ${sort.label}")
             }
@@ -130,11 +130,8 @@ internal val screenPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
         SymbolIdentity(row.symbol(), if (owned) "Owned" else "Not owned", row.policyAction())
         ScoreStrip(row.obj("scores"))
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ValuePair("State", row.obj("scores").raw("state").ifBlank { "Not recorded" }, Modifier.weight(1f))
-            ValuePair("Stop", displayNumber(row.obj("scores").numberOrNull("stop")), Modifier.weight(1f))
-            ValuePair("Buy", displayNumber(row.obj("scores").numberOrNull("buy")), Modifier.weight(1f))
-        }
+        PriceSummary(listOf("State" to row.obj("scores").raw("state").ifBlank { "Not recorded" },
+            "Stop" to displayNumber(row.obj("scores").numberOrNull("stop")), "Buy" to displayNumber(row.obj("scores").numberOrNull("buy"))))
         val error = row.obj("scores").optString("error")
         if (error.isNotBlank() && error != "null") InformationPanel("Data issue", error, error = true)
         else Text(row.obj("result").optString("human_explanation", "Policy explanation unavailable."),
@@ -186,11 +183,8 @@ internal val screenPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
         } }
         item { SectionCard {
             SectionHeading("Price levels")
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ValuePair("Price", displayNumber(scores.numberOrNull("price")), Modifier.weight(1f))
-                ValuePair("Stop", displayNumber(scores.numberOrNull("stop")), Modifier.weight(1f))
-                ValuePair("Buy", displayNumber(scores.numberOrNull("buy")), Modifier.weight(1f))
-            }
+            PriceSummary(listOf("Price" to displayNumber(scores.numberOrNull("price")),
+                "Stop" to displayNumber(scores.numberOrNull("stop")), "Buy" to displayNumber(scores.numberOrNull("buy"))))
             ValuePair("State", scores.raw("state").ifBlank { "Not recorded" })
             ValuePair("Price observation", scores.raw("asof"))
             if (scores.optString("error").let { it.isNotBlank() && it != "null" }) InformationPanel("Data issue", scores.raw("error"), error = true)

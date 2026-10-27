@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -87,9 +89,10 @@ private val primaryDestinations = listOf(Destination.DASHBOARD, Destination.MARK
     }) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val wide = maxWidth >= 700.dp
+            val largeText = LocalDensity.current.fontScale > 1.3f
             Scaffold(snackbarHost = { SnackbarHost(snackbars) }, topBar = {
                 TopAppBar(title = { Text(if (selected != null) selected.symbol() else destination.title,
-                    style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag("page-title")) },
+                    style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("page-title")) },
                     navigationIcon = { IconButton(onClick = {
                         if (selected != null) { selectedSymbol = null; historical = null }
                         else scope.launch { drawer.open() }
@@ -104,14 +107,16 @@ private val primaryDestinations = listOf(Destination.DASHBOARD, Destination.MARK
             }, bottomBar = {
                 if (!wide && selected == null) NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                     primaryDestinations.forEach { page -> NavigationBarItem(selected = destination == page,
-                        onClick = { navigate(page) }, icon = { MarketGlyph(page.icon) }, label = { Text(page.short) },
+                        onClick = { navigate(page) }, icon = { MarketGlyph(page.icon, description = if (largeText) page.title else null) },
+                        label = if (largeText) null else ({ Text(page.short, maxLines = 1) }),
                         modifier = Modifier.testTag("nav-${page.name}")) }
                 }
             }            ) { insets ->
                 Row(Modifier.fillMaxSize().padding(insets)) {
-                    if (wide) NavigationRail(containerColor = MaterialTheme.colorScheme.background) {
+                    if (wide) NavigationRail(modifier = Modifier.verticalScroll(rememberScrollState()).testTag("navigation-rail"), containerColor = MaterialTheme.colorScheme.background) {
                         primaryDestinations.forEach { page -> NavigationRailItem(selected = destination == page,
-                            onClick = { navigate(page) }, icon = { MarketGlyph(page.icon) }, label = { Text(page.short) },
+                            onClick = { navigate(page) }, icon = { MarketGlyph(page.icon, description = if (largeText) page.title else null) },
+                        label = if (largeText) null else ({ Text(page.short, maxLines = 1) }),
                             modifier = Modifier.testTag("nav-${page.name}")) }
                     }
                     Column(Modifier.fillMaxSize().widthIn(max = 1100.dp).padding(horizontal = if (wide) 24.dp else 16.dp)) {
