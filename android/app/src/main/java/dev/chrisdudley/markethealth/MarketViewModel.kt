@@ -18,9 +18,20 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
     val state: StateFlow<UiState> = mutable
     private val mutableHistory = MutableStateFlow(JSONArray())
     val history: StateFlow<JSONArray> = mutableHistory
+    private var activeHistoryFilters: JSONObject? = null
+    private var historyRequestVersion = 0L
     init { reload() }
 
     fun reload() = execute { repository.resume() }
+    // Presentation reconciliation only: no market fetch, policy evaluation,
+    // notification delivery or WorkManager scheduling is initiated here.
+    fun reconcile() = execute {
+        val current = repository.state()
+        // History is a separate UI flow: keep its current filters while reading
+        // the latest persisted page, instead of leaving that page cached too.
+        activeHistoryFilters?.let { history(it) }
+        current
+    }
     fun refresh() = execute { repository.refresh() }
     fun editHolding(payload: JSONObject) = execute { JSONObject(repository.call("holding", payload)) }
     fun removeHolding(payload: JSONObject) = execute { JSONObject(repository.call("remove", payload)) }
@@ -31,18 +42,24 @@ class MarketViewModel(application: Application) : AndroidViewModel(application) 
         result
     }
     fun history(filters: JSONObject = JSONObject(), append: Boolean = false) {
+        val query = JSONObject(filters.toString())
+        if (!append) activeHistoryFilters = JSONObject(query.toString())
+        val requestVersion = ++historyRequestVersion
         viewModelScope.launch {
             try {
                 if (append && mutableHistory.value.length() > 0)
-                    filters.put("before_id", mutableHistory.value.getJSONObject(mutableHistory.value.length() - 1).getInt("id"))
-                val page = JSONArray(repository.call("history", filters))
+                    query.put("before_id", mutableHistory.value.getJSONObject(mutableHistory.value.length() - 1).getInt("id"))
+                val page = JSONArray(repository.call("history", query))
+                if (requestVersion != historyRequestVersion) return@launch
                 if (append) {
                     val combined = JSONArray(mutableHistory.value.toString())
                     for (i in 0 until page.length()) combined.put(page.getJSONObject(i))
                     mutableHistory.value = combined
                 } else mutableHistory.value = page
             }
-            catch (e: Exception) { mutable.value = mutable.value.copy(error = e.message) }
+            catch (e: Exception) {
+                if (requestVersion == historyRequestVersion) mutable.value = mutable.value.copy(error = e.message)
+            }
         }
     }
     private fun execute(operation: suspend () -> JSONObject) {

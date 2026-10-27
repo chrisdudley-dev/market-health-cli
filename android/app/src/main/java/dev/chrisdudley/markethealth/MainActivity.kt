@@ -46,6 +46,13 @@ class MainActivity : ComponentActivity() {
                 notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } }
     }
+
+    override fun onResume() {
+        super.onResume()
+        // WorkManager may have committed newer state while this Activity and
+        // its ViewModel remained in memory. Re-read; never calculate or fetch.
+        if (RuntimeCompatibility.supported()) model.reconcile()
+    }
 }
 
 private val destinations = listOf("Dashboard", "Portfolio", "Trading List", "Buy Candidates", "Market Health", "History", "Policy", "Settings")
